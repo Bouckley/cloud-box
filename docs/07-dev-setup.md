@@ -8,9 +8,9 @@ Windows users: see the [appendix](#appendix-windows-with-wsl2).
 
 | Tool | Why | Install (Ubuntu 24.04) |
 |------|-----|------------------------|
-| make, gcc | Makefile; gcc is needed by `go test -race` | `sudo apt install build-essential` |
+| make, gcc, jq | Makefile; gcc is needed by `go test -race`; jq checks the Go download | `sudo apt install build-essential jq` |
 | Go (latest stable) | Box server | Official tarball to `/usr/local/go` (apt's version is too old) |
-| Node LTS + pnpm | Web app, phone app, shared packages | nvm, then `npm i -g corepack && corepack enable pnpm` |
+| Node LTS + pnpm | Web app, phone app, shared packages | nvm, then `npm i -g corepack && corepack enable pnpm` (Node 25+ no longer ships corepack) |
 | Docker + buildx | Containers | Docker Engine from docs.docker.com; add yourself to the `docker` group |
 | QEMU user emulation | `make test-arm64` | `sudo apt install qemu-user-static binfmt-support` |
 | Python 3 + Playwright | `webapp-testing` skill | `python3 -m venv ~/.venvs/playwright`, then `pip install playwright` and `playwright install --with-deps chromium` |
@@ -22,10 +22,21 @@ Go install:
 
 ```
 GOV=$(curl -s 'https://go.dev/VERSION?m=text' | head -1)
-curl -LO "https://go.dev/dl/${GOV}.linux-amd64.tar.gz"
-sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf "${GOV}.linux-amd64.tar.gz"
+TAR="${GOV}.linux-amd64.tar.gz"
+curl -LO "https://go.dev/dl/${TAR}"
+
+# Check the download against Go's published SHA-256 before installing
+SUM=$(curl -s 'https://go.dev/dl/?mode=json' | jq -r --arg f "$TAR" '.[].files[] | select(.filename==$f) | .sha256')
+echo "${SUM}  ${TAR}" | sha256sum -c -   # must print: OK
+
+sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf "$TAR" && rm "$TAR"
 echo 'export PATH=$PATH:/usr/local/go/bin:$HOME/go/bin' >> ~/.bashrc
 ```
+
+The Go version in `box/go.mod` is the minimum; CI and `make test-arm64` use it.
+
+**TypeScript version:** the repo pins TypeScript 6.0.x because typescript-eslint
+does not support TypeScript 7 yet. Bump both together when it does.
 
 Check arm64 emulation works:
 

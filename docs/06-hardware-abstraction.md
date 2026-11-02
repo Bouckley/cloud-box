@@ -54,7 +54,14 @@ type HAL struct {
 | Drives | Folders under `./.data`, fake sizes and SMART values | `lsblk`, `statfs`, `smartctl -j` |
 | Modules | Attach/detach/forge buttons on the dev page | DETECT on GPIO17; ATECC608 over I2C at 0x60 |
 
-Pick at startup: `boxd --hal=sim` (default on non-arm64) or `--hal=pi`.
+Pick at startup: `boxd --hal=sim` (default on non-arm64) or `--hal=pi`
+(default on arm64).
+
+Until the `pi` implementation lands in M5, `--hal=pi` exits with "pi HAL is not
+implemented yet (milestone M5)". On an arm64 machine before M5, pass
+`--hal=sim` explicitly. **Open question for M5:** keep `pi` as the arm64
+default (fails loudly on a Pi build without hardware access) or always default
+to `sim` and require `--hal=pi` in the systemd unit (doc 09 already passes it).
 
 ## Simulator dev page
 

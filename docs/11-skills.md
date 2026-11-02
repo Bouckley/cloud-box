@@ -44,6 +44,27 @@ Inside Claude Code, from the project folder:
 /plugin menu
 ```
 
+**Check the plugin is enabled, not just installed.** A plugin installed with
+project scope loads only when `.claude/settings.json` lists it under
+`enabledPlugins`; local scope needs the same entry in
+`.claude/settings.local.json` (git-ignored). Expo is enabled in the committed
+`.claude/settings.json`. The Trail of Bits plugins are local, so each developer
+adds them to their own `settings.local.json`:
+
+```json
+{
+  "enabledPlugins": {
+    "insecure-defaults@trailofbits": true,
+    "sharp-edges@trailofbits": true,
+    "spec-to-code-compliance@trailofbits": true,
+    "property-based-testing@trailofbits": true,
+    "supply-chain-risk-auditor@trailofbits": true
+  }
+}
+```
+
+Restart Claude Code after changing either file.
+
 From a terminal in the project folder:
 
 ```

@@ -49,6 +49,9 @@ ReadWritePaths=/srv/cloudbox /srv/cloudbox-backup
 WantedBy=multi-user.target
 ```
 
+`--backup` is added with the backup copy job in M4; until then `boxd` rejects
+it, so leave it out of the unit when testing earlier builds.
+
 The `pi` HAL needs GPIO and I2C access: add the `cloudbox` user to the `gpio`
 and `i2c` groups.
 

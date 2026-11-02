@@ -1,0 +1,55 @@
+openapi: 3.1.0
+info:
+  title: Cloud Box API
+  version: 0.1.0
+  description: >
+    The box stores ciphertext only. Request and response bodies never carry
+    plaintext file contents, names, dates, locations or keys.
+servers:
+  - url: https://localhost:8443
+paths:
+  /v1/health:
+    get:
+      operationId: getHealth
+      summary: Liveness check
+      responses:
+        '200':
+          description: The box is running.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+        default:
+          $ref: '#/components/responses/Error'
+components:
+  responses:
+    Error:
+      description: Any error. `action` is plain-language text the app can show.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+  schemas:
+    Health:
+      type: object
+      additionalProperties: false
+      required: [status, version]
+      properties:
+        status:
+          type: string
+          enum: [ok]
+        version:
+          type: string
+          description: boxd build version.
+    Error:
+      type: object
+      additionalProperties: false
+      required: [code, message, action]
+      properties:
+        code:
+          type: string
+          description: Stable machine-readable code, for example `storage_full`.
+        message:
+          type: string
+        action:
+          type: string

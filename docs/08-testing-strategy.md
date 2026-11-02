@@ -16,7 +16,7 @@ Nothing moves to the next stage until its gate passes.
 | Fault injection | Sim API + `kill -9` | Disk full, backup drive unplugged, crash mid-upload, network drop, clock jump |
 | Web end-to-end | Playwright + `@axe-core/playwright` | Key journeys and WCAG 2.2 AA checks on every screen |
 | Phone end-to-end | Maestro on the Android emulator | Pairing, auto backup, safe delete, free up space |
-| arm64 | Docker Buildx + QEMU | Box tests on linux/arm64 |
+| arm64 | Docker + QEMU (`make test-arm64`) | Box tests on linux/arm64, without `-race` (too slow under emulation); `-race` on arm64 runs on the Pi in M5 |
 | On-device soak | Real Pi, 72 h | Memory, temperature, upload of a full phone library, power cut |
 
 ## Must-pass journeys (end-to-end)

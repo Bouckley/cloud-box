@@ -20,3 +20,10 @@ export function requireLength(bytes: Uint8Array, length: number): void {
     throw new CryptoError('invalid_input');
   }
 }
+
+/** Associated data names what a ciphertext belongs to (ADR 0002); it must not be empty. */
+export function requireAd(ad: Uint8Array): void {
+  if (!(ad instanceof Uint8Array) || ad.length === 0) {
+    throw new CryptoError('invalid_input');
+  }
+}

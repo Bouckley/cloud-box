@@ -37,7 +37,7 @@ const kdf = ['correct horse battery staple', 'café', 'café'].map((password) =
 const aeadKey = seq(32);
 const aeadNonce = seq(24, 100);
 const aead = [
-  { ad: utf8(''), plaintext: utf8('') },
+  { ad: utf8('user:1:master-key'), plaintext: utf8('') },
   { ad: utf8('item:1:metadata'), plaintext: utf8('{"name":"IMG_0001.jpg"}') },
 ].map(({ ad, plaintext }) => ({
   key: hex(aeadKey),
@@ -48,13 +48,15 @@ const aead = [
 }));
 
 const streamKey = seq(32, 50);
+const streamAd = utf8('item:1:original');
 const secretstream = [0, 64, 200].map((n) => {
   const plaintext = seq(n, 7);
   return {
     key: hex(streamKey),
+    ad: hex(streamAd),
     chunkBytes: 64,
     plaintext: hex(plaintext),
-    ciphertext: hex(encryptFile(streamKey, plaintext, 64)),
+    ciphertext: hex(encryptFile(streamKey, plaintext, streamAd, 64)),
   };
 });
 

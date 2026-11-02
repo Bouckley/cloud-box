@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from 'vitest';
-import { CryptoError, DEFAULT_KDF, deriveKek, newSalt, ready } from './index.ts';
+import { CryptoError, DEFAULT_KDF, deriveKek, KDF_LIMITS, newSalt, ready } from './index.ts';
 
 const FAST = { opsLimit: 2, memLimitBytes: 64 * 1024 * 1024 };
 const salt = new Uint8Array(16).fill(7);
@@ -28,6 +28,31 @@ describe('deriveKek', () => {
       expect.objectContaining({ code: 'invalid_input' }),
     );
     expect(() => deriveKek('pw', new Uint8Array(15), FAST)).toThrow(CryptoError);
+  });
+});
+
+describe('KDF parameter bounds', () => {
+  const MiB = 1024 * 1024;
+
+  it.each([
+    ['opsLimit below 2', { opsLimit: 1, memLimitBytes: 64 * MiB }],
+    ['memory below 64 MiB', { opsLimit: 2, memLimitBytes: 64 * MiB - 1 }],
+    ['opsLimit above 10', { opsLimit: 11, memLimitBytes: 64 * MiB }],
+    ['memory above 1 GiB', { opsLimit: 2, memLimitBytes: 1024 * MiB + 1 }],
+    ['non-integer opsLimit', { opsLimit: 2.5, memLimitBytes: 64 * MiB }],
+  ])('rejects %s', (_, params) => {
+    expect(() => deriveKek('pw', salt, params)).toThrow(
+      expect.objectContaining({ code: 'invalid_input' }),
+    );
+  });
+
+  it('exports the bounds', () => {
+    expect(KDF_LIMITS).toEqual({
+      minOpsLimit: 2,
+      maxOpsLimit: 10,
+      minMemLimitBytes: 64 * MiB,
+      maxMemLimitBytes: 1024 * MiB,
+    });
   });
 });
 

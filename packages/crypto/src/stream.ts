@@ -1,5 +1,5 @@
 import { CryptoError } from './errors.ts';
-import { lib, requireLength } from './sodium.ts';
+import { lib, requireAd, requireLength } from './sodium.ts';
 
 /** Plaintext bytes per secretstream chunk (ADR 0002). */
 export const FILE_CHUNK_BYTES = 4194304;
@@ -15,12 +15,19 @@ export type FileEncryptor = {
 
 export type FileDecryptor = {
   pull(chunk: Uint8Array): { plaintext: Uint8Array; last: boolean };
+  /** Throws decrypt_failed unless the FINAL chunk was pulled. Call it before using the output. */
+  finish(): void;
   readonly finished: boolean;
 };
 
-export function createFileEncryptor(key: Uint8Array): FileEncryptor {
+/**
+ * Streams a file through secretstream. ad names the item and variant (for example
+ * "item:<id>:original") and is bound to every chunk, so a box cannot swap variants.
+ */
+export function createFileEncryptor(key: Uint8Array, ad: Uint8Array): FileEncryptor {
   const s = lib();
   requireLength(key, KEY_BYTES);
+  requireAd(ad);
   const { state, header } = s.crypto_secretstream_xchacha20poly1305_init_push(key);
   let done = false;
   return {
@@ -31,14 +38,20 @@ export function createFileEncryptor(key: Uint8Array): FileEncryptor {
       const tag = last
         ? s.crypto_secretstream_xchacha20poly1305_TAG_FINAL
         : s.crypto_secretstream_xchacha20poly1305_TAG_MESSAGE;
-      return s.crypto_secretstream_xchacha20poly1305_push(state, chunk, null, tag);
+      return s.crypto_secretstream_xchacha20poly1305_push(state, chunk, ad, tag);
     },
   };
 }
 
-export function createFileDecryptor(key: Uint8Array, header: Uint8Array): FileDecryptor {
+/** Pulls chunks made by createFileEncryptor. Callers must call finish() at the end. */
+export function createFileDecryptor(
+  key: Uint8Array,
+  header: Uint8Array,
+  ad: Uint8Array,
+): FileDecryptor {
   const s = lib();
   requireLength(key, KEY_BYTES);
+  requireAd(ad);
   if (header.length !== HEADER_BYTES) throw new CryptoError('decrypt_failed');
   let state: ReturnType<typeof s.crypto_secretstream_xchacha20poly1305_init_pull>;
   try {
@@ -55,13 +68,16 @@ export function createFileDecryptor(key: Uint8Array, header: Uint8Array): FileDe
       if (finished) throw new CryptoError('decrypt_failed');
       let result: { message: Uint8Array; tag: number } | false;
       try {
-        result = s.crypto_secretstream_xchacha20poly1305_pull(state, chunk, null);
+        result = s.crypto_secretstream_xchacha20poly1305_pull(state, chunk, ad);
       } catch {
         throw new CryptoError('decrypt_failed');
       }
       if (!result) throw new CryptoError('decrypt_failed');
       finished = result.tag === s.crypto_secretstream_xchacha20poly1305_TAG_FINAL;
       return { plaintext: result.message, last: finished };
+    },
+    finish() {
+      if (!finished) throw new CryptoError('decrypt_failed');
     },
   };
 }
@@ -70,9 +86,10 @@ export function createFileDecryptor(key: Uint8Array, header: Uint8Array): FileDe
 export function encryptFile(
   key: Uint8Array,
   data: Uint8Array,
+  ad: Uint8Array,
   chunkBytes = FILE_CHUNK_BYTES,
 ): Uint8Array {
-  const enc = createFileEncryptor(key);
+  const enc = createFileEncryptor(key, ad);
   const chunks = Math.max(1, Math.ceil(data.length / chunkBytes));
   const out = new Uint8Array(HEADER_BYTES + data.length + chunks * CHUNK_OVERHEAD);
   out.set(enc.header);
@@ -92,10 +109,12 @@ export function encryptFile(
 export function decryptFile(
   key: Uint8Array,
   data: Uint8Array,
+  ad: Uint8Array,
   chunkBytes = FILE_CHUNK_BYTES,
 ): Uint8Array {
+  requireAd(ad);
   if (data.length < HEADER_BYTES + CHUNK_OVERHEAD) throw new CryptoError('decrypt_failed');
-  const dec = createFileDecryptor(key, data.subarray(0, HEADER_BYTES));
+  const dec = createFileDecryptor(key, data.subarray(0, HEADER_BYTES), ad);
   const parts: Uint8Array[] = [];
   let total = 0;
   let offset = HEADER_BYTES;
@@ -106,7 +125,7 @@ export function decryptFile(
     total += plaintext.length;
     offset = end;
   }
-  if (!dec.finished) throw new CryptoError('decrypt_failed');
+  dec.finish();
   const out = new Uint8Array(total);
   let pos = 0;
   for (const p of parts) {

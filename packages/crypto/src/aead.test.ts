@@ -83,3 +83,22 @@ describe('encryptMetadata / decryptMetadata', () => {
     expect(decryptMetadata(key, encryptMetadata(key, value, ad), ad)).toEqual(value);
   });
 });
+
+describe('associated data is required', () => {
+  const empty = new Uint8Array();
+
+  it('rejects empty ad in every public function', () => {
+    const key = randomKey();
+    const box = aeadEncrypt(key, enc.encode('x'), ad);
+    for (const call of [
+      () => aeadEncrypt(key, enc.encode('x'), empty),
+      () => aeadDecrypt(key, box, empty),
+      () => wrapKey(key, randomKey(), empty),
+      () => unwrapKey(key, box, empty),
+      () => encryptMetadata(key, { a: 1 }, empty),
+      () => decryptMetadata(key, box, empty),
+    ]) {
+      expect(call).toThrow(failsWith('invalid_input'));
+    }
+  });
+});

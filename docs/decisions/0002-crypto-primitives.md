@@ -23,9 +23,9 @@ standard library for the two primitives it needs.
 
 | Use | Function | Parameters and format |
 |-----|----------|-----------------------|
-| Password → KEK | `crypto_pwhash` with `crypto_pwhash_ALG_ARGON2ID13` | 16-byte random salt; 32-byte output; default `opslimit 3`, `memlimit 268435456` (256 MiB, libsodium's MODERATE). Salt and both limits are stored next to the wrapped key so they can be raised later. Password is Unicode NFC-normalised, then UTF-8 encoded. |
-| Files (original, preview, thumbnail) | `crypto_secretstream_xchacha20poly1305_init_push` / `push` / `init_pull` / `pull` | 4 MiB plaintext chunks; each ciphertext chunk is plaintext + 17 bytes. Format: `header (24) ‖ chunk…`. The last chunk, and only the last, carries `TAG_FINAL`; decryption fails on a missing final tag, data after it, or reordered chunks. |
-| Metadata, key wrapping | `crypto_aead_xchacha20poly1305_ietf_encrypt` / `_decrypt` | Random 24-byte nonce. Format: `nonce (24) ‖ ciphertext ‖ tag (16)`. **Associated data is required** and names what the ciphertext belongs to (for example the item id and field), so a ciphertext moved to another item fails to decrypt. |
+| Password → KEK | `crypto_pwhash` with `crypto_pwhash_ALG_ARGON2ID13` | 16-byte random salt; 32-byte output; default `opslimit 3`, `memlimit 268435456` (256 MiB, libsodium's MODERATE). Salt and both limits are stored next to the wrapped key so they can be raised later. Clients refuse limits outside `opslimit 2–10` and `memlimit 64 MiB–1 GiB`, so a box cannot weaken them or exhaust a phone. Password is Unicode NFC-normalised, then UTF-8 encoded. |
+| Files (original, preview, thumbnail) | `crypto_secretstream_xchacha20poly1305_init_push` / `push` / `init_pull` / `pull` | 4 MiB plaintext chunks; each ciphertext chunk is plaintext + 17 bytes. Format: `header (24) ‖ chunk…`. **Associated data is required on every chunk** and names the item and variant (for example `item:<id>:original`), because one file key encrypts all three variants and the box must not be able to serve one in place of another. The last chunk, and only the last, carries `TAG_FINAL`; decryption fails on a missing final tag, data after it, or reordered chunks. Streaming callers must call `finish()`, which fails unless the final chunk arrived. |
+| Metadata, key wrapping | `crypto_aead_xchacha20poly1305_ietf_encrypt` / `_decrypt` | Random 24-byte nonce. Format: `nonce (24) ‖ ciphertext ‖ tag (16)`. **Associated data is required and must not be empty**; it names what the ciphertext belongs to (for example the item id and field), so a ciphertext moved to another item fails to decrypt. |
 | Sharing keys with another user | `crypto_box_seal` / `crypto_box_seal_open` (X25519) | Output = plaintext + 48 bytes. |
 | Device login | `crypto_sign_detached` / `crypto_sign_verify_detached` (Ed25519) | 64-byte detached signatures. Box verifies with Go `crypto/ed25519`. |
 | Upload integrity | `crypto_hash_sha256` | Box checks with Go `crypto/sha256`. |
@@ -46,8 +46,9 @@ because those are the only primitives the box runs.
 
 - Doc 03's building-blocks table and doc 05's note on `*_enc` columns now name
   these functions.
-- Every caller must choose associated data. The convention is set in M1 with
-  the data model (for example `item:<id>:metadata`).
+- Every caller must choose associated data for metadata, wrapped keys and
+  files. The convention is set in M1 with the data model (for example
+  `item:<id>:metadata`, `item:<id>:original`, `item:<id>:thumbnail`).
 - The keyed BLAKE2b dedupe hash (`crypto_generichash`) stays in doc 03 and is
   added in M1, where it is first used.
 - Raising the KDF cost later needs no format change: the stored limits travel

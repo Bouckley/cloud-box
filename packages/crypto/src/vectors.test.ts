@@ -28,8 +28,8 @@ describe('crypto-vectors.json', () => {
     expect(aeadDecrypt(b(v.key), b(v.box), b(v.ad))).toEqual(b(v.plaintext));
   });
 
-  it.each(vectors.secretstream)('secretstream: $chunkBytes-byte chunks', (v) => {
-    expect(decryptFile(b(v.key), b(v.ciphertext), v.chunkBytes)).toEqual(b(v.plaintext));
+  it.each(vectors.secretstream)('secretstream: $chunkBytes-byte chunks, ad=$ad', (v) => {
+    expect(decryptFile(b(v.key), b(v.ciphertext), b(v.ad), v.chunkBytes)).toEqual(b(v.plaintext));
   });
 
   it.each(vectors.sealed)('sealed: seed $seed', (v) => {

@@ -19,3 +19,12 @@ export {
   type FileDecryptor,
   type FileEncryptor,
 } from './stream.ts';
+export {
+  boxKeyPairFromSeed,
+  generateBoxKeyPair,
+  openSealed,
+  sealTo,
+  type KeyPair,
+} from './sealed.ts';
+export { generateSigningKeyPair, sign, signingKeyPairFromSeed, verify } from './sign.ts';
+export { sha256 } from './hash.ts';

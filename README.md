@@ -16,7 +16,7 @@ laptop first, then move it to a Raspberry Pi 5.
 | 4 | [Box API](docs/04-box-api.md) | Endpoints the apps call |
 | 5 | [Storage and data model](docs/05-storage-and-data-model.md) | Database tables and disk layout |
 | 6 | [Hardware abstraction](docs/06-hardware-abstraction.md) | Simulating the Pi's hardware on a laptop |
-| 7 | [Dev setup (Windows)](docs/07-dev-setup-windows.md) | Tools to install and how to run it locally |
+| 7 | [Dev setup](docs/07-dev-setup.md) | Tools to install and how to run it locally |
 | 8 | [Testing strategy](docs/08-testing-strategy.md) | Test types and the gates before hardware |
 | 9 | [Deploy to Raspberry Pi](docs/09-deploy-to-raspberry-pi.md) | Moving from laptop to Pi |
 | 10 | [Roadmap](docs/10-roadmap.md) | Milestones with exit criteria |

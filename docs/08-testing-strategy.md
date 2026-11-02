@@ -36,7 +36,7 @@ Nothing moves to the next stage until its gate passes.
 
 | Stage | Where | Gate to move on |
 |-------|-------|-----------------|
-| 1 | Laptop, native in WSL | All unit, integration and web E2E tests green |
+| 1 | Laptop, native Linux | All unit, integration and web E2E tests green |
 | 2 | Laptop, Docker (amd64) | Same suite green inside the container |
 | 3 | Laptop, Docker (arm64 emulated) | Box suite green on linux/arm64 |
 | 4 | Pi on your desk | Journeys 1–9 pass from your phone; 72 h soak with no crash, steady memory |

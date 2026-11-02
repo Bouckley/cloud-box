@@ -24,7 +24,7 @@ marketplaces install with `/plugin` commands inside Claude Code.
 | Should | `property-based-testing` | trailofbits/skills | fast-check tests for crypto and sync |
 | Should | `supply-chain-risk-auditor` | trailofbits/skills | Review Go and npm dependencies |
 | Nice | `differential-review` | trailofbits/skills | Security review of each change before merging |
-| Nice | `devcontainer-setup` | trailofbits/skills | Reproducible dev container on Windows |
+| Nice | `devcontainer-setup` | trailofbits/skills | Reproducible dev container (Linux or Windows) |
 | Nice | `skill-creator` | anthropics/skills | Write the project skills below |
 
 ## Install

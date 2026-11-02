@@ -1,6 +1,6 @@
 # ADR 0003: Associated data naming
 
-Date: 2026-11-02 · Status: **Proposed** (confirm at the start of M1)
+Date: 2026-11-02 · Status: Accepted
 
 ## Context
 

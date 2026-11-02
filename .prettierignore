@@ -1,0 +1,7 @@
+pnpm-lock.yaml
+packages/api-client/src/schema.ts
+testdata/
+*.md
+.claude/
+.superpowers/
+box/

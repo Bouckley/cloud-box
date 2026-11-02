@@ -21,6 +21,7 @@ type PowerButton interface {
 
 type Drive struct {
     ID, Role, Model string // Role: "main" or "backup"
+    Path            string // where it is mounted; blobs live under it
     SizeBytes, FreeBytes uint64
 }
 
@@ -37,11 +38,18 @@ type Modules interface {
     Verify(ctx context.Context, slot int) (ModuleIdentity, error)
 }
 
+// Clock is the box's time source. Trash purge, upload expiry and sessions
+// read it, so the simulator can move time forward.
+type Clock interface {
+    Now() time.Time
+}
+
 type HAL struct {
     Light   StatusLight
     Button  PowerButton
     Drives  Drives
     Modules Modules
+    Clock   Clock
 }
 ```
 
@@ -52,7 +60,12 @@ type HAL struct {
 | StatusLight | Logs and shows state on a dev page | RGB LED on 3 GPIO pins (periph.io) |
 | PowerButton | Button on the dev page | Pi 5 power button events / GPIO |
 | Drives | Folders under `./.data`, fake sizes and SMART values | `lsblk`, `statfs`, `smartctl -j` |
-| Modules | Attach/detach/forge buttons on the dev page | DETECT on GPIO17; ATECC608 over I2C at 0x60 |
+| Modules | Attach/detach/forge buttons on the dev page (M9; until then "no module") | DETECT on GPIO17; ATECC608 over I2C at 0x60 |
+| Clock | Real time plus an offset the dev API moves forward | System clock |
+
+On the laptop the main drive is the data directory and the backup drive is
+`<data>/sim-backup` (1 TB and 2 TB, 10 % full by default). An unplugged drive
+is simply not listed.
 
 Pick at startup: `boxd --hal=sim` (default on non-arm64) or `--hal=pi`
 (default on arm64).
@@ -65,7 +78,10 @@ to `sim` and require `--hal=pi` in the systemd unit (doc 09 already passes it).
 
 ## Simulator dev page
 
-Only built with the `sim` build tag, served at `/dev/sim`:
+Only built with the Go build tag `sim` (`go build -tags sim`). `make dev`,
+`make test` and CI use the tag; `make build-pi` does not, so a real box never
+serves these controls (they could, for example, move the clock forward and
+purge Trash). Served at `/dev/sim`:
 
 - Status light preview
 - Press power button (short / long)
@@ -73,8 +89,18 @@ Only built with the `sim` build tag, served at `/dev/sim`:
 - Attach a genuine module, attach a forged module, detach
 - Freeze the clock forward 31 days (tests Trash purge)
 
-These same controls are exposed as an HTTP API so Playwright and Go
-integration tests can drive failure cases.
+These same controls are exposed as an HTTP API (no auth, dev builds only) so
+Playwright and Go integration tests can drive failure cases:
+
+| Method | Path | Body | Does |
+|--------|------|------|------|
+| GET | `/dev/sim/state` | | Light, clock offset, drives |
+| POST | `/dev/sim/button` | `{"kind": "short"\|"long"}` | Press the power button |
+| POST | `/dev/sim/drives/{role}` | `{"present": bool, "fillPercent": 0-100}` | Unplug/plug, fill a drive |
+| POST | `/dev/sim/clock/advance` | `{"seconds": n}` | Move the clock forward |
+| POST | `/dev/sim/jobs/{name}` | | Run `replicate`, `purge`, `cleanup` or `light` now |
+
+The HTML page arrives with the web app in M2; M1 has the API only.
 
 ## Open question: ATECC608 from Go
 

@@ -7,17 +7,23 @@ owner's devices and on a printed recovery key.
 
 Use libsodium on every platform so all clients produce identical results.
 
-| Use | Primitive | Libraries |
-|-----|-----------|-----------|
-| Password → key | Argon2id (`crypto_pwhash`) | libsodium-wrappers-sumo (web), react-native-libsodium (app), golang.org/x/crypto/argon2 (tests) |
-| Encrypt files (streaming) | XChaCha20-Poly1305 `secretstream` | same |
-| Encrypt metadata, wrap keys | XChaCha20-Poly1305 `secretbox` | same |
+| Use | libsodium function | Libraries |
+|-----|---------------------|-----------|
+| Password → key | Argon2id: `crypto_pwhash` with `ALG_ARGON2ID13` | libsodium-wrappers-sumo (web), react-native-libsodium (app) |
+| Encrypt files (streaming) | XChaCha20-Poly1305 `crypto_secretstream_xchacha20poly1305_*` | same |
+| Encrypt metadata, wrap keys | XChaCha20-Poly1305 AEAD `crypto_aead_xchacha20poly1305_ietf_*`, with associated data | same |
 | Share keys with another user | X25519 sealed box (`crypto_box_seal`) | same |
-| Device login | Ed25519 signatures | same; Go stdlib `crypto/ed25519` on the box |
-| Dedupe without revealing content | Keyed BLAKE2b of plaintext with a per-user key | same |
+| Device login | Ed25519 `crypto_sign_detached` | same; Go stdlib `crypto/ed25519` on the box |
+| Upload integrity | SHA-256 `crypto_hash_sha256` | same; Go stdlib `crypto/sha256` on the box |
+| Dedupe without revealing content | Keyed BLAKE2b (`crypto_generichash`) of plaintext with a per-user key | same (added in M1) |
+
+Exact parameters, formats and the reasons for each choice are in
+[ADR 0002](decisions/0002-crypto-primitives.md). Note that libsodium's plain
+`crypto_secretbox_easy` is XSalsa20-Poly1305 and is not used.
 
 Never write custom crypto. Wrap these calls once in `@cloudbox/crypto` and
-test them against `testdata/crypto-vectors.json` in Go and TypeScript.
+test them against `testdata/crypto-vectors.json` in TypeScript (all
+primitives) and Go (Ed25519 and SHA-256, the only ones the box runs).
 
 ## Key hierarchy
 

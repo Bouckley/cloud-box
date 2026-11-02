@@ -34,7 +34,8 @@ On a laptop the same layout lives under `./.data/` in the repo (git-ignored).
 | `invites`, `links` | token_hash, collection_id, role, expires_at | Tokens stored hashed |
 | `events` | id, kind, at, detail | For the helper's activity view; no content |
 
-`*_enc` columns hold libsodium `secretbox` ciphertext the box can't read.
+`*_enc` columns hold XChaCha20-Poly1305 AEAD ciphertext
+(`crypto_aead_xchacha20poly1305_ietf`, see ADR 0002) the box can't read.
 A global monotonic `seq` increments on every change; clients sync with `since=seq`.
 
 ## Item state machine

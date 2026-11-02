@@ -1,0 +1,20 @@
+# Dev data (doc 05: ./.data on laptops)
+.data/
+
+# Build output
+dist/
+coverage/
+
+# Dependencies
+node_modules/
+
+# Local env and logs
+.env
+.env.*
+*.log
+
+# Personal Claude Code settings
+.claude/settings.local.json
+
+# Plan execution scratch
+.superpowers/

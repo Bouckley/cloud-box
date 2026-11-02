@@ -10,3 +10,12 @@ export {
   unwrapKey,
   wrapKey,
 } from './aead.ts';
+export {
+  createFileDecryptor,
+  createFileEncryptor,
+  decryptFile,
+  encryptFile,
+  FILE_CHUNK_BYTES,
+  type FileDecryptor,
+  type FileEncryptor,
+} from './stream.ts';

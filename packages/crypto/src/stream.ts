@@ -1,0 +1,117 @@
+import { CryptoError } from './errors.ts';
+import { lib, requireLength } from './sodium.ts';
+
+/** Plaintext bytes per secretstream chunk (ADR 0002). */
+export const FILE_CHUNK_BYTES = 4194304;
+
+const KEY_BYTES = 32;
+const HEADER_BYTES = 24;
+const CHUNK_OVERHEAD = 17;
+
+export type FileEncryptor = {
+  header: Uint8Array;
+  push(chunk: Uint8Array, last: boolean): Uint8Array;
+};
+
+export type FileDecryptor = {
+  pull(chunk: Uint8Array): { plaintext: Uint8Array; last: boolean };
+  readonly finished: boolean;
+};
+
+export function createFileEncryptor(key: Uint8Array): FileEncryptor {
+  const s = lib();
+  requireLength(key, KEY_BYTES);
+  const { state, header } = s.crypto_secretstream_xchacha20poly1305_init_push(key);
+  let done = false;
+  return {
+    header,
+    push(chunk, last) {
+      if (done) throw new CryptoError('invalid_input');
+      done = last;
+      const tag = last
+        ? s.crypto_secretstream_xchacha20poly1305_TAG_FINAL
+        : s.crypto_secretstream_xchacha20poly1305_TAG_MESSAGE;
+      return s.crypto_secretstream_xchacha20poly1305_push(state, chunk, null, tag);
+    },
+  };
+}
+
+export function createFileDecryptor(key: Uint8Array, header: Uint8Array): FileDecryptor {
+  const s = lib();
+  requireLength(key, KEY_BYTES);
+  if (header.length !== HEADER_BYTES) throw new CryptoError('decrypt_failed');
+  let state: ReturnType<typeof s.crypto_secretstream_xchacha20poly1305_init_pull>;
+  try {
+    state = s.crypto_secretstream_xchacha20poly1305_init_pull(header, key);
+  } catch {
+    throw new CryptoError('decrypt_failed');
+  }
+  let finished = false;
+  return {
+    get finished() {
+      return finished;
+    },
+    pull(chunk) {
+      if (finished) throw new CryptoError('decrypt_failed');
+      let result: { message: Uint8Array; tag: number } | false;
+      try {
+        result = s.crypto_secretstream_xchacha20poly1305_pull(state, chunk, null);
+      } catch {
+        throw new CryptoError('decrypt_failed');
+      }
+      if (!result) throw new CryptoError('decrypt_failed');
+      finished = result.tag === s.crypto_secretstream_xchacha20poly1305_TAG_FINAL;
+      return { plaintext: result.message, last: finished };
+    },
+  };
+}
+
+/** Encrypts a whole file: header ‖ chunks, the last chunk tagged FINAL. */
+export function encryptFile(
+  key: Uint8Array,
+  data: Uint8Array,
+  chunkBytes = FILE_CHUNK_BYTES,
+): Uint8Array {
+  const enc = createFileEncryptor(key);
+  const chunks = Math.max(1, Math.ceil(data.length / chunkBytes));
+  const out = new Uint8Array(HEADER_BYTES + data.length + chunks * CHUNK_OVERHEAD);
+  out.set(enc.header);
+  let offset = HEADER_BYTES;
+  for (let i = 0; i < chunks; i++) {
+    const ct = enc.push(data.subarray(i * chunkBytes, (i + 1) * chunkBytes), i === chunks - 1);
+    out.set(ct, offset);
+    offset += ct.length;
+  }
+  return out;
+}
+
+/**
+ * Decrypts encryptFile output. Fails unless the FINAL tag is on exactly the last chunk:
+ * the decryptor refuses to pull after FINAL, and a missing FINAL fails the finished check.
+ */
+export function decryptFile(
+  key: Uint8Array,
+  data: Uint8Array,
+  chunkBytes = FILE_CHUNK_BYTES,
+): Uint8Array {
+  if (data.length < HEADER_BYTES + CHUNK_OVERHEAD) throw new CryptoError('decrypt_failed');
+  const dec = createFileDecryptor(key, data.subarray(0, HEADER_BYTES));
+  const parts: Uint8Array[] = [];
+  let total = 0;
+  let offset = HEADER_BYTES;
+  while (offset < data.length) {
+    const end = Math.min(offset + chunkBytes + CHUNK_OVERHEAD, data.length);
+    const { plaintext } = dec.pull(data.subarray(offset, end));
+    parts.push(plaintext);
+    total += plaintext.length;
+    offset = end;
+  }
+  if (!dec.finished) throw new CryptoError('decrypt_failed');
+  const out = new Uint8Array(total);
+  let pos = 0;
+  for (const p of parts) {
+    out.set(p, pos);
+    pos += p.length;
+  }
+  return out;
+}

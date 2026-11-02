@@ -8,12 +8,14 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p .",
-    "test": "vitest run"
+    "test": "vitest run",
+    "gen-vectors": "node scripts/gen-vectors.ts"
   },
   "dependencies": {
     "libsodium-wrappers-sumo": "^0.8.4"
   },
   "devDependencies": {
-    "@types/libsodium-wrappers-sumo": "^0.8.2"
+    "@types/libsodium-wrappers-sumo": "^0.8.2",
+    "@types/node": "^26.6.6"
   }
 }

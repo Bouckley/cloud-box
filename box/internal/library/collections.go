@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"time"
 
 	"github.com/Bouckley/cloud-box/box/internal/store"
 )
@@ -13,19 +14,26 @@ import (
 // folder its own ancestor (409 invalid_parent).
 var ErrInvalidParent = errors.New("invalid parent")
 
+// ErrCollectionNotEmpty means a delete was asked for a collection that still
+// holds an item outside Trash or an undeleted child (409 collection_not_empty).
+var ErrCollectionNotEmpty = errors.New("collection not empty")
+
 // maxDepth bounds the walk up the parents, so a damaged database can never
 // make it loop forever.
 const maxDepth = 10_000
 
 // Collection is an album or a folder. NameEnc and KeyEnc are ciphertext;
-// KeyEnc is the collection key wrapped for the requesting user.
+// KeyEnc is the collection key wrapped for the requesting user. DeletedAt is
+// set once the collection is deleted; it stays listed while trashed items
+// still need its key.
 type Collection struct {
-	ID       string
-	Kind     string
-	ParentID *string
-	NameEnc  []byte
-	KeyEnc   []byte
-	Seq      int64
+	ID        string
+	Kind      string
+	ParentID  *string
+	NameEnc   []byte
+	KeyEnc    []byte
+	DeletedAt *time.Time
+	Seq       int64
 }
 
 // CreateCollection stores a new collection and the user's wrapped key for it.
@@ -61,7 +69,7 @@ func (s *Service) CreateCollection(ctx context.Context, userID string, c Collect
 
 // Collections returns every collection the user holds a key for.
 func (s *Service) Collections(ctx context.Context, userID string) ([]Collection, error) {
-	rows, err := s.db.DB().QueryContext(ctx, `SELECT c.id, c.kind, c.parent_id, c.name_enc, k.wrapped_key, c.seq
+	rows, err := s.db.DB().QueryContext(ctx, `SELECT `+collectionColumns+`
 		FROM collections c JOIN collection_keys k ON k.collection_id = c.id AND k.user_id = ?
 		ORDER BY c.seq`, userID)
 	if err != nil {
@@ -121,7 +129,7 @@ func checkParent(ctx context.Context, tx *sql.Tx, userID, id, kind string, paren
 		return ErrInvalidParent
 	}
 	var parentKind string
-	err := tx.QueryRowContext(ctx, "SELECT kind FROM collections WHERE id = ? AND owner_id = ?",
+	err := tx.QueryRowContext(ctx, "SELECT kind FROM collections WHERE id = ? AND owner_id = ? AND deleted_at IS NULL",
 		*parentID, userID).Scan(&parentKind)
 	if errors.Is(err, sql.ErrNoRows) || (err == nil && parentKind != "folder") {
 		return ErrInvalidParent
@@ -148,7 +156,7 @@ func checkParent(ctx context.Context, tx *sql.Tx, userID, id, kind string, paren
 }
 
 func getCollection(ctx context.Context, tx *sql.Tx, userID, id string) (Collection, error) {
-	row := tx.QueryRowContext(ctx, `SELECT c.id, c.kind, c.parent_id, c.name_enc, k.wrapped_key, c.seq
+	row := tx.QueryRowContext(ctx, `SELECT `+collectionColumns+`
 		FROM collections c JOIN collection_keys k ON k.collection_id = c.id AND k.user_id = c.owner_id
 		WHERE c.id = ? AND c.owner_id = ?`, id, userID)
 	c, err := scanCollection(row)
@@ -158,14 +166,126 @@ func getCollection(ctx context.Context, tx *sql.Tx, userID, id string) (Collecti
 	return c, err
 }
 
+const collectionColumns = `c.id, c.kind, c.parent_id, c.name_enc, k.wrapped_key, c.deleted_at, c.seq`
+
 func scanCollection(r interface{ Scan(...any) error }) (Collection, error) {
 	var c Collection
 	var parent sql.NullString
-	if err := r.Scan(&c.ID, &c.Kind, &parent, &c.NameEnc, &c.KeyEnc, &c.Seq); err != nil {
+	var deleted sql.NullInt64
+	if err := r.Scan(&c.ID, &c.Kind, &parent, &c.NameEnc, &c.KeyEnc, &deleted, &c.Seq); err != nil {
 		return Collection{}, err
 	}
 	if parent.Valid {
 		c.ParentID = &parent.String
 	}
+	if deleted.Valid {
+		at := time.UnixMilli(deleted.Int64).UTC()
+		c.DeletedAt = &at
+	}
 	return c, nil
+}
+
+// DeleteCollection deletes one of the user's collections when no item
+// outside Trash and no undeleted child collection is in it, else
+// ErrCollectionNotEmpty. It only sets deleted_at (with a new seq): trashed
+// items still need its key. Already deleted: no-op.
+func (s *Service) DeleteCollection(ctx context.Context, userID, id string) error {
+	return s.db.Tx(ctx, func(tx *sql.Tx) error {
+		c, err := getCollection(ctx, tx, userID, id)
+		if err != nil || c.DeletedAt != nil {
+			return err
+		}
+		var busy int
+		if err := tx.QueryRowContext(ctx, `SELECT
+			(SELECT COUNT(*) FROM items WHERE collection_id = ? AND trashed_at IS NULL) +
+			(SELECT COUNT(*) FROM collections WHERE parent_id = ? AND deleted_at IS NULL)`, id, id).Scan(&busy); err != nil {
+			return err
+		}
+		if busy > 0 {
+			return ErrCollectionNotEmpty
+		}
+		seq, err := store.NextSeq(ctx, tx)
+		if err != nil {
+			return err
+		}
+		_, err = tx.ExecContext(ctx, "UPDATE collections SET deleted_at = ?, seq = ? WHERE id = ?",
+			s.clock.Now().UnixMilli(), seq, id)
+		return err
+	})
+}
+
+// UndeleteCollection un-deletes collection id and its deleted ancestors,
+// giving each a new seq, inside the caller's transaction. Trash calls it
+// when an item is restored.
+func UndeleteCollection(ctx context.Context, tx *sql.Tx, id string) error {
+	cur := id
+	for range maxDepth {
+		var parent sql.NullString
+		var deleted sql.NullInt64
+		err := tx.QueryRowContext(ctx, "SELECT parent_id, deleted_at FROM collections WHERE id = ?", cur).
+			Scan(&parent, &deleted)
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		if deleted.Valid {
+			seq, err := store.NextSeq(ctx, tx)
+			if err != nil {
+				return err
+			}
+			if _, err := tx.ExecContext(ctx, "UPDATE collections SET deleted_at = NULL, seq = ? WHERE id = ?", seq, cur); err != nil {
+				return err
+			}
+		}
+		if !parent.Valid {
+			return nil
+		}
+		cur = parent.String
+	}
+	return nil
+}
+
+// RemoveDeletedEmpty removes collection id, and then each deleted ancestor,
+// while it is deleted and holds no items and no child collections at all,
+// inside the caller's transaction. Trash calls it after an item is deleted
+// for good. An undeleted collection is never removed.
+func RemoveDeletedEmpty(ctx context.Context, tx *sql.Tx, id string) error {
+	cur := id
+	for range maxDepth {
+		var parent sql.NullString
+		var deleted sql.NullInt64
+		err := tx.QueryRowContext(ctx, "SELECT parent_id, deleted_at FROM collections WHERE id = ?", cur).
+			Scan(&parent, &deleted)
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		if !deleted.Valid {
+			return nil
+		}
+		var held int
+		if err := tx.QueryRowContext(ctx, `SELECT
+			(SELECT COUNT(*) FROM items WHERE collection_id = ?) +
+			(SELECT COUNT(*) FROM collections WHERE parent_id = ?)`, cur, cur).Scan(&held); err != nil {
+			return err
+		}
+		if held > 0 {
+			return nil
+		}
+		if _, err := tx.ExecContext(ctx, "DELETE FROM collection_keys WHERE collection_id = ?", cur); err != nil {
+			return err
+		}
+		if _, err := tx.ExecContext(ctx, "DELETE FROM collections WHERE id = ?", cur); err != nil {
+			return err
+		}
+		if !parent.Valid {
+			return nil
+		}
+		cur = parent.String
+	}
+	return nil
 }

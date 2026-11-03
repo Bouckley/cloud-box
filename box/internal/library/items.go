@@ -173,10 +173,11 @@ func checkBlobList(list []ItemBlob) error {
 	return nil
 }
 
-// ownCollection is store.ErrNotFound unless the user owns the collection.
+// ownCollection is store.ErrNotFound unless the user owns the collection and
+// it is not deleted.
 func ownCollection(ctx context.Context, tx *sql.Tx, userID, id string) error {
 	var n int
-	if err := tx.QueryRowContext(ctx, "SELECT COUNT(*) FROM collections WHERE id = ? AND owner_id = ?",
+	if err := tx.QueryRowContext(ctx, "SELECT COUNT(*) FROM collections WHERE id = ? AND owner_id = ? AND deleted_at IS NULL",
 		id, userID).Scan(&n); err != nil {
 		return err
 	}

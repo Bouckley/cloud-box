@@ -6,15 +6,17 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 )
 
 type collectionJSON struct {
-	ID       string  `json:"id"`
-	Kind     string  `json:"kind"`
-	ParentID *string `json:"parentId"`
-	NameEnc  []byte  `json:"nameEnc"`
-	KeyEnc   []byte  `json:"keyEnc"`
-	Seq      int64   `json:"seq"`
+	ID        string     `json:"id"`
+	Kind      string     `json:"kind"`
+	ParentID  *string    `json:"parentId"`
+	NameEnc   []byte     `json:"nameEnc"`
+	KeyEnc    []byte     `json:"keyEnc"`
+	DeletedAt *time.Time `json:"deletedAt"`
+	Seq       int64      `json:"seq"`
 }
 
 func newCollectionBody(kind string, parent any) map[string]any {
@@ -120,4 +122,37 @@ func assertCode(t *testing.T, rec *httptest.ResponseRecorder, status int, code s
 		return
 	}
 	assertError(t, decode(t, rec), code)
+}
+
+func TestDeleteCollectionAPI(t *testing.T) {
+	e := newEnv(t)
+	o := e.setUpOwner()
+	album := e.createCollection(o.token, newCollectionBody("album", nil))
+	if !strings.Contains(e.call(http.MethodGet, "/v1/collections", o.token, nil).Body.String(), `"deletedAt":null`) {
+		t.Errorf("live collection must list deletedAt null")
+	}
+	orig := e.uploadBlob(o.token, randBytes(300))
+	it := e.createItem(o.token, newItemBody(album.ID, map[string]string{"original": orig}))
+	assertCode(t, e.call(http.MethodDelete, "/v1/collections/"+album.ID, o.token, nil), http.StatusConflict, "collection_not_empty")
+
+	if rec := e.call(http.MethodDelete, "/v1/items/"+it.ID, o.token, nil); rec.Code != http.StatusNoContent {
+		t.Fatalf("trash = %d %s", rec.Code, rec.Body)
+	}
+	if rec := e.call(http.MethodDelete, "/v1/collections/"+album.ID, o.token, nil); rec.Code != http.StatusNoContent {
+		t.Fatalf("delete = %d %s, want 204", rec.Code, rec.Body)
+	}
+	var list struct {
+		Collections []collectionJSON `json:"collections"`
+	}
+	decodeInto(t, e.call(http.MethodGet, "/v1/collections", o.token, nil), &list)
+	if len(list.Collections) != 1 || list.Collections[0].DeletedAt == nil {
+		t.Errorf("list after delete = %+v, want the album with deletedAt", list.Collections)
+	}
+	assertCode(t, e.call(http.MethodDelete, "/v1/collections/"+newID(), o.token, nil), http.StatusNotFound, "not_found")
+	if rec := e.call(http.MethodDelete, "/v1/collections/nope", o.token, nil); rec.Code != http.StatusBadRequest {
+		t.Errorf("bad id = %d, want 400", rec.Code)
+	}
+	if rec := e.call(http.MethodDelete, "/v1/collections/"+album.ID, "", nil); rec.Code != http.StatusUnauthorized {
+		t.Errorf("no token = %d, want 401", rec.Code)
+	}
 }

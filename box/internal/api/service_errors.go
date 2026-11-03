@@ -50,6 +50,12 @@ func (h *handlers) serviceError(w http.ResponseWriter, r *http.Request, err erro
 			Message: "The uploaded file was damaged on the way.",
 			Action:  "The app will upload it again.",
 		})
+	case errors.Is(err, library.ErrCollectionNotEmpty):
+		writeError(w, http.StatusConflict, apiError{
+			Code:    "collection_not_empty",
+			Message: "This album or folder still has things in it.",
+			Action:  "Move or delete what is inside it first, then try again.",
+		})
 	case errors.Is(err, library.ErrInvalidParent):
 		writeError(w, http.StatusConflict, apiError{
 			Code:    "invalid_parent",

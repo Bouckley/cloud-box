@@ -74,6 +74,7 @@ func NewRouter(d Deps) http.Handler {
 		mux.HandleFunc("GET /v1/collections", h.requireSession(h.listCollections))
 		mux.HandleFunc("POST /v1/collections", h.requireSession(h.createCollection))
 		mux.HandleFunc("PATCH /v1/collections/{id}", h.requireSession(h.updateCollection))
+		mux.HandleFunc("DELETE /v1/collections/{id}", h.requireSession(h.deleteCollection))
 		mux.HandleFunc("GET /v1/items", h.requireSession(h.listItemChanges))
 		mux.HandleFunc("POST /v1/items", h.requireSession(h.createItem))
 		mux.HandleFunc("POST /v1/items/lookup", h.requireSession(h.lookupItems))

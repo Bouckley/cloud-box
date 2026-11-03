@@ -10,6 +10,7 @@ import (
 
 	"github.com/Bouckley/cloud-box/box/internal/blobs"
 	"github.com/Bouckley/cloud-box/box/internal/hal"
+	"github.com/Bouckley/cloud-box/box/internal/library"
 	"github.com/Bouckley/cloud-box/box/internal/store"
 )
 
@@ -54,7 +55,8 @@ func (s *Service) Trash(ctx context.Context, userID, itemID string) error {
 	return s.setTrashed(ctx, userID, itemID, true)
 }
 
-// Restore takes the item out of Trash and gives it a new seq. Not in Trash: no-op.
+// Restore takes the item out of Trash and gives it a new seq. Its collection
+// and that collection's deleted ancestors are un-deleted. Not in Trash: no-op.
 func (s *Service) Restore(ctx context.Context, userID, itemID string) error {
 	return s.setTrashed(ctx, userID, itemID, false)
 }
@@ -73,8 +75,17 @@ func (s *Service) setTrashed(ctx context.Context, userID, itemID string, trash b
 		if trash {
 			at = s.hal.Clock.Now().UnixMilli()
 		}
-		_, err = tx.ExecContext(ctx, "UPDATE items SET trashed_at = ?, seq = ? WHERE id = ?", at, seq, itemID)
-		return err
+		if _, err := tx.ExecContext(ctx, "UPDATE items SET trashed_at = ?, seq = ? WHERE id = ?", at, seq, itemID); err != nil {
+			return err
+		}
+		if trash {
+			return nil
+		}
+		var col string
+		if err := tx.QueryRowContext(ctx, "SELECT collection_id FROM items WHERE id = ?", itemID).Scan(&col); err != nil {
+			return err
+		}
+		return library.UndeleteCollection(ctx, tx, col)
 	})
 }
 
@@ -182,8 +193,13 @@ func (s *Service) Purge(ctx context.Context) (int, error) {
 }
 
 // deleteItem removes the item, its blobs' rows (and their replica rows) and
-// writes a tombstone, returning the blob ids whose files must go.
+// writes a tombstone, returning the blob ids whose files must go. A deleted
+// collection it leaves empty goes too, with its deleted ancestors.
 func deleteItem(ctx context.Context, tx *sql.Tx, userID, itemID string) ([]string, error) {
+	var col string
+	if err := tx.QueryRowContext(ctx, "SELECT collection_id FROM items WHERE id = ?", itemID).Scan(&col); err != nil {
+		return nil, err
+	}
 	rows, err := tx.QueryContext(ctx, "SELECT blob_id FROM item_blobs WHERE item_id = ?", itemID)
 	if err != nil {
 		return nil, err
@@ -213,8 +229,10 @@ func deleteItem(ctx context.Context, tx *sql.Tx, userID, itemID string) ([]strin
 	if err != nil {
 		return nil, err
 	}
-	_, err = tx.ExecContext(ctx, "INSERT INTO tombstones (item_id, owner_id, seq) VALUES (?, ?, ?)", itemID, userID, seq)
-	return blobIDs, err
+	if _, err := tx.ExecContext(ctx, "INSERT INTO tombstones (item_id, owner_id, seq) VALUES (?, ?, ?)", itemID, userID, seq); err != nil {
+		return nil, err
+	}
+	return blobIDs, library.RemoveDeletedEmpty(ctx, tx, col)
 }
 
 // removeFiles deletes blob files after the rows are gone. A failure (or a

@@ -3,22 +3,38 @@ package api
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/Bouckley/cloud-box/box/internal/auth"
 	"github.com/Bouckley/cloud-box/box/internal/library"
 )
 
 type collectionResponse struct {
-	ID       string  `json:"id"`
-	Kind     string  `json:"kind"`
-	ParentID *string `json:"parentId"` // null at the root, never omitted
-	NameEnc  []byte  `json:"nameEnc"`
-	KeyEnc   []byte  `json:"keyEnc"`
-	Seq      int64   `json:"seq"`
+	ID        string     `json:"id"`
+	Kind      string     `json:"kind"`
+	ParentID  *string    `json:"parentId"` // null at the root, never omitted
+	NameEnc   []byte     `json:"nameEnc"`
+	KeyEnc    []byte     `json:"keyEnc"`
+	DeletedAt *time.Time `json:"deletedAt"` // null unless deleted, never omitted
+	Seq       int64      `json:"seq"`
 }
 
 func toCollectionResponse(c library.Collection) collectionResponse {
-	return collectionResponse{ID: c.ID, Kind: c.Kind, ParentID: c.ParentID, NameEnc: c.NameEnc, KeyEnc: c.KeyEnc, Seq: c.Seq}
+	return collectionResponse{ID: c.ID, Kind: c.Kind, ParentID: c.ParentID, NameEnc: c.NameEnc,
+		KeyEnc: c.KeyEnc, DeletedAt: c.DeletedAt, Seq: c.Seq}
+}
+
+func (h *handlers) deleteCollection(w http.ResponseWriter, r *http.Request, sess auth.Session) {
+	id := r.PathValue("id")
+	if !validID(id) {
+		badRequest(w, "id must be 32 lowercase hex characters")
+		return
+	}
+	if err := h.d.Library.DeleteCollection(r.Context(), sess.UserID, id); err != nil {
+		h.serviceError(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *handlers) listCollections(w http.ResponseWriter, r *http.Request, sess auth.Session) {

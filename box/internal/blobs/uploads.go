@@ -284,7 +284,7 @@ func (s *Service) Complete(ctx context.Context, userID, uploadID string) (Blob, 
 	b := Blob{ID: blobID, SHA256: digest, Size: up.Size}
 	millis(&b.StoredAt, now.UnixMilli())
 	var verifiedAt sql.NullInt64
-	if got, err := hashFileUncached(dest); err == nil && got == digest {
+	if got, err := HashFileUncached(dest); err == nil && got == digest {
 		verifiedAt = sql.NullInt64{Int64: now.UnixMilli(), Valid: true}
 		v := b.StoredAt
 		b.VerifiedAt = &v
@@ -334,9 +334,10 @@ func hashFile(path string) (string, error) {
 	return hashReader(f)
 }
 
-// hashFileUncached hashes the file as it is on the drive, not as it is in
-// the page cache, so "verified" means the drive really holds these bytes.
-func hashFileUncached(path string) (string, error) {
+// HashFileUncached returns the SHA-256 (hex) of the file as it is on the
+// drive, not as it is in the page cache, so "verified" means the drive
+// really holds these bytes.
+func HashFileUncached(path string) (string, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return "", err

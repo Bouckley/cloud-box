@@ -7,12 +7,12 @@ Nothing moves to the next stage until its gate passes.
 
 | Type | Tools | Covers |
 |------|-------|--------|
-| Unit (Go) | `go test -race` | Store, blobs, status, trash, replica logic |
+| Unit (Go) | `go test -race`, run twice: with and without `-tags sim` | Store, auth, blobs, library, status, trash, replica, jobs |
 | Unit (TS) | Vitest | Crypto wrappers, API client, UI logic |
 | Crypto vectors | `testdata/crypto-vectors.json` | Same inputs give the same outputs in Go and TS |
 | Property-based | `rapid` (Go), fast-check (TS) | Encrypt/decrypt round-trips, sync never loses or duplicates items |
-| API contract | Generated TS client against a real `boxd` | Server matches `api/openapi.yaml` |
-| Integration | Go tests with `--hal=sim` | Full upload → verify → replicate → status |
+| API contract + zero knowledge | `pnpm --filter @cloudbox/api-client test:contract`: the generated TS client and `@cloudbox/crypto` against a freshly built `boxd` (live since M1) | Server matches `api/openapi.yaml`; an encrypted round trip works; no file the box writes holds plaintext, file names, the password or keys; logs hold no tokens or wrapped keys |
+| Integration | `box/internal/server/integration_test.go` (`-tags sim`) over real HTTPS | Full upload → verify → replicate → status, pairing and revoke, Trash and purge, storage full |
 | Fault injection | Sim API + `kill -9` | Disk full, backup drive unplugged, crash mid-upload, network drop, clock jump |
 | Web end-to-end | Playwright + `@axe-core/playwright` | Key journeys and WCAG 2.2 AA checks on every screen |
 | Phone end-to-end | Maestro on the Android emulator | Pairing, auto backup, safe delete, free up space |
@@ -45,5 +45,7 @@ Nothing moves to the next stage until its gate passes.
 
 ## CI
 
-GitHub Actions on every push: lint, unit, crypto vectors, contract, web E2E.
+GitHub Actions on every push: lint, Go unit and integration tests (with and
+without `-tags sim`), TS unit tests and crypto vectors, the contract test, and
+(from M2) web E2E.
 Nightly: arm64 suite and fault injection.

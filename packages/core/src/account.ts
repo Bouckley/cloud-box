@@ -27,6 +27,7 @@ import {
   type RecoveryKey,
 } from '@cloudbox/crypto';
 import { DeviceKeys } from './device.ts';
+import { Library } from './library.ts';
 import { ClientError } from './errors.ts';
 import type { Platform } from './platform.ts';
 import {
@@ -59,6 +60,8 @@ export type Unlocked = {
   deviceId: string;
   keys: Keys;
   api: AuthedClient;
+  /** The decrypted index; roots exist and the first sync is done. */
+  library: Library;
   changePassword(p: string): Promise<void>;
   devices(): Promise<DeviceView[]>;
   renameDevice(id: string, name: string): Promise<void>;
@@ -197,7 +200,9 @@ export class Box {
         await this.#device.save(rec);
         this.#token = null;
         await this.#requireLogin();
-        return this.#unlocked(userId, rec.deviceId, { master, identity, dedupe }, kdf);
+        const unlocked = this.#unlocked(userId, rec.deviceId, { master, identity, dedupe }, kdf);
+        await unlocked.library.ensureRoots();
+        return unlocked;
       },
     };
   }
@@ -327,12 +332,14 @@ export class Box {
       await unlocked.renameDevice(deviceId, rec.pendingName);
       await this.#device.setPendingName(undefined);
     }
+    await unlocked.library.ensureRoots();
     return unlocked;
   }
 
   #unlocked(userId: string, deviceId: string, keys: Keys, kdf: KdfParams): Unlocked {
     const api = this.#api;
     const platform = this.#platform;
+    const library = new Library(api, keys.master);
     let locked = false;
     const open = () => {
       if (locked) throw new Error('This account is locked. Unlock it again.');
@@ -342,6 +349,7 @@ export class Box {
       deviceId,
       keys,
       api,
+      library,
       async changePassword(p) {
         open();
         const salt = newSalt();
@@ -389,6 +397,7 @@ export class Box {
       },
       lock: () => {
         locked = true;
+        library.wipe();
         keys.master.fill(0);
         keys.identity.privateKey.fill(0);
         keys.dedupe.fill(0);

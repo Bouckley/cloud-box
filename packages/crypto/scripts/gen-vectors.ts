@@ -152,6 +152,25 @@ const dedupe = [utf8(''), utf8('abc'), new Uint8Array(1000).fill(0x61)].map((inp
   hash: dedupeHash(dedupeKey, input),
 }));
 
+// What the recovery signing key signs to reset a box (ADR 0005). `message` is
+// the UTF-8 text. Built inline here; Task 7 of M2 adds recoverMessage to
+// @cloudbox/crypto and checks it against these rows.
+const recover = [
+  { deviceId: ID, challenge: hex(seq(32, 64)), seed: seq(32, 30) },
+  { deviceId: 'ffeeddccbbaa99887766554433221100', challenge: hex(seq(32, 192)), seed: seq(32, 31) },
+].map(({ deviceId, challenge, seed }) => {
+  const kp = signingKeyPairFromSeed(seed);
+  const message = `cloudbox/v1/recover/${deviceId}/${challenge}`;
+  return {
+    deviceId,
+    challenge,
+    message,
+    seed: hex(seed),
+    publicKey: hex(kp.publicKey),
+    signature: hex(sign(kp.privateKey, utf8(message))),
+  };
+});
+
 const generated = {
   version: 1,
   note: 'Generated once by packages/crypto/scripts/gen-vectors.ts and committed. Binary values are lowercase hex. Do not edit by hand.',
@@ -164,6 +183,7 @@ const generated = {
   ad,
   authMessage: authMessageVectors,
   dedupe,
+  recover,
 };
 
 let vectors: Record<string, unknown> = generated;

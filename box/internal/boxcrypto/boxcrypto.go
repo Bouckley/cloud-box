@@ -30,3 +30,13 @@ func SHA256(data []byte) [32]byte {
 func AuthMessage(deviceID, challengeHex string) []byte {
 	return []byte("cloudbox/v1/auth/" + deviceID + "/" + challengeHex)
 }
+
+// RecoverMessage is the message the recovery signing key signs to reset a box
+// onto a new device (ADR 0005): UTF-8
+// "cloudbox/v1/recover/<deviceID>/<challengeHex>". The prefix keeps it apart
+// from AuthMessage, and the device id binds the signature to one device. It
+// must match recoverMessage in @cloudbox/crypto; testdata/crypto-vectors.json
+// checks both. Callers validate deviceID and challengeHex first.
+func RecoverMessage(deviceID, challengeHex string) []byte {
+	return []byte("cloudbox/v1/recover/" + deviceID + "/" + challengeHex)
+}

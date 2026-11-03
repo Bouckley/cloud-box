@@ -85,7 +85,12 @@ func (s *Service) Setup(ctx context.Context, u NewUser, d NewDevice) (Account, e
 	return Account{Role: RoleOwner, NewUser: u}, nil
 }
 
+// insertDevice adds d. An empty NameEnc is stored as an empty blob (the
+// column is NOT NULL) and read back as "not named yet".
 func insertDevice(ctx context.Context, tx *sql.Tx, userID string, d NewDevice, now int64) error {
+	if d.NameEnc == nil {
+		d.NameEnc = []byte{}
+	}
 	_, err := tx.ExecContext(ctx, `INSERT INTO devices (id, user_id, name_enc, sign_public_key,
 		created_at, last_seen) VALUES (?, ?, ?, ?, ?, ?)`,
 		d.ID, userID, d.NameEnc, d.SignPublicKey, now, now)

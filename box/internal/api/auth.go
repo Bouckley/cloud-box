@@ -81,6 +81,20 @@ func validateNewDevice(d auth.NewDevice) error {
 	)
 }
 
+// validatePairDevice is validateNewDevice with an optional name: a device
+// joining by pairing code or recovery reset has no master key yet.
+func validatePairDevice(d auth.NewDevice) error {
+	if !validID(d.ID) {
+		return errors.New("device.id must be 32 lowercase hex characters")
+	}
+	if d.NameEnc != nil {
+		if err := checkLen("device.nameEnc", d.NameEnc, minNameEncBytes, maxNameEncBytes); err != nil {
+			return err
+		}
+	}
+	return checkLen("device.signPublicKey", d.SignPublicKey, publicKeyBytes, publicKeyBytes)
+}
+
 func firstErr(errs ...error) error {
 	for _, err := range errs {
 		if err != nil {

@@ -24,6 +24,8 @@ type Service struct {
 	challenges     map[string]pendingChallenge // by challenge hex
 	challengeOrder []string                    // oldest first, for eviction
 	setupUntil     time.Time                   // setup is open before this time
+	recoveries     map[string]pendingRecovery  // by challenge hex
+	recoveryOrder  []string                    // oldest first, for eviction
 }
 
 // New returns the auth service.

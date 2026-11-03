@@ -14,17 +14,20 @@ import (
 type owner struct {
 	userID, deviceID, token string
 	key                     ed25519.PrivateKey
+	recovery                ed25519.PrivateKey // recovery signing key
 }
 
 // setUpOwner runs setup and logs in over HTTP.
 func (e *env) setUpOwner() owner {
 	e.t.Helper()
 	pub, priv, _ := ed25519.GenerateKey(rand.Reader)
+	rpub, rpriv, _ := ed25519.GenerateKey(rand.Reader)
 	body := setupBody(pub)
+	user(body)["recoveryPublicKey"] = []byte(rpub)
 	if rec := e.call(http.MethodPost, "/v1/setup", "", body); rec.Code != http.StatusCreated {
 		e.t.Fatalf("setup = %d %s", rec.Code, rec.Body)
 	}
-	o := owner{userID: user(body)["id"].(string), deviceID: device(body)["id"].(string), key: priv}
+	o := owner{userID: user(body)["id"].(string), deviceID: device(body)["id"].(string), key: priv, recovery: rpriv}
 	o.token = e.login(o.deviceID, priv)
 	return o
 }

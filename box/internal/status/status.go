@@ -160,6 +160,9 @@ func (s *Service) devices(ctx context.Context, userID string) ([]Device, error) 
 		if err := rows.Scan(&d.ID, &d.NameEnc, &last); err != nil {
 			return nil, err
 		}
+		if len(d.NameEnc) == 0 {
+			d.NameEnc = nil // paired without a name, not named yet
+		}
 		if last.Valid {
 			t := time.UnixMilli(last.Int64).UTC()
 			d.LastBackupAt = &t

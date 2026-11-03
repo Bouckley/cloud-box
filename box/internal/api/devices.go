@@ -33,7 +33,7 @@ func (h *handlers) pairDevice(w http.ResponseWriter, r *http.Request) {
 		badRequest(w, "code has the wrong format")
 		return
 	}
-	if err := validateNewDevice(req.Device); err != nil {
+	if err := validatePairDevice(req.Device); err != nil {
 		badRequest(w, err.Error())
 		return
 	}
@@ -65,4 +65,28 @@ func (h *handlers) revokeDevice(w http.ResponseWriter, r *http.Request, sess aut
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *handlers) renameDevice(w http.ResponseWriter, r *http.Request, sess auth.Session) {
+	id := r.PathValue("id")
+	if !validID(id) {
+		badRequest(w, "id must be 32 lowercase hex characters")
+		return
+	}
+	var req struct {
+		NameEnc []byte `json:"nameEnc"`
+	}
+	if !readJSON(w, r, &req) {
+		return
+	}
+	if err := checkLen("nameEnc", req.NameEnc, minNameEncBytes, maxNameEncBytes); err != nil {
+		badRequest(w, err.Error())
+		return
+	}
+	d, err := h.d.Auth.RenameDevice(r.Context(), sess.UserID, id, req.NameEnc)
+	if err != nil {
+		h.serviceError(w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, d)
 }

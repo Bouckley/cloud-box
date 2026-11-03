@@ -107,3 +107,41 @@ func TestVerifyWrongLengths(t *testing.T) {
 		t.Error("nil key and signature verified")
 	}
 }
+
+// recoverVectors mirrors the recover section of testdata/crypto-vectors.json
+// (ADR 0005): what the recovery signing key signs to reset a box.
+type recoverVectors struct {
+	Recover []struct {
+		DeviceID  string `json:"deviceId"`
+		Challenge string `json:"challenge"`
+		Message   string `json:"message"`
+		PublicKey string `json:"publicKey"`
+		Signature string `json:"signature"`
+	} `json:"recover"`
+}
+
+func TestRecoverVectors(t *testing.T) {
+	raw, err := os.ReadFile("../../../testdata/crypto-vectors.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var v recoverVectors
+	if err := json.Unmarshal(raw, &v); err != nil {
+		t.Fatal(err)
+	}
+	if len(v.Recover) == 0 {
+		t.Fatal("no recover vectors")
+	}
+	for i, row := range v.Recover {
+		msg := RecoverMessage(row.DeviceID, row.Challenge)
+		if string(msg) != row.Message {
+			t.Errorf("recover[%d] = %q, want %q", i, msg, row.Message)
+		}
+		if !VerifyEd25519(unhex(t, row.PublicKey), msg, unhex(t, row.Signature)) {
+			t.Errorf("recover[%d]: signature does not verify over the Go-built message", i)
+		}
+		if bytes.Equal(msg, AuthMessage(row.DeviceID, row.Challenge)) {
+			t.Errorf("recover[%d]: recover message equals the auth message", i)
+		}
+	}
+}

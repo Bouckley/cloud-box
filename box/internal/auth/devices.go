@@ -22,7 +22,8 @@ var (
 	ErrLastDevice = errors.New("cannot revoke the last active device")
 )
 
-// Device is a paired device as the API returns it.
+// Device is a paired device as the API returns it. NameEnc is nil until a
+// device paired without a name sets one (ADR 0005).
 type Device struct {
 	ID            string     `json:"id"`
 	NameEnc       []byte     `json:"nameEnc"`
@@ -49,7 +50,8 @@ func (s *Service) CreatePairingCode(ctx context.Context, sess Session) (string, 
 	return code, expires, nil
 }
 
-// Pair adds d to the user who created code. The code must be unused,
+// Pair adds d to the user who created code. d.NameEnc may be empty: a new
+// device has no master key yet and names itself after its first unlock. The code must be unused,
 // unexpired and from a device that is still active. A failed insert (for
 // example a reused device id) leaves the code unused.
 func (s *Service) Pair(ctx context.Context, code string, d NewDevice) (string, error) {
@@ -95,12 +97,7 @@ func (s *Service) Devices(ctx context.Context, userID string) ([]Device, error) 
 		if err := rows.Scan(&d.ID, &d.NameEnc, &d.SignPublicKey, &created, &lastSeen, &revoked); err != nil {
 			return nil, err
 		}
-		d.CreatedAt = time.UnixMilli(created).UTC()
-		d.LastSeen = time.UnixMilli(lastSeen).UTC()
-		if revoked.Valid {
-			t := time.UnixMilli(revoked.Int64).UTC()
-			d.RevokedAt = &t
-		}
+		fillDevice(&d, created, lastSeen, revoked)
 		devices = append(devices, d)
 	}
 	return devices, rows.Err()

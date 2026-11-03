@@ -3,6 +3,7 @@ package api
 import (
 	"errors"
 	"net/http"
+	"strings"
 
 	"github.com/Bouckley/cloud-box/box/internal/auth"
 	"github.com/Bouckley/cloud-box/box/internal/blobs"
@@ -17,6 +18,8 @@ func (h *handlers) serviceError(w http.ResponseWriter, r *http.Request, err erro
 	switch {
 	case errors.Is(err, auth.ErrUnauthorized):
 		unauthorized(w)
+	case errors.Is(err, auth.ErrInvalid):
+		badRequest(w, strings.TrimPrefix(err.Error(), auth.ErrInvalid.Error()+": "))
 	case errors.Is(err, store.ErrNotFound):
 		notFound(w, r)
 	case errors.Is(err, store.ErrIDTaken):

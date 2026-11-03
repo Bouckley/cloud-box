@@ -338,7 +338,7 @@ export interface paths {
     put?: never;
     /**
      * Create an item from completed uploads
-     * @description Errors: 400 `invalid_request` (missing original, unknown or foreign blob), 404 `not_found` (collection), 409 `id_taken`, 409 `blob_in_use`, 409 `already_stored` (same dedupe hash; `action` names the existing item).
+     * @description Errors: 400 `invalid_request` (missing original, unknown or foreign blob), 404 `not_found` (collection), 409 `id_taken`, 409 `blob_in_use`, 409 `already_stored` (same dedupe hash; `lookupItems` returns the existing item).
      */
     post: operations['createItem'];
     delete?: never;

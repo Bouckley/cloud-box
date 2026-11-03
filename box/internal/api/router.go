@@ -50,6 +50,7 @@ func NewRouter(d Deps) http.Handler {
 		mux.HandleFunc("GET /v1/uploads/{id}", h.requireSession(h.getUpload))
 		mux.HandleFunc("PUT /v1/uploads/{id}/parts/{n}", h.requireSession(h.putUploadPart))
 		mux.HandleFunc("POST /v1/uploads/{id}/complete", h.requireSession(h.completeUpload))
+		mux.HandleFunc("GET /v1/blobs/{id}", h.requireSession(h.getBlob))
 	}
 	return withLogging(logger, withRecover(logger, &jsonErrors{mux: mux}))
 }

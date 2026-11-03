@@ -8,6 +8,7 @@ import (
 	"github.com/Bouckley/cloud-box/box/internal/blobs"
 	"github.com/Bouckley/cloud-box/box/internal/library"
 	"github.com/Bouckley/cloud-box/box/internal/store"
+	"github.com/Bouckley/cloud-box/box/internal/trash"
 )
 
 // serviceError maps a service error to the JSON error shape. Unknown errors
@@ -72,6 +73,12 @@ func (h *handlers) serviceError(w http.ResponseWriter, r *http.Request, err erro
 		badRequest(w, "blobs must include an original, and each blob must be one of your completed uploads, used once.")
 	case errors.Is(err, library.ErrTooManyHashes):
 		badRequest(w, "send at most 1000 dedupeHashes")
+	case errors.Is(err, trash.ErrNotInTrash):
+		writeError(w, http.StatusConflict, apiError{
+			Code:    "not_in_trash",
+			Message: "Only items in Trash can be deleted for good.",
+			Action:  "Move it to Trash first.",
+		})
 	case errors.Is(err, auth.ErrLastDevice):
 		writeError(w, http.StatusConflict, apiError{
 			Code:    "last_device",

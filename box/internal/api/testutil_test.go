@@ -16,6 +16,7 @@ import (
 	"github.com/Bouckley/cloud-box/box/internal/hal/sim"
 	"github.com/Bouckley/cloud-box/box/internal/library"
 	"github.com/Bouckley/cloud-box/box/internal/store"
+	"github.com/Bouckley/cloud-box/box/internal/trash"
 )
 
 // env is a router over real services backed by a temp store and the simulator.
@@ -38,8 +39,9 @@ func newEnv(t *testing.T) *env {
 	t.Cleanup(func() { _ = db.Close() })
 	s := sim.New(dir)
 	clock := s.HAL().Clock
-	deps := Deps{Version: "test", Auth: auth.New(db, clock), Blobs: blobs.New(db, s.HAL()),
-		Library: library.New(db, clock)}
+	b := blobs.New(db, s.HAL())
+	deps := Deps{Version: "test", Auth: auth.New(db, clock), Blobs: b,
+		Library: library.New(db, clock), Trash: trash.New(db, s.HAL(), b)}
 	return &env{t: t, db: db, sim: s, dir: dir, deps: deps, router: NewRouter(deps)}
 }
 

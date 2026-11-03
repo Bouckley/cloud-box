@@ -121,3 +121,23 @@ func syncDir(dir string) error {
 func millis(t *time.Time, ms int64) {
 	*t = time.UnixMilli(ms).UTC()
 }
+
+// Remove deletes a blob's files on the main and backup drives. Missing files
+// and an unplugged backup drive are fine. The caller removes the rows.
+func (s *Service) Remove(ctx context.Context, blobID string) error {
+	var errs []error
+	for _, role := range []string{hal.RoleMain, hal.RoleBackup} {
+		d, err := s.hal.Drive(ctx, role)
+		if errors.Is(err, hal.ErrDriveMissing) {
+			continue
+		}
+		if err != nil {
+			errs = append(errs, err)
+			continue
+		}
+		if err := os.Remove(BlobPath(d.Path, blobID)); err != nil && !errors.Is(err, os.ErrNotExist) {
+			errs = append(errs, err)
+		}
+	}
+	return errors.Join(errs...)
+}

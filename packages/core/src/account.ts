@@ -342,7 +342,7 @@ export class Box {
     const library = new Library(api, keys);
     let locked = false;
     const open = () => {
-      if (locked) throw new Error('This account is locked. Unlock it again.');
+      if (locked) throw new ClientError('locked');
     };
     return {
       userId,

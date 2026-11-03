@@ -27,3 +27,12 @@ export function requireAd(ad: Uint8Array): void {
     throw new CryptoError('invalid_input');
   }
 }
+
+/**
+ * A key that encrypts must not be all zeros: a wiped key (zero-filled on
+ * lock) would otherwise produce ciphertext anyone can open.
+ */
+export function requireKey(key: Uint8Array, length: number): void {
+  requireLength(key, length);
+  if (lib().is_zero(key)) throw new CryptoError('invalid_input');
+}

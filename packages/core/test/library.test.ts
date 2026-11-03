@@ -1,9 +1,9 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { ready } from '@cloudbox/crypto';
 import { startBoxd, type RunningBox } from '@cloudbox/testbox';
-import { Box, BoxError, type Unlocked } from '../src/index.ts';
+import { Box, BoxError, noMedia, type Unlocked } from '../src/index.ts';
 import { nodePlatform } from '../src/testing.ts';
-import { createItem, meta, PASSWORD, setUpOwner } from './helpers.ts';
+import { createItem, hookedOwner, meta, PASSWORD, setUpOwner, type Hook } from './helpers.ts';
 
 let box: RunningBox;
 beforeAll(ready);
@@ -212,8 +212,9 @@ describe('library', () => {
     expect(item.collectionId).toBe(me.library.roots().photos);
   });
 
-  it("other user's ids are 404 → BoxError", async () => {
-    // A box has one user, so the other user lives on a second box.
+  it('ids the box does not know are 404 → BoxError', async () => {
+    // A box has one user, so the ids come from a second box. User scoping
+    // itself is covered by the Go tests.
     const { me } = await setUpOwner(box);
     const mine = await createItem(me, me.library.roots().photos, meta('a.jpg'));
     const otherBox = await startBoxd();
@@ -238,7 +239,75 @@ describe('library', () => {
     const { me } = await setUpOwner(box);
     const col = me.library.snapshot().collections.get(me.library.roots().photos)!;
     me.lock();
-    expect(col.key.every((b) => b === 0)).toBe(true);
+    expect(col.key!.every((b) => b === 0)).toBe(true);
     await expect(me.library.sync()).rejects.toThrow();
+  });
+
+  it('a sync that fails part-way loses nothing', async () => {
+    const hook: { fn: Hook | null } = { fn: null };
+    const { me } = await hookedOwner(box, hook);
+    const photos = me.library.roots().photos;
+    const ids = [
+      await createItem(me, photos, meta('a.jpg')),
+      await createItem(me, photos, meta('b.jpg')),
+      await createItem(me, photos, meta('c.jpg')),
+    ];
+    // Page 1 says there is more; fetching page 2 fails.
+    let pages = 0;
+    hook.fn = async (req) => {
+      const u = new URL(req.url);
+      if (req.method !== 'GET' || u.pathname !== '/v1/items') return undefined;
+      pages++;
+      if (pages === 1) {
+        const body = (await (await box.fetch(req)).json()) as { more: boolean };
+        return Response.json({ ...body, more: true });
+      }
+      throw new TypeError('network down');
+    };
+    await expect(me.library.sync()).rejects.toMatchObject({ code: 'box_unreachable' });
+    hook.fn = null;
+    await me.library.sync();
+    const snap = me.library.snapshot();
+    for (const id of ids) expect(snap.items.get(id)?.meta).not.toBeNull();
+    expect(snap.items.size).toBe(3);
+  });
+
+  it('an unreadable collection cannot be written to', async () => {
+    const hook: { fn: Hook | null } = { fn: null };
+    const { p, me } = await hookedOwner(box, hook);
+    const broken = await me.library.createCollection('album', 'Broken');
+    const item = await createItem(me, me.library.roots().photos, meta('a.jpg'));
+    // The box serves a key for "Broken" that does not unwrap.
+    const writes: string[] = [];
+    hook.fn = async (req) => {
+      const u = new URL(req.url);
+      if (req.method !== 'GET') writes.push(`${req.method} ${u.pathname}`);
+      if (req.method !== 'GET' || u.pathname !== '/v1/collections') return undefined;
+      const body = (await (await box.fetch(req)).json()) as {
+        collections: { id: string; keyEnc: string }[];
+      };
+      for (const c of body.collections) {
+        if (c.id === broken) {
+          c.keyEnc = Buffer.from(crypto.getRandomValues(new Uint8Array(72))).toString('base64');
+        }
+      }
+      return Response.json(body);
+    };
+    const again = await Box.connect(box.baseUrl, p).unlock(PASSWORD);
+    const view = again.library.snapshot().collections.get(broken)!;
+    expect(view.key).toBeNull();
+    expect(view.name).toBeNull();
+    writes.length = 0;
+    const src = {
+      name: 'x.jpg',
+      type: 'image/jpeg',
+      size: 3,
+      lastModified: 0,
+      slice: async () => new Uint8Array(3),
+    };
+    await expect(again.library.upload(src, broken, noMedia)).rejects.toThrow();
+    await expect(again.library.move([item], broken)).rejects.toThrow();
+    await expect(again.library.renameCollection(broken, 'Fixed')).rejects.toThrow();
+    expect(writes.filter((w) => !w.startsWith('POST /v1/auth/'))).toEqual([]);
   });
 });

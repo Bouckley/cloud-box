@@ -7,6 +7,30 @@ import { nodePlatform } from '../src/testing.ts';
 export const FAST_KDF = { opsLimit: 2, memLimitBytes: 67108864 };
 export const PASSWORD = 'correct horse battery staple';
 
+export type Hook = (req: Request) => Promise<Response | undefined>;
+
+/**
+ * Sets up an owner whose platform fetch runs hook.fn first: a Response from
+ * it replaces the box's, and a throw is a network failure.
+ */
+export async function hookedOwner(
+  box: RunningBox,
+  hook: { fn: Hook | null },
+): Promise<{ p: Platform; me: Unlocked }> {
+  const p = nodePlatform((async (input: RequestInfo | URL, init?: RequestInit) => {
+    const req = new Request(input, init);
+    const replaced = hook.fn ? await hook.fn(req.clone()) : undefined;
+    return replaced ?? box.fetch(req);
+  }) as typeof fetch);
+  await box.pressButton();
+  const prepared = await Box.connect(box.baseUrl, p).prepareSetup({
+    password: PASSWORD,
+    deviceName: 'Laptop',
+    kdf: FAST_KDF,
+  });
+  return { p, me: await prepared.commit() };
+}
+
 export async function setUpOwner(
   box: RunningBox,
 ): Promise<{ p: Platform; me: Unlocked; words: string[] }> {
@@ -53,7 +77,7 @@ export async function createItem(
   plaintext: Uint8Array = crypto.getRandomValues(new Uint8Array(3)),
 ): Promise<string> {
   const col = me.library.snapshot().collections.get(collectionId);
-  if (!col) throw new Error(`no collection ${collectionId}`);
+  if (!col?.key) throw new Error(`no collection ${collectionId}`);
   const id = newId();
   const fileKey = randomKey();
   const ciphertext = encryptFile(fileKey, plaintext, ad.itemBlob(id, 'original'));

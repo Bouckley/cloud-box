@@ -1,12 +1,15 @@
 import { CryptoError } from './errors.ts';
-import { lib, requireAd, requireLength } from './sodium.ts';
+import { lib, requireAd, requireKey, requireLength } from './sodium.ts';
 
 /** Plaintext bytes per secretstream chunk (ADR 0002). */
 export const FILE_CHUNK_BYTES = 4194304;
 
 const KEY_BYTES = 32;
-const HEADER_BYTES = 24;
-const CHUNK_OVERHEAD = 17;
+/** Bytes before the first chunk, and added to each chunk. */
+export const FILE_HEADER_BYTES = 24;
+export const FILE_CHUNK_OVERHEAD = 17;
+const HEADER_BYTES = FILE_HEADER_BYTES;
+const CHUNK_OVERHEAD = FILE_CHUNK_OVERHEAD;
 
 export type FileEncryptor = {
   header: Uint8Array;
@@ -26,7 +29,7 @@ export type FileDecryptor = {
  */
 export function createFileEncryptor(key: Uint8Array, ad: Uint8Array): FileEncryptor {
   const s = lib();
-  requireLength(key, KEY_BYTES);
+  requireKey(key, KEY_BYTES);
   requireAd(ad);
   const { state, header } = s.crypto_secretstream_xchacha20poly1305_init_push(key);
   let done = false;

@@ -4,8 +4,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { ready } from '@cloudbox/crypto';
 import { startBoxd, type RunningBox } from '@cloudbox/testbox';
 import { Box, noMedia, type MediaAdapter, type SourceFile } from '../src/index.ts';
-import { nodePlatform } from '../src/testing.ts';
-import { PASSWORD, setUpOwner } from './helpers.ts';
+import { hookedOwner, PASSWORD, setUpOwner, type Hook } from './helpers.ts';
 
 let box: RunningBox;
 beforeAll(ready);
@@ -34,31 +33,13 @@ function file(name: string, bytes: Uint8Array, type = 'image/jpeg'): SourceFile 
   };
 }
 
-type Hook = (req: Request) => Promise<Response | undefined>;
-
-/** Sets up an owner whose platform fetch runs hook.fn first (a Response replaces the box's). */
-async function hookedOwner(hook: { fn: Hook | null }) {
-  const p = nodePlatform((async (input: RequestInfo | URL, init?: RequestInit) => {
-    const req = new Request(input, init);
-    const replaced = hook.fn ? await hook.fn(req.clone()) : undefined;
-    return replaced ?? box.fetch(req);
-  }) as typeof fetch);
-  await box.pressButton();
-  const prepared = await Box.connect(box.baseUrl, p).prepareSetup({
-    password: PASSWORD,
-    deviceName: 'Laptop',
-    kdf: { opsLimit: 2, memLimitBytes: 67108864 },
-  });
-  return { p, me: await prepared.commit() };
-}
-
 const isPartPut = (req: Request) =>
   req.method === 'PUT' && /^\/v1\/uploads\/[^/]+\/parts\/\d+$/.test(new URL(req.url).pathname);
 
 describe('upload and download', () => {
   it('uploads a 9 MiB file and reads it back', async () => {
     const puts: string[] = [];
-    const { p, me } = await hookedOwner({
+    const { p, me } = await hookedOwner(box, {
       fn: async (req) => {
         if (isPartPut(req)) puts.push(new URL(req.url).pathname.split('/').pop()!);
         return undefined;
@@ -151,7 +132,7 @@ describe('upload and download', () => {
 
   it('an already aborted signal sends nothing', async () => {
     const sent: string[] = [];
-    const { me } = await hookedOwner({
+    const { me } = await hookedOwner(box, {
       fn: async (req) => {
         if (new URL(req.url).pathname.startsWith('/v1/uploads')) sent.push(req.url);
         return undefined;
@@ -170,7 +151,7 @@ describe('upload and download', () => {
   it('retries a failed part', async () => {
     let failed = 0;
     const hook: { fn: Hook | null } = { fn: null };
-    const { me } = await hookedOwner(hook);
+    const { me } = await hookedOwner(box, hook);
     hook.fn = async (req) => {
       if (isPartPut(req) && new URL(req.url).pathname.endsWith('/parts/1') && failed === 0) {
         failed++;
@@ -193,7 +174,7 @@ describe('upload and download', () => {
 
   it('gives up after three retries', async () => {
     const hook: { fn: Hook | null } = { fn: null };
-    const { me } = await hookedOwner(hook);
+    const { me } = await hookedOwner(box, hook);
     hook.fn = async (req) => (isPartPut(req) ? new Response('{}', { status: 503 }) : undefined);
     const delays: number[] = [];
     await expect(
@@ -209,7 +190,7 @@ describe('upload and download', () => {
 
   it('does not retry a refused part', async () => {
     const hook: { fn: Hook | null } = { fn: null };
-    const { me } = await hookedOwner(hook);
+    const { me } = await hookedOwner(box, hook);
     hook.fn = async (req) =>
       isPartPut(req)
         ? Response.json(
@@ -302,6 +283,102 @@ describe('upload and download', () => {
     await expect(me.library.readBlob(item, 'original', ac.signal)).rejects.toMatchObject({
       name: 'AbortError',
     });
+  });
+
+  it('lock during an upload sends no item', async () => {
+    const sent: string[] = [];
+    const hook: { fn: Hook | null } = { fn: null };
+    const { me } = await hookedOwner(box, hook);
+    hook.fn = async (req) => {
+      const path = new URL(req.url).pathname;
+      sent.push(`${req.method} ${path}`);
+      if (isPartPut(req) && path.endsWith('/parts/0')) me.lock();
+      return undefined;
+    };
+    await expect(
+      me.library.upload(file('secret.jpg', random(9 * MiB)), me.library.roots().photos, noMedia),
+    ).rejects.toMatchObject({ code: 'locked' });
+    expect(sent.filter((s) => s === 'POST /v1/items')).toEqual([]);
+    expect(sent.filter((s) => s.endsWith('/parts/1'))).toEqual([]);
+  });
+
+  it('dates outside years 0–9999 are stored as unknown', async () => {
+    const { me } = await setUpOwner(box);
+    const media: MediaAdapter = {
+      describe: async () => ({
+        takenAt: new Date(Date.UTC(-1, 0, 1)),
+        width: 1.5,
+        height: -3,
+        durationMs: null,
+      }),
+    };
+    const f = { ...file('odd.jpg', random(10)), lastModified: Date.UTC(10000, 0, 1) };
+    const r = await me.library.upload(f, me.library.roots().photos, media);
+    const item = me.library.snapshot().items.get(r.itemId)!;
+    expect(item.meta).toMatchObject({ modifiedAt: null, takenAt: null, width: null, height: null });
+  });
+
+  it('a full box is not retried', async () => {
+    const hook: { fn: Hook | null } = { fn: null };
+    const { me } = await hookedOwner(box, hook);
+    hook.fn = async (req) =>
+      isPartPut(req)
+        ? Response.json(
+            { code: 'storage_full', message: 'Full.', action: 'Free up space.' },
+            { status: 507 },
+          )
+        : undefined;
+    const delays: number[] = [];
+    await expect(
+      me.library.upload(file('a.jpg', random(100)), me.library.roots().photos, noMedia, {
+        sleep: async (ms) => {
+          delays.push(ms);
+        },
+      }),
+    ).rejects.toMatchObject({ status: 507, code: 'storage_full' });
+    expect(delays).toEqual([]);
+  });
+
+  it('streams a download in chunks', async () => {
+    const { me } = await setUpOwner(box);
+    const bytes = random(9 * MiB + 7);
+    const r = await me.library.upload(
+      file('big.bin', bytes, 'application/octet-stream'),
+      me.library.roots().files,
+      noMedia,
+    );
+    const item = me.library.snapshot().items.get(r.itemId)!;
+    const parts: Uint8Array[] = [];
+    const reader = me.library.readBlobStream(item, 'original').getReader();
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      parts.push(value);
+    }
+    expect(parts.length).toBe(3); // 4 MiB + 4 MiB + 1 MiB
+    expect(Buffer.compare(Buffer.concat(parts), Buffer.from(bytes))).toBe(0);
+  });
+
+  it('a streamed download of the wrong role fails', async () => {
+    const { me } = await setUpOwner(box);
+    const media: MediaAdapter = {
+      describe: async () => ({
+        takenAt: null,
+        width: null,
+        height: null,
+        durationMs: null,
+        thumb: { bytes: random(100), mime: 'image/webp' },
+      }),
+    };
+    const r = await me.library.upload(file('a.jpg', random(100)), me.library.roots().photos, media);
+    const item = me.library.snapshot().items.get(r.itemId)!;
+    const swapped = { ...item, blobs: { ...item.blobs, original: item.blobs.thumb! } };
+    const reader = me.library.readBlobStream(swapped, 'original').getReader();
+    await expect(
+      (async () => {
+        for (;;) if ((await reader.read()).done) return;
+      })(),
+    ).rejects.toThrow();
   });
 
   it('empty file uploads', async () => {

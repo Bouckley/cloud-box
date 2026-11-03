@@ -1,6 +1,8 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import {
   aeadDecrypt,
+  createFileEncryptor,
+  encryptFile,
   aeadEncrypt,
   decryptMetadata,
   encryptMetadata,
@@ -81,6 +83,23 @@ describe('encryptMetadata / decryptMetadata', () => {
     const key = randomKey();
     const value = { name: 'IMG_0001.jpg', takenAt: '2024-05-01T10:00:00Z' };
     expect(decryptMetadata(key, encryptMetadata(key, value, ad), ad)).toEqual(value);
+  });
+});
+
+describe('an all-zero key is refused for encryption', () => {
+  // A wiped (zero-filled) key must never encrypt: anyone could decrypt the result.
+  it('in every encrypting function', () => {
+    const zero = new Uint8Array(32);
+    for (const call of [
+      () => aeadEncrypt(zero, enc.encode('x'), ad),
+      () => wrapKey(zero, randomKey(), ad),
+      () => wrapKey(randomKey(), zero, ad),
+      () => encryptMetadata(zero, { a: 1 }, ad),
+      () => createFileEncryptor(zero, ad),
+      () => encryptFile(zero, enc.encode('x'), ad),
+    ]) {
+      expect(call).toThrow(failsWith('invalid_input'));
+    }
   });
 });
 

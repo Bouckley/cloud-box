@@ -1,5 +1,5 @@
 import { CryptoError } from './errors.ts';
-import { lib, requireAd, requireLength } from './sodium.ts';
+import { lib, requireAd, requireKey, requireLength } from './sodium.ts';
 
 const KEY_BYTES = 32;
 const NONCE_BYTES = 24;
@@ -22,7 +22,7 @@ export function aeadEncryptWithNonce(
   ad: Uint8Array,
 ): Uint8Array {
   const s = lib();
-  requireLength(key, KEY_BYTES);
+  requireKey(key, KEY_BYTES);
   requireLength(nonce, NONCE_BYTES);
   requireAd(ad);
   const ct = s.crypto_aead_xchacha20poly1305_ietf_encrypt(plaintext, ad, null, nonce, key);
@@ -51,7 +51,7 @@ export function aeadDecrypt(key: Uint8Array, box: Uint8Array, ad: Uint8Array): U
 }
 
 export function wrapKey(kek: Uint8Array, key: Uint8Array, ad: Uint8Array): Uint8Array {
-  requireLength(key, KEY_BYTES);
+  requireKey(key, KEY_BYTES);
   return aeadEncrypt(kek, key, ad);
 }
 

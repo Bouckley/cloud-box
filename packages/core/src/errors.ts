@@ -7,7 +7,11 @@ export type ClientErrorCode =
   | 'not_paired'
   | 'revoked'
   | 'box_unreachable'
-  | 'kdf_limits';
+  | 'kdf_limits'
+  | 'locked'
+  | 'not_found'
+  | 'unreadable'
+  | 'file_changed';
 
 const MESSAGES: Record<ClientErrorCode, string> = {
   wrong_password: 'That password is not right.',
@@ -17,6 +21,10 @@ const MESSAGES: Record<ClientErrorCode, string> = {
   revoked: 'This device was removed from the box.',
   box_unreachable: 'Cannot reach the box.',
   kdf_limits: 'The box asked for password settings outside the safe range.',
+  locked: 'This account is locked. Unlock it again.',
+  not_found: 'That item or collection is not in this library.',
+  unreadable: 'That album or folder cannot be read on this device.',
+  file_changed: 'The file changed while it was being uploaded. Try again.',
 };
 
 /**

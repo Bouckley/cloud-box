@@ -17,6 +17,8 @@ export {
   decryptFile,
   encryptFile,
   FILE_CHUNK_BYTES,
+  FILE_CHUNK_OVERHEAD,
+  FILE_HEADER_BYTES,
   type FileDecryptor,
   type FileEncryptor,
 } from './stream.ts';

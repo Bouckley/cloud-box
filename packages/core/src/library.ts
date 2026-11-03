@@ -1,13 +1,19 @@
 import type { components } from '@cloudbox/api-client';
 import {
   ad,
+  createFileDecryptor,
+  CryptoError,
   decryptFile,
+  FILE_CHUNK_BYTES,
+  FILE_CHUNK_OVERHEAD,
+  FILE_HEADER_BYTES,
   newId,
   randomKey,
   unwrapKey,
   wrapKey,
   type BlobRole,
 } from '@cloudbox/crypto';
+import { BoxError, ClientError } from './errors.ts';
 import { decodeMeta, decodeName, encodeMeta, encodeName, type ItemMeta } from './meta.ts';
 import { b64, fromB64, must, type AuthedClient } from './transport.ts';
 import {
@@ -31,7 +37,8 @@ export type CollectionView = {
   name: string | null;
   role: 'photos' | 'files' | null;
   deletedAt: Date | null;
-  key: Uint8Array;
+  /** Null when the key cannot be unwrapped: shown as unreadable, never written to. */
+  key: Uint8Array | null;
 };
 
 export type ItemView = {
@@ -139,13 +146,13 @@ export class Library {
 
   async renameCollection(id: string, name: string): Promise<void> {
     this.#open();
-    const col = this.#snapshot.collections.get(id);
-    if (!col) throw notFound();
+    const key = this.#writableKey(id);
+    const role = this.#snapshot.collections.get(id)!.role;
     try {
       must(
         await this.#api.PATCH('/v1/collections/{id}', {
           params: { path: { id } },
-          body: { nameEnc: b64(encodeName(col.key, id, { v: 1, name, role: col.role })) },
+          body: { nameEnc: b64(encodeName(key, id, { v: 1, name, role })) },
         }),
       );
     } finally {
@@ -159,9 +166,21 @@ export class Library {
    */
   async deleteCollection(id: string, items: 'keep' | 'trash'): Promise<void> {
     this.#open();
+    await this.sync();
     const col = this.#snapshot.collections.get(id);
-    if (!col) throw notFound();
+    if (!col) throw new ClientError('not_found');
     if (col.role !== null) throw new Error('Photos and Files cannot be deleted.');
+    // The box refuses a collection with folders still in it; say so before
+    // moving anything, so the action is not left half done.
+    for (const c of this.#snapshot.collections.values()) {
+      if (c.parentId === id && c.deletedAt === null) {
+        throw new BoxError(409, {
+          code: 'collection_not_empty',
+          message: 'This folder still has folders in it.',
+          action: 'Move or delete those folders first.',
+        });
+      }
+    }
     const inside = [...this.#snapshot.items.values()]
       .filter((i) => i.collectionId === id && i.trashedAt === null)
       .map((i) => i.id);
@@ -201,17 +220,17 @@ export class Library {
   /** Moves items into another collection, re-wrapping each file key for it. */
   async move(ids: string[], collectionId: string): Promise<void> {
     this.#open();
-    const target = this.#snapshot.collections.get(collectionId);
-    if (!target) throw notFound();
+    const targetKey = this.#writableKey(collectionId);
     await this.#each(ids, async (id) => {
       const fileKey = this.#fileKeys.get(id);
-      if (!fileKey) throw notFound();
+      if (!fileKey) throw new ClientError('not_found');
+      this.#open();
       must(
         await this.#api.PATCH('/v1/items/{id}', {
           params: { path: { id } },
           body: {
             collectionId,
-            fileKeyEnc: b64(wrapKey(target.key, fileKey, ad.itemFileKey(id))),
+            fileKeyEnc: b64(wrapKey(targetKey, fileKey, ad.itemFileKey(id))),
           },
         }),
       );
@@ -222,7 +241,7 @@ export class Library {
     this.#open();
     const item = this.#snapshot.items.get(id);
     const fileKey = this.#fileKeys.get(id);
-    if (!item?.meta || !fileKey) throw notFound();
+    if (!item?.meta || !fileKey) throw new ClientError('not_found');
     const m: ItemMeta = { ...item.meta, favourite: on };
     try {
       must(
@@ -253,7 +272,7 @@ export class Library {
     this.#open();
     const blob = item.blobs[role];
     const fileKey = this.#fileKeys.get(item.id);
-    if (!blob || !fileKey) throw notFound();
+    if (!blob || !fileKey) throw new ClientError('not_found');
     signal?.throwIfAborted();
     const res = await this.#api.GET('/v1/blobs/{id}', {
       params: { path: { id: blob.id } },
@@ -263,6 +282,74 @@ export class Library {
     const bytes = new Uint8Array(must(res) as unknown as ArrayBuffer);
     signal?.throwIfAborted();
     return decryptFile(fileKey, bytes, ad.itemBlob(item.id, role));
+  }
+
+  /**
+   * Downloads and decrypts a blob as a stream of plaintext chunks (4 MiB
+   * each), for files too big to hold in memory. The stream errors if the
+   * blob is cut short, has extra bytes, or fails to decrypt.
+   */
+  readBlobStream(item: ItemView, role: BlobRole, signal?: AbortSignal): ReadableStream<Uint8Array> {
+    this.#open();
+    const blob = item.blobs[role];
+    const fileKey = this.#fileKeys.get(item.id);
+    if (!blob || !fileKey) throw new ClientError('not_found');
+    const key = fileKey.slice();
+    const aad = ad.itemBlob(item.id, role);
+    const api = this.#api;
+    const queue = new ByteQueue();
+    let reader: ReadableStreamDefaultReader<Uint8Array> | null = null;
+    let dec: ReturnType<typeof createFileDecryptor> | null = null;
+    const fill = async (n: number) => {
+      while (queue.length < n) {
+        const { done, value } = await reader!.read();
+        if (done) return;
+        queue.push(value);
+      }
+    };
+    const stop = () => {
+      key.fill(0);
+      void reader?.cancel().catch(() => {});
+    };
+    return new ReadableStream<Uint8Array>({
+      async pull(controller) {
+        try {
+          signal?.throwIfAborted();
+          if (!reader) {
+            const res = await api.GET('/v1/blobs/{id}', {
+              params: { path: { id: blob.id } },
+              parseAs: 'stream',
+              ...(signal ? { signal } : {}),
+            });
+            reader = (must(res) as unknown as ReadableStream<Uint8Array>).getReader();
+            await fill(FILE_HEADER_BYTES);
+            if (queue.length < FILE_HEADER_BYTES) throw new CryptoError('decrypt_failed');
+            dec = createFileDecryptor(key, queue.take(FILE_HEADER_BYTES), aad);
+          }
+          await fill(FILE_CHUNK_BYTES + FILE_CHUNK_OVERHEAD);
+          if (queue.length < FILE_CHUNK_OVERHEAD) throw new CryptoError('decrypt_failed');
+          const frame = queue.take(Math.min(queue.length, FILE_CHUNK_BYTES + FILE_CHUNK_OVERHEAD));
+          const { plaintext, last } = dec!.pull(frame);
+          if (last) {
+            // Nothing may follow the final chunk.
+            await fill(1);
+            if (queue.length > 0) throw new CryptoError('decrypt_failed');
+            dec!.finish();
+            if (plaintext.length > 0) controller.enqueue(plaintext);
+            key.fill(0);
+            controller.close();
+            return;
+          }
+          controller.enqueue(plaintext);
+        } catch (e) {
+          stop();
+          throw e;
+        }
+      },
+      cancel() {
+        stop();
+      },
+    });
   }
 
   /**
@@ -276,22 +363,32 @@ export class Library {
     o?: UploadOptions,
   ): Promise<UploadResult> {
     this.#open();
-    const col = this.#snapshot.collections.get(collectionId);
-    if (!col || col.deletedAt) throw notFound();
-    const r = await uploadFile(
-      { api: this.#api, dedupeKey: this.#dedupe, collectionKey: col.key, collectionId },
-      f,
-      media,
-      o,
-    );
-    if (r.kind === 'uploaded') await this.sync();
-    return r;
+    if (this.#snapshot.collections.get(collectionId)?.deletedAt) {
+      throw new ClientError('not_found');
+    }
+    // Copies: lock() zero-fills the library's keys, and an upload must never
+    // go on encrypting with a wiped key. It also checks alive() before each step.
+    const collectionKey = this.#writableKey(collectionId).slice();
+    const dedupeKey = this.#dedupe.slice();
+    try {
+      const r = await uploadFile(
+        { api: this.#api, dedupeKey, collectionKey, collectionId, alive: () => this.#open() },
+        f,
+        media,
+        o,
+      );
+      if (r.kind === 'uploaded') await this.sync();
+      return r;
+    } finally {
+      collectionKey.fill(0);
+      dedupeKey.fill(0);
+    }
   }
 
   /** Wipes every key this library holds. Called by Unlocked.lock(). */
   wipe(): void {
     this.#locked = true;
-    for (const c of this.#snapshot.collections.values()) c.key.fill(0);
+    for (const c of this.#snapshot.collections.values()) c.key?.fill(0);
     for (const k of this.#fileKeys.values()) k.fill(0);
     this.#fileKeys.clear();
     this.#raw.clear();
@@ -300,7 +397,16 @@ export class Library {
   }
 
   #open(): void {
-    if (this.#locked) throw new Error('This account is locked. Unlock it again.');
+    if (this.#locked) throw new ClientError('locked');
+  }
+
+  /** The key of a collection that may be written to: known and readable. */
+  #writableKey(id: string): Uint8Array {
+    this.#open();
+    const col = this.#snapshot.collections.get(id);
+    if (!col) throw new ClientError('not_found');
+    if (!col.key) throw new ClientError('unreadable');
+    return col.key;
   }
 
   /** Runs fn for each id in order, then syncs even if one failed. */
@@ -347,35 +453,52 @@ export class Library {
     return null;
   }
 
+  /**
+   * One round: list collections, then page through item changes. Nothing is
+   * kept until the last page arrives, so a round that fails part-way is
+   * repeated in full next time instead of skipping what it missed.
+   */
   async #syncOnce(): Promise<void> {
     const before = this.#snapshot;
     const { collections: list } = must(await this.#api.GET('/v1/collections'));
-    const collections = this.#collections(before.collections, list);
+    this.#open();
+    const { next: collections, created, dropped } = this.#collections(before.collections, list);
 
+    let cursor = this.#cursor;
+    const changes = new Map<string, ApiItem | null>();
+    try {
+      let more = true;
+      while (more) {
+        const page = must(
+          await this.#api.GET('/v1/items', {
+            params: { query: { since: cursor, limit: SYNC_PAGE } },
+          }),
+        );
+        for (const it of page.items) changes.set(it.id, it);
+        for (const id of page.purged) changes.set(id, null);
+        cursor = page.cursor;
+        more = page.more;
+      }
+      this.#open();
+    } catch (e) {
+      for (const c of created) c.key?.fill(0);
+      throw e;
+    }
+
+    // Commit the round.
+    this.#cursor = cursor;
+    for (const c of dropped) c.key?.fill(0);
     const dirty = new Set<string>();
     const purged = new Set<string>();
-    let more = true;
-    while (more) {
-      const page = must(
-        await this.#api.GET('/v1/items', {
-          params: { query: { since: this.#cursor, limit: SYNC_PAGE } },
-        }),
-      );
-      for (const it of page.items) {
-        this.#raw.set(it.id, it);
-        dirty.add(it.id);
-        purged.delete(it.id);
-      }
-      for (const id of page.purged) {
+    for (const [id, it] of changes) {
+      if (it) {
+        this.#raw.set(id, it);
+        dirty.add(id);
+      } else {
         this.#raw.delete(id);
-        dirty.delete(id);
         purged.add(id);
       }
-      this.#cursor = page.cursor;
-      more = page.more;
     }
-    this.#open();
-
     // Rows whose key could not be found last time (their collection was not
     // listed yet) are tried again.
     if (collections !== before.collections) {
@@ -405,8 +528,15 @@ export class Library {
   #collections(
     prev: ReadonlyMap<string, CollectionView>,
     list: ApiCollection[],
-  ): ReadonlyMap<string, CollectionView> {
+  ): {
+    next: ReadonlyMap<string, CollectionView>;
+    /** Views with keys unwrapped in this round. */
+    created: CollectionView[];
+    /** Views no longer listed, whose keys go once the round commits. */
+    dropped: CollectionView[];
+  } {
     const next = new Map<string, CollectionView>();
+    const created: CollectionView[] = [];
     let same = prev.size === list.length;
     for (const c of list) {
       const old = prev.get(c.id);
@@ -414,12 +544,13 @@ export class Library {
       const view = old
         ? this.#updatedCollection(old, c, deletedAt)
         : this.#collectionView(c, deletedAt);
+      if (!old) created.push(view);
       if (view !== old) same = false;
       next.set(c.id, view);
     }
-    if (same) return prev;
-    for (const [id, old] of prev) if (!next.has(id)) old.key.fill(0);
-    return next;
+    if (same) return { next: prev, created: [], dropped: [] };
+    const dropped = [...prev.values()].filter((old) => !next.has(old.id));
+    return { next, created, dropped };
   }
 
   #collectionView(c: ApiCollection, deletedAt: Date | null): CollectionView {
@@ -427,7 +558,6 @@ export class Library {
     try {
       key = unwrapKey(this.#master, fromB64(c.keyEnc), ad.collectionKey(c.id));
     } catch {
-      key = new Uint8Array(32);
       return {
         id: c.id,
         kind: c.kind,
@@ -435,7 +565,7 @@ export class Library {
         name: null,
         role: null,
         deletedAt,
-        key,
+        key: null,
       };
     }
     const n = decodeName(key, c.id, fromB64(c.nameEnc));
@@ -456,7 +586,7 @@ export class Library {
     c: ApiCollection,
     deletedAt: Date | null,
   ): CollectionView {
-    const n = decodeName(old.key, c.id, fromB64(c.nameEnc));
+    const n = old.key ? decodeName(old.key, c.id, fromB64(c.nameEnc)) : null;
     const name = n?.name ?? null;
     const role = n?.role ?? null;
     if (
@@ -474,7 +604,7 @@ export class Library {
     const col = collections.get(raw.collectionId);
     let meta: ItemMeta | null = null;
     this.#dropKey(raw.id);
-    if (col) {
+    if (col?.key) {
       try {
         const fileKey = unwrapKey(col.key, fromB64(raw.fileKeyEnc), ad.itemFileKey(raw.id));
         this.#fileKeys.set(raw.id, fileKey);
@@ -501,6 +631,34 @@ export class Library {
   }
 }
 
-function notFound(): Error {
-  return new Error('That item or collection is not in this library.');
+/** Bytes from a stream, taken back out in exact-sized pieces. */
+class ByteQueue {
+  #chunks: Uint8Array[] = [];
+  #length = 0;
+
+  get length(): number {
+    return this.#length;
+  }
+
+  push(b: Uint8Array): void {
+    if (b.length === 0) return;
+    this.#chunks.push(b);
+    this.#length += b.length;
+  }
+
+  /** Removes and returns exactly n bytes; n must be at most length. */
+  take(n: number): Uint8Array {
+    const out = new Uint8Array(n);
+    let at = 0;
+    while (at < n) {
+      const head = this.#chunks[0]!;
+      const use = Math.min(head.length, n - at);
+      out.set(head.subarray(0, use), at);
+      at += use;
+      if (use === head.length) this.#chunks.shift();
+      else this.#chunks[0] = head.subarray(use);
+    }
+    this.#length -= n;
+    return out;
+  }
 }

@@ -12,7 +12,7 @@ import {
   type BlobRole,
 } from '@cloudbox/crypto';
 import { BoxError, ClientError } from './errors.ts';
-import { encodeMeta, type ItemMeta } from './meta.ts';
+import { encodeMeta, parseMeta, type ItemMeta } from './meta.ts';
 import { b64, must, type AuthedClient } from './transport.ts';
 
 /** A file to upload. The web wraps a File; tests wrap bytes. */
@@ -57,7 +57,12 @@ export type UploadContext = {
   dedupeKey: Uint8Array;
   collectionKey: Uint8Array;
   collectionId: string;
+  /** Throws when the account was locked; checked before every step. */
+  alive(): void;
 };
+
+/** What every step checks before it starts. */
+type Step = { signal?: AbortSignal | undefined; alive?: () => void };
 
 /** Waits before retry 1, 2 and 3 of a part (ADR 0005). */
 export const RETRY_DELAYS_MS = [1000, 4000, 10000] as const;
@@ -65,18 +70,20 @@ export const RETRY_DELAYS_MS = [1000, 4000, 10000] as const;
 const hex = (b: Uint8Array) => Array.from(b, (x) => x.toString(16).padStart(2, '0')).join('');
 const realSleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
-function checkAbort(signal: AbortSignal | undefined): void {
-  if (signal?.aborted) throw new DOMException('The upload was stopped.', 'AbortError');
+function checkAbort(step: Step): void {
+  step.alive?.();
+  if (step.signal?.aborted) throw new DOMException('The upload was stopped.', 'AbortError');
 }
 
 /** Network failures and server-side errors are worth another try; refusals are not. */
 function retryable(e: unknown): boolean {
   if (e instanceof ClientError) return e.code === 'box_unreachable';
-  if (e instanceof BoxError) return e.status >= 500 || e.status === 408 || e.status === 429;
+  // Not 507 storage_full: waiting will not free space.
+  if (e instanceof BoxError) return [408, 429, 500, 502, 503, 504].includes(e.status);
   return false;
 }
 
-async function withRetry<T>(fn: () => Promise<T>, o: UploadOptions): Promise<T> {
+async function withRetry<T>(fn: () => Promise<T>, o: UploadOptions & Step): Promise<T> {
   const sleep = o.sleep ?? realSleep;
   for (let attempt = 0; ; attempt++) {
     try {
@@ -84,7 +91,7 @@ async function withRetry<T>(fn: () => Promise<T>, o: UploadOptions): Promise<T> 
     } catch (e) {
       if (attempt >= RETRY_DELAYS_MS.length || !retryable(e)) throw e;
       await sleep(RETRY_DELAYS_MS[attempt]!);
-      checkAbort(o.signal);
+      checkAbort(o);
     }
   }
 }
@@ -92,14 +99,14 @@ async function withRetry<T>(fn: () => Promise<T>, o: UploadOptions): Promise<T> 
 /** Reads the file in chunks, checking each chunk is the length the file said. */
 async function* chunks(
   f: SourceFile,
-  signal?: AbortSignal,
+  step: Step,
 ): AsyncGenerator<{
   bytes: Uint8Array;
   last: boolean;
 }> {
   let off = 0;
   do {
-    checkAbort(signal);
+    checkAbort(step);
     const end = Math.min(f.size, off + FILE_CHUNK_BYTES);
     const bytes = await f.slice(off, end);
     if (bytes.length !== end - off) throw changed();
@@ -108,8 +115,8 @@ async function* chunks(
   } while (off < f.size);
 }
 
-function changed(): Error {
-  return new Error('The file changed while it was being uploaded. Try again.');
+function changed(): ClientError {
+  return new ClientError('file_changed');
 }
 
 /** One encrypted blob going up in fixed-size parts, hashed as it goes. */
@@ -141,7 +148,7 @@ class BlobUpload {
   }
 
   static async start(api: AuthedClient, o: UploadOptions, size: number): Promise<BlobUpload> {
-    checkAbort(o.signal);
+    checkAbort(o);
     const up = await withRetry(
       async () => must(await api.POST('/v1/uploads', { body: { size } })),
       o,
@@ -170,7 +177,7 @@ class BlobUpload {
   }
 
   async #flush(): Promise<void> {
-    checkAbort(this.#o.signal);
+    checkAbort(this.#o);
     const body = this.#buf;
     const n = this.#part;
     await withRetry(
@@ -195,7 +202,7 @@ class BlobUpload {
   /** Sends the hash of everything written; returns the blob id. */
   async complete(): Promise<string> {
     if (this.#sent !== this.#size || this.#fill !== 0) throw changed();
-    checkAbort(this.#o.signal);
+    checkAbort(this.#o);
     const digest = hex(this.#hash.digest());
     const blob = await withRetry(
       async () =>
@@ -212,9 +219,9 @@ class BlobUpload {
 }
 
 /** The keyed hash of the file's plaintext, read once before anything is uploaded. */
-async function dedupePass(f: SourceFile, key: Uint8Array, signal?: AbortSignal): Promise<string> {
+async function dedupePass(f: SourceFile, key: Uint8Array, step: Step): Promise<string> {
   const h = createDedupeHasher(key);
-  for await (const c of chunks(f, signal)) h.update(c.bytes);
+  for await (const c of chunks(f, step)) h.update(c.bytes);
   return h.digest();
 }
 
@@ -242,8 +249,12 @@ async function describe(media: MediaAdapter, f: SourceFile): Promise<MediaInfo> 
 
 const count = (v: number | null | undefined) =>
   typeof v === 'number' && Number.isSafeInteger(v) && v >= 0 ? v : null;
-const time = (d: Date | null | undefined) =>
-  d instanceof Date && !Number.isNaN(d.getTime()) ? d.toISOString() : null;
+/** RFC 3339 only covers years 0000–9999; anything else is unknown. */
+const time = (d: Date | null | undefined) => {
+  if (!(d instanceof Date) || Number.isNaN(d.getTime())) return null;
+  const y = d.getUTCFullYear();
+  return y >= 0 && y <= 9999 ? d.toISOString() : null;
+};
 
 async function smallBlob(
   api: AuthedClient,
@@ -268,14 +279,15 @@ export async function uploadFile(
   ctx: UploadContext,
   f: SourceFile,
   media: MediaAdapter,
-  o: UploadOptions = {},
+  options: UploadOptions = {},
 ): Promise<UploadResult> {
   const { api } = ctx;
-  checkAbort(o.signal);
+  const o: UploadOptions & Step = { ...options, alive: ctx.alive };
+  checkAbort(o);
   if (!Number.isSafeInteger(f.size) || f.size < 0) throw changed();
 
-  const dedupeHash = await dedupePass(f, ctx.dedupeKey, o.signal);
-  checkAbort(o.signal);
+  const dedupeHash = await dedupePass(f, ctx.dedupeKey, o);
+  checkAbort(o);
   const dup = await lookup(api, dedupeHash, o);
   if (dup) return dup;
 
@@ -291,7 +303,7 @@ export async function uploadFile(
     const up = await BlobUpload.start(api, o, total);
     const progress = () => o.onProgress?.(up.sent, total);
     await up.write(enc.header, progress);
-    for await (const c of chunks(f, o.signal)) {
+    for await (const c of chunks(f, o)) {
       again.update(c.bytes);
       await up.write(enc.push(c.bytes, c.last), progress);
     }
@@ -320,30 +332,31 @@ export async function uploadFile(
       thumbMime: blobs.thumb ? info.thumb!.mime : null,
       previewMime: blobs.preview ? info.preview!.mime : null,
     };
-    checkAbort(o.signal);
-    const res = await withRetry(
-      () =>
-        api
-          .POST('/v1/items', {
-            body: {
-              id: itemId,
-              collectionId: ctx.collectionId,
-              fileKeyEnc: b64(wrapKey(ctx.collectionKey, fileKey, ad.itemFileKey(itemId))),
-              metadataEnc: b64(encodeMeta(fileKey, itemId, meta)),
-              dedupeHash,
-              blobs,
-            },
-          })
-          .then((r) => {
-            // A retried create that had already landed comes back as id_taken.
-            if (r.response.status === 409 && (r.error as { code?: string })?.code === 'id_taken') {
-              return null;
-            }
-            must(r);
-            return r;
-          }),
-      o,
-    ).catch(async (e: unknown) => {
+    // Never store metadata this app could not read back.
+    if (!parseMeta(meta)) throw new Error('Could not describe this file.');
+    const res = await withRetry(() => {
+      // Checked in the same turn as the wrap, so a lock cannot slip between.
+      checkAbort(o);
+      return api
+        .POST('/v1/items', {
+          body: {
+            id: itemId,
+            collectionId: ctx.collectionId,
+            fileKeyEnc: b64(wrapKey(ctx.collectionKey, fileKey, ad.itemFileKey(itemId))),
+            metadataEnc: b64(encodeMeta(fileKey, itemId, meta)),
+            dedupeHash,
+            blobs,
+          },
+        })
+        .then((r) => {
+          // A retried create that had already landed comes back as id_taken.
+          if (r.response.status === 409 && (r.error as { code?: string })?.code === 'id_taken') {
+            return null;
+          }
+          must(r);
+          return r;
+        });
+    }, o).catch(async (e: unknown) => {
       // Another device stored the same file meanwhile.
       if (e instanceof BoxError && e.code === 'already_stored') {
         const hit = await lookup(api, dedupeHash, o);

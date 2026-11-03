@@ -48,7 +48,7 @@ func New(cfg config.Config, version string, logger *slog.Logger) (*Server, error
 	return &Server{
 		http: &http.Server{
 			Addr:              cfg.Addr,
-			Handler:           api.NewRouter(version),
+			Handler:           api.NewRouter(api.Deps{Version: version, Logger: logger}),
 			TLSConfig:         &tls.Config{Certificates: []tls.Certificate{cert}, MinVersion: tls.VersionTLS13},
 			ReadHeaderTimeout: 10 * time.Second,
 			ReadTimeout:       60 * time.Second,

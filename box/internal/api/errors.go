@@ -31,19 +31,3 @@ func notFound(w http.ResponseWriter, _ *http.Request) {
 		Action:  "Update the app, then try again.",
 	})
 }
-
-// only wraps h so that other methods get a JSON 405 with an Allow header.
-func only(method string, h http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != method {
-			w.Header().Set("Allow", method)
-			writeError(w, http.StatusMethodNotAllowed, apiError{
-				Code:    "method_not_allowed",
-				Message: "The box does not accept this request method here.",
-				Action:  "Update the app, then try again.",
-			})
-			return
-		}
-		h(w, r)
-	}
-}

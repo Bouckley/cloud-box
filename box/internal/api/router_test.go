@@ -10,7 +10,7 @@ import (
 func do(t *testing.T, method, path string) *httptest.ResponseRecorder {
 	t.Helper()
 	rec := httptest.NewRecorder()
-	NewRouter("test").ServeHTTP(rec, httptest.NewRequest(method, path, nil))
+	NewRouter(Deps{Version: "test"}).ServeHTTP(rec, httptest.NewRequest(method, path, nil))
 	return rec
 }
 

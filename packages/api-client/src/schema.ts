@@ -21,6 +21,453 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/v1/setup': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * First run only - create the owner and their first device
+     * @description Works only while the box has no user; afterwards 409 `already_set_up`. Stores wrapped keys only. Errors: 400 `invalid_request`, 409 `id_taken`.
+     */
+    post: operations['setup'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/account': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * The signed-in user's wrapped keys and KDF parameters
+     * @description A newly paired device fetches this, then unwraps the master key with the password.
+     */
+    get: operations['getAccount'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/auth/challenge': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Get a single-use challenge for a device (valid 60 s)
+     * @description Unknown and revoked devices get 401 `unauthorized`.
+     */
+    post: operations['createChallenge'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/auth/verify': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Send the Ed25519 signature of the auth message; get a session token
+     * @description The device signs UTF-8 `cloudbox/v1/auth/<deviceId>/<challenge>` with its signing key. Any failure is 401 `unauthorized`.
+     */
+    post: operations['verifyChallenge'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/devices': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** The user's devices, including revoked ones */
+    get: operations['listDevices'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/devices/pairing-codes': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Create a single-use pairing code (valid 10 minutes) for the QR */
+    post: operations['createPairingCode'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/devices/pair': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Add a new device to the user who created the pairing code
+     * @description A used, expired or unknown code is 401 `unauthorized`. A reused device id is 409 `id_taken`.
+     */
+    post: operations['pairDevice'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/devices/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: components['parameters']['IdPath'];
+      };
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /**
+     * Revoke a device; its sessions end at once
+     * @description Revoking the user's last active device is 409 `last_device`.
+     */
+    delete: operations['revokeDevice'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/uploads': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Start a resumable upload of one encrypted blob
+     * @description Parts are 8 MiB (`partBytes`), numbered from 0; every part except the last is exactly `partBytes`. 507 `storage_full` when the main drive cannot hold the blob plus 1 GiB.
+     */
+    post: operations['createUpload'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/uploads/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: components['parameters']['IdPath'];
+      };
+      cookie?: never;
+    };
+    /** Which parts have arrived (to resume) */
+    get: operations['getUpload'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/uploads/{id}/parts/{n}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: components['parameters']['IdPath'];
+        n: number;
+      };
+      cookie?: never;
+    };
+    get?: never;
+    /**
+     * Upload one part; re-sending a part replaces it
+     * @description A part of the wrong size is 400 `invalid_request` and is not kept.
+     */
+    put: operations['putUploadPart'];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/uploads/{id}/complete': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: components['parameters']['IdPath'];
+      };
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Assemble the parts, check the hash and store the blob
+     * @description Safe to retry: a completed upload returns the same blob with 200. Missing parts: 409 `upload_incomplete`. Wrong hash: 422 `hash_mismatch`, and the parts are discarded.
+     */
+    post: operations['completeUpload'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/blobs/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: components['parameters']['IdPath'];
+      };
+      cookie?: never;
+    };
+    /**
+     * Download an encrypted blob (supports Range)
+     * @description A range outside the blob is 416 `range_not_satisfiable` with `Content-Range: bytes *\/<size>`.
+     */
+    get: operations['getBlob'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/collections': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** The user's albums and folders */
+    get: operations['listCollections'];
+    put?: never;
+    /**
+     * Create an album or folder
+     * @description Only folders have a parent, and the parent must be the user's folder (409 `invalid_parent`). A reused id is 409 `id_taken`.
+     */
+    post: operations['createCollection'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/collections/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: components['parameters']['IdPath'];
+      };
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /**
+     * Rename or move a collection
+     * @description A move that would create a cycle is 409 `invalid_parent`.
+     */
+    patch: operations['updateCollection'];
+    trace?: never;
+  };
+  '/v1/items': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Items changed since a cursor, and items deleted for good
+     * @description Trashed items are included with `trashedAt` set. Repeat with the returned `cursor` while `more` is true.
+     */
+    get: operations['listItemChanges'];
+    put?: never;
+    /**
+     * Create an item from completed uploads
+     * @description Errors: 400 `invalid_request` (missing original, unknown or foreign blob), 404 `not_found` (collection), 409 `id_taken`, 409 `blob_in_use`, 409 `already_stored` (same dedupe hash; `lookupItems` returns the existing item).
+     */
+    post: operations['createItem'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/items/lookup': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Which of these dedupe hashes the box already has */
+    post: operations['lookupItems'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/items/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: components['parameters']['IdPath'];
+      };
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** Move an item to Trash (restorable for 30 days) */
+    delete: operations['trashItem'];
+    options?: never;
+    head?: never;
+    /**
+     * Move to another collection or replace encrypted metadata
+     * @description Moving needs `fileKeyEnc` re-wrapped for the new collection, else 409 `rewrap_required`.
+     */
+    patch: operations['updateItem'];
+    trace?: never;
+  };
+  '/v1/items/{id}/restore': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: components['parameters']['IdPath'];
+      };
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Restore an item from Trash */
+    post: operations['restoreItem'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/trash': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Items in Trash with days left before they are deleted for good */
+    get: operations['listTrash'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/trash/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: components['parameters']['IdPath'];
+      };
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /**
+     * Delete an item for good (only from Trash)
+     * @description An item not in Trash is 409 `not_in_trash`.
+     */
+    delete: operations['deleteFromTrash'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/status': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Safety summary
+     * @description `safe` is true only when every item not in Trash has a verified copy on the backup drive and there are no warnings.
+     */
+    get: operations['getStatus'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -37,6 +484,190 @@ export interface components {
       message: string;
       action: string;
     };
+    /** @description 16 random bytes as lowercase hex (ADR 0003). */
+    Id: string;
+    NullableId: string | null;
+    /** @description 32 bytes as lowercase hex (SHA-256, dedupe hash, challenge). */
+    Hex32: string;
+    /** @description 32 random bytes, base64url without padding. */
+    Token: string;
+    /** Format: date-time */
+    Timestamp: string;
+    /** Format: date-time */
+    NullableTimestamp: string | null;
+    /** @description Opaque sync position; start with "0". */
+    Cursor: string;
+    /** @description A 32-byte key wrapped with XChaCha20-Poly1305 (nonce 24 + key 32 + tag 16 = 72 bytes). */
+    WrappedKey: string;
+    /** @description 32-byte public key. */
+    PublicKey: string;
+    /** @description 64-byte Ed25519 signature. */
+    Signature: string;
+    /** @description 16-byte Argon2id salt. */
+    Salt: string;
+    /** @description Encrypted name, 41 bytes to 4 KiB. */
+    NameEnc: string;
+    /** @description Encrypted metadata, 41 bytes to 64 KiB. */
+    MetadataEnc: string;
+    Kdf: {
+      salt: components['schemas']['Salt'];
+      opsLimit: number;
+      memLimitBytes: number;
+    };
+    NewUser: {
+      id: components['schemas']['Id'];
+      kdf: components['schemas']['Kdf'];
+      masterKeyByPassword: components['schemas']['WrappedKey'];
+      masterKeyByRecovery: components['schemas']['WrappedKey'];
+      identityPublicKey: components['schemas']['PublicKey'];
+      identityKeyEnc: components['schemas']['WrappedKey'];
+      dedupeKeyEnc: components['schemas']['WrappedKey'];
+    };
+    Account: {
+      id: components['schemas']['Id'];
+      /** @enum {string} */
+      role: 'owner' | 'member' | 'helper' | 'guest';
+      kdf: components['schemas']['Kdf'];
+      masterKeyByPassword: components['schemas']['WrappedKey'];
+      masterKeyByRecovery: components['schemas']['WrappedKey'];
+      identityPublicKey: components['schemas']['PublicKey'];
+      identityKeyEnc: components['schemas']['WrappedKey'];
+      dedupeKeyEnc: components['schemas']['WrappedKey'];
+    };
+    NewDevice: {
+      id: components['schemas']['Id'];
+      nameEnc: components['schemas']['NameEnc'];
+      signPublicKey: components['schemas']['PublicKey'];
+    };
+    SetupRequest: {
+      user: components['schemas']['NewUser'];
+      device: components['schemas']['NewDevice'];
+    };
+    Device: {
+      id: components['schemas']['Id'];
+      nameEnc: components['schemas']['NameEnc'];
+      signPublicKey: components['schemas']['PublicKey'];
+      createdAt: components['schemas']['Timestamp'];
+      lastSeen: components['schemas']['Timestamp'];
+      revokedAt: components['schemas']['NullableTimestamp'];
+    };
+    Challenge: {
+      challenge: components['schemas']['Hex32'];
+      expiresAt: components['schemas']['Timestamp'];
+    };
+    Session: {
+      token: components['schemas']['Token'];
+      expiresAt: components['schemas']['Timestamp'];
+    };
+    PairingCode: {
+      code: components['schemas']['Token'];
+      expiresAt: components['schemas']['Timestamp'];
+    };
+    Upload: {
+      id: components['schemas']['Id'];
+      size: number;
+      sha256: components['schemas']['Hex32'];
+      /** @constant */
+      partBytes: 8388608;
+      partCount: number;
+      /** @description Part numbers that have arrived, ascending. */
+      received: number[];
+      expiresAt: components['schemas']['Timestamp'];
+    };
+    /**
+     * @description Apps show "safe" only for `replicated`.
+     * @enum {string}
+     */
+    ItemState: 'uploading' | 'stored' | 'verified' | 'replicated';
+    Blob: {
+      id: components['schemas']['Id'];
+      size: number;
+      sha256: components['schemas']['Hex32'];
+      state: components['schemas']['ItemState'];
+    };
+    /** @enum {string} */
+    CollectionKind: 'album' | 'folder';
+    Collection: {
+      id: components['schemas']['Id'];
+      kind: components['schemas']['CollectionKind'];
+      parentId: components['schemas']['NullableId'];
+      nameEnc: components['schemas']['NameEnc'];
+      keyEnc: components['schemas']['WrappedKey'];
+      seq: number;
+    };
+    /** @enum {string} */
+    BlobRole: 'original' | 'preview' | 'thumb';
+    NewItem: {
+      id: components['schemas']['Id'];
+      collectionId: components['schemas']['Id'];
+      fileKeyEnc: components['schemas']['WrappedKey'];
+      metadataEnc: components['schemas']['MetadataEnc'];
+      dedupeHash: components['schemas']['Hex32'];
+      blobs: {
+        original: components['schemas']['Id'];
+        preview?: components['schemas']['Id'];
+        thumb?: components['schemas']['Id'];
+      };
+    };
+    Item: {
+      id: components['schemas']['Id'];
+      collectionId: components['schemas']['Id'];
+      deviceId: components['schemas']['Id'];
+      fileKeyEnc: components['schemas']['WrappedKey'];
+      metadataEnc: components['schemas']['MetadataEnc'];
+      dedupeHash: components['schemas']['Hex32'];
+      blobs: {
+        role: components['schemas']['BlobRole'];
+        blobId: components['schemas']['Id'];
+        size: number;
+      }[];
+      state: components['schemas']['ItemState'];
+      createdAt: components['schemas']['Timestamp'];
+      trashedAt: components['schemas']['NullableTimestamp'];
+      seq: number;
+    };
+    ItemChanges: {
+      items: components['schemas']['Item'][];
+      /** @description Ids of items deleted for good since the cursor. */
+      purged: components['schemas']['Id'][];
+      cursor: components['schemas']['Cursor'];
+      more: boolean;
+    };
+    LookupResult: {
+      dedupeHash: components['schemas']['Hex32'];
+      itemId: components['schemas']['Id'];
+      state: components['schemas']['ItemState'];
+      trashed: boolean;
+    };
+    TrashEntry: {
+      itemId: components['schemas']['Id'];
+      trashedAt: components['schemas']['Timestamp'];
+      daysLeft: number;
+    };
+    Status: {
+      safe: boolean;
+      items: {
+        /** @description Items not in Trash. */
+        total: number;
+        verified: number;
+        replicated: number;
+        notYetCopied: number;
+        trashed: number;
+      };
+      devices: {
+        id: components['schemas']['Id'];
+        nameEnc: components['schemas']['NameEnc'];
+        lastBackupAt: components['schemas']['NullableTimestamp'];
+      }[];
+      drives: {
+        /** @enum {string} */
+        role: 'main' | 'backup';
+        sizeBytes: number;
+        freeBytes: number;
+      }[];
+      lastCopyAt: components['schemas']['NullableTimestamp'];
+      warnings: components['schemas']['Error'][];
+    };
   };
   responses: {
     /** @description Any error. `action` is plain-language text the app can show. */
@@ -49,7 +680,9 @@ export interface components {
       };
     };
   };
-  parameters: never;
+  parameters: {
+    IdPath: components['schemas']['Id'];
+  };
   requestBodies: never;
   headers: never;
   pathItems: never;
@@ -72,6 +705,651 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['Health'];
+        };
+      };
+      default: components['responses']['Error'];
+    };
+  };
+  setup: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['SetupRequest'];
+      };
+    };
+    responses: {
+      /** @description The owner and device were created. */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Account'];
+        };
+      };
+      default: components['responses']['Error'];
+    };
+  };
+  getAccount: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The account. */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Account'];
+        };
+      };
+      default: components['responses']['Error'];
+    };
+  };
+  createChallenge: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': {
+          deviceId: components['schemas']['Id'];
+        };
+      };
+    };
+    responses: {
+      /** @description A challenge to sign. */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Challenge'];
+        };
+      };
+      default: components['responses']['Error'];
+    };
+  };
+  verifyChallenge: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': {
+          deviceId: components['schemas']['Id'];
+          challenge: components['schemas']['Hex32'];
+          signature: components['schemas']['Signature'];
+        };
+      };
+    };
+    responses: {
+      /** @description A session (valid 1 hour). */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Session'];
+        };
+      };
+      default: components['responses']['Error'];
+    };
+  };
+  listDevices: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Devices. */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            devices: components['schemas']['Device'][];
+          };
+        };
+      };
+      default: components['responses']['Error'];
+    };
+  };
+  createPairingCode: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description A pairing code. */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PairingCode'];
+        };
+      };
+      default: components['responses']['Error'];
+    };
+  };
+  pairDevice: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': {
+          code: components['schemas']['Token'];
+          device: components['schemas']['NewDevice'];
+        };
+      };
+    };
+    responses: {
+      /** @description The device was added; it can now log in. */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            userId: components['schemas']['Id'];
+            deviceId: components['schemas']['Id'];
+          };
+        };
+      };
+      default: components['responses']['Error'];
+    };
+  };
+  revokeDevice: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: components['parameters']['IdPath'];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Revoked. */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      default: components['responses']['Error'];
+    };
+  };
+  createUpload: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': {
+          /** @description Ciphertext size in bytes (max 64 GiB). */
+          size: number;
+          sha256: components['schemas']['Hex32'];
+        };
+      };
+    };
+    responses: {
+      /** @description The upload was started. */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Upload'];
+        };
+      };
+      default: components['responses']['Error'];
+    };
+  };
+  getUpload: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: components['parameters']['IdPath'];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The upload. */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Upload'];
+        };
+      };
+      default: components['responses']['Error'];
+    };
+  };
+  putUploadPart: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: components['parameters']['IdPath'];
+        n: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/octet-stream': string;
+      };
+    };
+    responses: {
+      /** @description The part was stored. */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      default: components['responses']['Error'];
+    };
+  };
+  completeUpload: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: components['parameters']['IdPath'];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Already completed; the same blob. */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Blob'];
+        };
+      };
+      /** @description The blob was stored. `state` is `verified` when the re-read from the drive matched, otherwise `stored`. */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Blob'];
+        };
+      };
+      default: components['responses']['Error'];
+    };
+  };
+  getBlob: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @example bytes=0-1023 */
+        Range?: string;
+      };
+      path: {
+        id: components['parameters']['IdPath'];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The whole blob. */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/octet-stream': string;
+        };
+      };
+      /** @description The requested range. */
+      206: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/octet-stream': string;
+        };
+      };
+      default: components['responses']['Error'];
+    };
+  };
+  listCollections: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Collections. */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            collections: components['schemas']['Collection'][];
+          };
+        };
+      };
+      default: components['responses']['Error'];
+    };
+  };
+  createCollection: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': {
+          id: components['schemas']['Id'];
+          kind: components['schemas']['CollectionKind'];
+          parentId?: components['schemas']['NullableId'];
+          nameEnc: components['schemas']['NameEnc'];
+          keyEnc: components['schemas']['WrappedKey'];
+        };
+      };
+    };
+    responses: {
+      /** @description Created. */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Collection'];
+        };
+      };
+      default: components['responses']['Error'];
+    };
+  };
+  updateCollection: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: components['parameters']['IdPath'];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': {
+          nameEnc?: components['schemas']['NameEnc'];
+          parentId?: components['schemas']['NullableId'];
+        };
+      };
+    };
+    responses: {
+      /** @description Updated. */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Collection'];
+        };
+      };
+      default: components['responses']['Error'];
+    };
+  };
+  listItemChanges: {
+    parameters: {
+      query?: {
+        since?: components['schemas']['Cursor'];
+        limit?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description A page of changes. */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ItemChanges'];
+        };
+      };
+      default: components['responses']['Error'];
+    };
+  };
+  createItem: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['NewItem'];
+      };
+    };
+    responses: {
+      /** @description Created. */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Item'];
+        };
+      };
+      default: components['responses']['Error'];
+    };
+  };
+  lookupItems: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': {
+          dedupeHashes: components['schemas']['Hex32'][];
+        };
+      };
+    };
+    responses: {
+      /** @description The hashes that were found. */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            found: components['schemas']['LookupResult'][];
+          };
+        };
+      };
+      default: components['responses']['Error'];
+    };
+  };
+  trashItem: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: components['parameters']['IdPath'];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description In Trash. */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      default: components['responses']['Error'];
+    };
+  };
+  updateItem: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: components['parameters']['IdPath'];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': {
+          collectionId?: components['schemas']['Id'];
+          fileKeyEnc?: components['schemas']['WrappedKey'];
+          metadataEnc?: components['schemas']['MetadataEnc'];
+        };
+      };
+    };
+    responses: {
+      /** @description Updated. */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Item'];
+        };
+      };
+      default: components['responses']['Error'];
+    };
+  };
+  restoreItem: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: components['parameters']['IdPath'];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Restored. */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Item'];
+        };
+      };
+      default: components['responses']['Error'];
+    };
+  };
+  listTrash: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Trash. */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            items: components['schemas']['TrashEntry'][];
+          };
+        };
+      };
+      default: components['responses']['Error'];
+    };
+  };
+  deleteFromTrash: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: components['parameters']['IdPath'];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Deleted for good. */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      default: components['responses']['Error'];
+    };
+  };
+  getStatus: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Status. */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Status'];
         };
       };
       default: components['responses']['Error'];

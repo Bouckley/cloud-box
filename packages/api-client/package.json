@@ -9,12 +9,16 @@
   "scripts": {
     "generate": "openapi-typescript ../../api/openapi.yaml -o src/schema.ts && prettier --write src/schema.ts",
     "typecheck": "tsc --noEmit -p .",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:contract": "vitest run --config vitest.contract.config.ts"
   },
   "dependencies": {
     "openapi-fetch": "^0.17.0"
   },
   "devDependencies": {
-    "openapi-typescript": "^7.13.0"
+    "@cloudbox/crypto": "workspace:*",
+    "@types/node": "^26.6.6",
+    "openapi-typescript": "^7.13.0",
+    "undici": "8.12.2"
   }
 }

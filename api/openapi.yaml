@@ -1,17 +1,23 @@
 openapi: 3.1.0
 info:
   title: Cloud Box API
-  version: 0.1.0
+  version: 0.2.0
   description: >
     The box stores ciphertext only. Request and response bodies never carry
-    plaintext file contents, names, dates, locations or keys.
+    plaintext file contents, names, dates, locations or keys. Conventions
+    (encodings, sessions, the auth message, upload parts, item state, sync)
+    are in docs/decisions/0004-box-api-conventions.md. Every error uses the
+    Error shape; `action` is plain-language text the app can show.
 servers:
   - url: https://localhost:8443
+security:
+  - bearer: []
 paths:
   /v1/health:
     get:
       operationId: getHealth
       summary: Liveness check
+      security: []
       responses:
         '200':
           description: The box is running.
@@ -21,7 +27,623 @@ paths:
                 $ref: '#/components/schemas/Health'
         default:
           $ref: '#/components/responses/Error'
+
+  /v1/setup:
+    post:
+      operationId: setup
+      summary: First run only - create the owner and their first device
+      description: >
+        Works only while the box has no user; afterwards 409 `already_set_up`.
+        Stores wrapped keys only. Errors: 400 `invalid_request`, 409 `id_taken`.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetupRequest'
+      responses:
+        '201':
+          description: The owner and device were created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+        default:
+          $ref: '#/components/responses/Error'
+
+  /v1/account:
+    get:
+      operationId: getAccount
+      summary: The signed-in user's wrapped keys and KDF parameters
+      description: A newly paired device fetches this, then unwraps the master key with the password.
+      responses:
+        '200':
+          description: The account.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+        default:
+          $ref: '#/components/responses/Error'
+
+  /v1/auth/challenge:
+    post:
+      operationId: createChallenge
+      summary: Get a single-use challenge for a device (valid 60 s)
+      description: Unknown and revoked devices get 401 `unauthorized`.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [deviceId]
+              properties:
+                deviceId:
+                  $ref: '#/components/schemas/Id'
+      responses:
+        '200':
+          description: A challenge to sign.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Challenge'
+        default:
+          $ref: '#/components/responses/Error'
+
+  /v1/auth/verify:
+    post:
+      operationId: verifyChallenge
+      summary: Send the Ed25519 signature of the auth message; get a session token
+      description: >
+        The device signs UTF-8 `cloudbox/v1/auth/<deviceId>/<challenge>` with its
+        signing key. Any failure is 401 `unauthorized`.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [deviceId, challenge, signature]
+              properties:
+                deviceId:
+                  $ref: '#/components/schemas/Id'
+                challenge:
+                  $ref: '#/components/schemas/Hex32'
+                signature:
+                  $ref: '#/components/schemas/Signature'
+      responses:
+        '200':
+          description: A session (valid 1 hour).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+        default:
+          $ref: '#/components/responses/Error'
+
+  /v1/devices:
+    get:
+      operationId: listDevices
+      summary: The user's devices, including revoked ones
+      responses:
+        '200':
+          description: Devices.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [devices]
+                properties:
+                  devices:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Device'
+        default:
+          $ref: '#/components/responses/Error'
+
+  /v1/devices/pairing-codes:
+    post:
+      operationId: createPairingCode
+      summary: Create a single-use pairing code (valid 10 minutes) for the QR
+      responses:
+        '201':
+          description: A pairing code.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PairingCode'
+        default:
+          $ref: '#/components/responses/Error'
+
+  /v1/devices/pair:
+    post:
+      operationId: pairDevice
+      summary: Add a new device to the user who created the pairing code
+      description: A used, expired or unknown code is 401 `unauthorized`. A reused device id is 409 `id_taken`.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [code, device]
+              properties:
+                code:
+                  $ref: '#/components/schemas/Token'
+                device:
+                  $ref: '#/components/schemas/NewDevice'
+      responses:
+        '201':
+          description: The device was added; it can now log in.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [userId, deviceId]
+                properties:
+                  userId:
+                    $ref: '#/components/schemas/Id'
+                  deviceId:
+                    $ref: '#/components/schemas/Id'
+        default:
+          $ref: '#/components/responses/Error'
+
+  /v1/devices/{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    delete:
+      operationId: revokeDevice
+      summary: Revoke a device; its sessions end at once
+      description: Revoking the user's last active device is 409 `last_device`.
+      responses:
+        '204':
+          description: Revoked.
+        default:
+          $ref: '#/components/responses/Error'
+
+  /v1/uploads:
+    post:
+      operationId: createUpload
+      summary: Start a resumable upload of one encrypted blob
+      description: >
+        Parts are 8 MiB (`partBytes`), numbered from 0; every part except the last
+        is exactly `partBytes`. 507 `storage_full` when the main drive cannot hold
+        the blob plus 1 GiB.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [size, sha256]
+              properties:
+                size:
+                  type: integer
+                  minimum: 1
+                  maximum: 68719476736
+                  description: Ciphertext size in bytes (max 64 GiB).
+                sha256:
+                  $ref: '#/components/schemas/Hex32'
+      responses:
+        '201':
+          description: The upload was started.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Upload'
+        default:
+          $ref: '#/components/responses/Error'
+
+  /v1/uploads/{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    get:
+      operationId: getUpload
+      summary: Which parts have arrived (to resume)
+      responses:
+        '200':
+          description: The upload.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Upload'
+        default:
+          $ref: '#/components/responses/Error'
+
+  /v1/uploads/{id}/parts/{n}:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+      - name: n
+        in: path
+        required: true
+        schema:
+          type: integer
+          minimum: 0
+    put:
+      operationId: putUploadPart
+      summary: Upload one part; re-sending a part replaces it
+      description: A part of the wrong size is 400 `invalid_request` and is not kept.
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        '204':
+          description: The part was stored.
+        default:
+          $ref: '#/components/responses/Error'
+
+  /v1/uploads/{id}/complete:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    post:
+      operationId: completeUpload
+      summary: Assemble the parts, check the hash and store the blob
+      description: >
+        Safe to retry: a completed upload returns the same blob with 200.
+        Missing parts: 409 `upload_incomplete`. Wrong hash: 422 `hash_mismatch`,
+        and the parts are discarded.
+      responses:
+        '200':
+          description: Already completed; the same blob.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Blob'
+        '201':
+          description: >
+            The blob was stored. `state` is `verified` when the re-read from the
+            drive matched, otherwise `stored`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Blob'
+        default:
+          $ref: '#/components/responses/Error'
+
+  /v1/blobs/{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    get:
+      operationId: getBlob
+      summary: Download an encrypted blob (supports Range)
+      description: >
+        A range outside the blob is 416 `range_not_satisfiable` with
+        `Content-Range: bytes */<size>`.
+      parameters:
+        - name: Range
+          in: header
+          required: false
+          schema:
+            type: string
+          example: bytes=0-1023
+      responses:
+        '200':
+          description: The whole blob.
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '206':
+          description: The requested range.
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        default:
+          $ref: '#/components/responses/Error'
+
+  /v1/collections:
+    get:
+      operationId: listCollections
+      summary: The user's albums and folders
+      responses:
+        '200':
+          description: Collections.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [collections]
+                properties:
+                  collections:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Collection'
+        default:
+          $ref: '#/components/responses/Error'
+    post:
+      operationId: createCollection
+      summary: Create an album or folder
+      description: >
+        Only folders have a parent, and the parent must be the user's folder
+        (409 `invalid_parent`). A reused id is 409 `id_taken`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [id, kind, nameEnc, keyEnc]
+              properties:
+                id:
+                  $ref: '#/components/schemas/Id'
+                kind:
+                  $ref: '#/components/schemas/CollectionKind'
+                parentId:
+                  $ref: '#/components/schemas/NullableId'
+                nameEnc:
+                  $ref: '#/components/schemas/NameEnc'
+                keyEnc:
+                  $ref: '#/components/schemas/WrappedKey'
+      responses:
+        '201':
+          description: Created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Collection'
+        default:
+          $ref: '#/components/responses/Error'
+
+  /v1/collections/{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    patch:
+      operationId: updateCollection
+      summary: Rename or move a collection
+      description: A move that would create a cycle is 409 `invalid_parent`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              minProperties: 1
+              properties:
+                nameEnc:
+                  $ref: '#/components/schemas/NameEnc'
+                parentId:
+                  $ref: '#/components/schemas/NullableId'
+      responses:
+        '200':
+          description: Updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Collection'
+        default:
+          $ref: '#/components/responses/Error'
+
+  /v1/items:
+    get:
+      operationId: listItemChanges
+      summary: Items changed since a cursor, and items deleted for good
+      description: >
+        Trashed items are included with `trashedAt` set. Repeat with the returned
+        `cursor` while `more` is true.
+      parameters:
+        - name: since
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/Cursor'
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+            default: 500
+      responses:
+        '200':
+          description: A page of changes.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ItemChanges'
+        default:
+          $ref: '#/components/responses/Error'
+    post:
+      operationId: createItem
+      summary: Create an item from completed uploads
+      description: >
+        Errors: 400 `invalid_request` (missing original, unknown or foreign blob),
+        404 `not_found` (collection), 409 `id_taken`, 409 `blob_in_use`,
+        409 `already_stored` (same dedupe hash; `lookupItems` returns the existing item).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewItem'
+      responses:
+        '201':
+          description: Created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Item'
+        default:
+          $ref: '#/components/responses/Error'
+
+  /v1/items/lookup:
+    post:
+      operationId: lookupItems
+      summary: Which of these dedupe hashes the box already has
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [dedupeHashes]
+              properties:
+                dedupeHashes:
+                  type: array
+                  maxItems: 1000
+                  items:
+                    $ref: '#/components/schemas/Hex32'
+      responses:
+        '200':
+          description: The hashes that were found.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [found]
+                properties:
+                  found:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/LookupResult'
+        default:
+          $ref: '#/components/responses/Error'
+
+  /v1/items/{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    patch:
+      operationId: updateItem
+      summary: Move to another collection or replace encrypted metadata
+      description: Moving needs `fileKeyEnc` re-wrapped for the new collection, else 409 `rewrap_required`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              minProperties: 1
+              properties:
+                collectionId:
+                  $ref: '#/components/schemas/Id'
+                fileKeyEnc:
+                  $ref: '#/components/schemas/WrappedKey'
+                metadataEnc:
+                  $ref: '#/components/schemas/MetadataEnc'
+      responses:
+        '200':
+          description: Updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Item'
+        default:
+          $ref: '#/components/responses/Error'
+    delete:
+      operationId: trashItem
+      summary: Move an item to Trash (restorable for 30 days)
+      responses:
+        '204':
+          description: In Trash.
+        default:
+          $ref: '#/components/responses/Error'
+
+  /v1/items/{id}/restore:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    post:
+      operationId: restoreItem
+      summary: Restore an item from Trash
+      responses:
+        '200':
+          description: Restored.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Item'
+        default:
+          $ref: '#/components/responses/Error'
+
+  /v1/trash:
+    get:
+      operationId: listTrash
+      summary: Items in Trash with days left before they are deleted for good
+      responses:
+        '200':
+          description: Trash.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TrashEntry'
+        default:
+          $ref: '#/components/responses/Error'
+
+  /v1/trash/{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    delete:
+      operationId: deleteFromTrash
+      summary: Delete an item for good (only from Trash)
+      description: An item not in Trash is 409 `not_in_trash`.
+      responses:
+        '204':
+          description: Deleted for good.
+        default:
+          $ref: '#/components/responses/Error'
+
+  /v1/status:
+    get:
+      operationId: getStatus
+      summary: Safety summary
+      description: >
+        `safe` is true only when every item not in Trash has a verified copy on
+        the backup drive and there are no warnings.
+      responses:
+        '200':
+          description: Status.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        default:
+          $ref: '#/components/responses/Error'
+
 components:
+  securitySchemes:
+    bearer:
+      type: http
+      scheme: bearer
+      description: Session token from verifyChallenge.
+
+  parameters:
+    IdPath:
+      name: id
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/Id'
+
   responses:
     Error:
       description: Any error. `action` is plain-language text the app can show.
@@ -29,6 +651,7 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
+
   schemas:
     Health:
       type: object
@@ -41,6 +664,7 @@ components:
         version:
           type: string
           description: boxd build version.
+
     Error:
       type: object
       additionalProperties: false
@@ -53,3 +677,465 @@ components:
           type: string
         action:
           type: string
+
+    Id:
+      type: string
+      pattern: '^[0-9a-f]{32}$'
+      description: 16 random bytes as lowercase hex (ADR 0003).
+    NullableId:
+      type: [string, 'null']
+      pattern: '^[0-9a-f]{32}$'
+    Hex32:
+      type: string
+      pattern: '^[0-9a-f]{64}$'
+      description: 32 bytes as lowercase hex (SHA-256, dedupe hash, challenge).
+    Token:
+      type: string
+      pattern: '^[A-Za-z0-9_-]{43}$'
+      description: 32 random bytes, base64url without padding.
+    Timestamp:
+      type: string
+      format: date-time
+    NullableTimestamp:
+      type: [string, 'null']
+      format: date-time
+    Cursor:
+      type: string
+      pattern: '^[0-9]{1,18}$'
+      description: Opaque sync position; start with "0".
+    WrappedKey:
+      type: string
+      contentEncoding: base64
+      minLength: 96
+      maxLength: 96
+      description: A 32-byte key wrapped with XChaCha20-Poly1305 (nonce 24 + key 32 + tag 16 = 72 bytes).
+    PublicKey:
+      type: string
+      contentEncoding: base64
+      minLength: 44
+      maxLength: 44
+      description: 32-byte public key.
+    Signature:
+      type: string
+      contentEncoding: base64
+      minLength: 88
+      maxLength: 88
+      description: 64-byte Ed25519 signature.
+    Salt:
+      type: string
+      contentEncoding: base64
+      minLength: 24
+      maxLength: 24
+      description: 16-byte Argon2id salt.
+    NameEnc:
+      type: string
+      contentEncoding: base64
+      minLength: 56
+      maxLength: 5464
+      description: Encrypted name, 41 bytes to 4 KiB.
+    MetadataEnc:
+      type: string
+      contentEncoding: base64
+      minLength: 56
+      maxLength: 87384
+      description: Encrypted metadata, 41 bytes to 64 KiB.
+
+    Kdf:
+      type: object
+      additionalProperties: false
+      required: [salt, opsLimit, memLimitBytes]
+      properties:
+        salt:
+          $ref: '#/components/schemas/Salt'
+        opsLimit:
+          type: integer
+          minimum: 2
+          maximum: 10
+        memLimitBytes:
+          type: integer
+          minimum: 67108864
+          maximum: 1073741824
+
+    NewUser:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          id,
+          kdf,
+          masterKeyByPassword,
+          masterKeyByRecovery,
+          identityPublicKey,
+          identityKeyEnc,
+          dedupeKeyEnc,
+        ]
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        kdf:
+          $ref: '#/components/schemas/Kdf'
+        masterKeyByPassword:
+          $ref: '#/components/schemas/WrappedKey'
+        masterKeyByRecovery:
+          $ref: '#/components/schemas/WrappedKey'
+        identityPublicKey:
+          $ref: '#/components/schemas/PublicKey'
+        identityKeyEnc:
+          $ref: '#/components/schemas/WrappedKey'
+        dedupeKeyEnc:
+          $ref: '#/components/schemas/WrappedKey'
+
+    Account:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          id,
+          role,
+          kdf,
+          masterKeyByPassword,
+          masterKeyByRecovery,
+          identityPublicKey,
+          identityKeyEnc,
+          dedupeKeyEnc,
+        ]
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        role:
+          type: string
+          enum: [owner, member, helper, guest]
+        kdf:
+          $ref: '#/components/schemas/Kdf'
+        masterKeyByPassword:
+          $ref: '#/components/schemas/WrappedKey'
+        masterKeyByRecovery:
+          $ref: '#/components/schemas/WrappedKey'
+        identityPublicKey:
+          $ref: '#/components/schemas/PublicKey'
+        identityKeyEnc:
+          $ref: '#/components/schemas/WrappedKey'
+        dedupeKeyEnc:
+          $ref: '#/components/schemas/WrappedKey'
+
+    NewDevice:
+      type: object
+      additionalProperties: false
+      required: [id, nameEnc, signPublicKey]
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        nameEnc:
+          $ref: '#/components/schemas/NameEnc'
+        signPublicKey:
+          $ref: '#/components/schemas/PublicKey'
+
+    SetupRequest:
+      type: object
+      additionalProperties: false
+      required: [user, device]
+      properties:
+        user:
+          $ref: '#/components/schemas/NewUser'
+        device:
+          $ref: '#/components/schemas/NewDevice'
+
+    Device:
+      type: object
+      additionalProperties: false
+      required: [id, nameEnc, signPublicKey, createdAt, lastSeen, revokedAt]
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        nameEnc:
+          $ref: '#/components/schemas/NameEnc'
+        signPublicKey:
+          $ref: '#/components/schemas/PublicKey'
+        createdAt:
+          $ref: '#/components/schemas/Timestamp'
+        lastSeen:
+          $ref: '#/components/schemas/Timestamp'
+        revokedAt:
+          $ref: '#/components/schemas/NullableTimestamp'
+
+    Challenge:
+      type: object
+      additionalProperties: false
+      required: [challenge, expiresAt]
+      properties:
+        challenge:
+          $ref: '#/components/schemas/Hex32'
+        expiresAt:
+          $ref: '#/components/schemas/Timestamp'
+
+    Session:
+      type: object
+      additionalProperties: false
+      required: [token, expiresAt]
+      properties:
+        token:
+          $ref: '#/components/schemas/Token'
+        expiresAt:
+          $ref: '#/components/schemas/Timestamp'
+
+    PairingCode:
+      type: object
+      additionalProperties: false
+      required: [code, expiresAt]
+      properties:
+        code:
+          $ref: '#/components/schemas/Token'
+        expiresAt:
+          $ref: '#/components/schemas/Timestamp'
+
+    Upload:
+      type: object
+      additionalProperties: false
+      required: [id, size, sha256, partBytes, partCount, received, expiresAt]
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        size:
+          type: integer
+        sha256:
+          $ref: '#/components/schemas/Hex32'
+        partBytes:
+          type: integer
+          const: 8388608
+        partCount:
+          type: integer
+        received:
+          type: array
+          description: Part numbers that have arrived, ascending.
+          items:
+            type: integer
+        expiresAt:
+          $ref: '#/components/schemas/Timestamp'
+
+    ItemState:
+      type: string
+      enum: [uploading, stored, verified, replicated]
+      description: Apps show "safe" only for `replicated`.
+
+    Blob:
+      type: object
+      additionalProperties: false
+      required: [id, size, sha256, state]
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        size:
+          type: integer
+        sha256:
+          $ref: '#/components/schemas/Hex32'
+        state:
+          $ref: '#/components/schemas/ItemState'
+
+    CollectionKind:
+      type: string
+      enum: [album, folder]
+
+    Collection:
+      type: object
+      additionalProperties: false
+      required: [id, kind, parentId, nameEnc, keyEnc, seq]
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        kind:
+          $ref: '#/components/schemas/CollectionKind'
+        parentId:
+          $ref: '#/components/schemas/NullableId'
+        nameEnc:
+          $ref: '#/components/schemas/NameEnc'
+        keyEnc:
+          $ref: '#/components/schemas/WrappedKey'
+        seq:
+          type: integer
+
+    BlobRole:
+      type: string
+      enum: [original, preview, thumb]
+
+    NewItem:
+      type: object
+      additionalProperties: false
+      required: [id, collectionId, fileKeyEnc, metadataEnc, dedupeHash, blobs]
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        collectionId:
+          $ref: '#/components/schemas/Id'
+        fileKeyEnc:
+          $ref: '#/components/schemas/WrappedKey'
+        metadataEnc:
+          $ref: '#/components/schemas/MetadataEnc'
+        dedupeHash:
+          $ref: '#/components/schemas/Hex32'
+        blobs:
+          type: object
+          additionalProperties: false
+          required: [original]
+          properties:
+            original:
+              $ref: '#/components/schemas/Id'
+            preview:
+              $ref: '#/components/schemas/Id'
+            thumb:
+              $ref: '#/components/schemas/Id'
+
+    Item:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          id,
+          collectionId,
+          deviceId,
+          fileKeyEnc,
+          metadataEnc,
+          dedupeHash,
+          blobs,
+          state,
+          createdAt,
+          trashedAt,
+          seq,
+        ]
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        collectionId:
+          $ref: '#/components/schemas/Id'
+        deviceId:
+          $ref: '#/components/schemas/Id'
+        fileKeyEnc:
+          $ref: '#/components/schemas/WrappedKey'
+        metadataEnc:
+          $ref: '#/components/schemas/MetadataEnc'
+        dedupeHash:
+          $ref: '#/components/schemas/Hex32'
+        blobs:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [role, blobId, size]
+            properties:
+              role:
+                $ref: '#/components/schemas/BlobRole'
+              blobId:
+                $ref: '#/components/schemas/Id'
+              size:
+                type: integer
+        state:
+          $ref: '#/components/schemas/ItemState'
+        createdAt:
+          $ref: '#/components/schemas/Timestamp'
+        trashedAt:
+          $ref: '#/components/schemas/NullableTimestamp'
+        seq:
+          type: integer
+
+    ItemChanges:
+      type: object
+      additionalProperties: false
+      required: [items, purged, cursor, more]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Item'
+        purged:
+          type: array
+          description: Ids of items deleted for good since the cursor.
+          items:
+            $ref: '#/components/schemas/Id'
+        cursor:
+          $ref: '#/components/schemas/Cursor'
+        more:
+          type: boolean
+
+    LookupResult:
+      type: object
+      additionalProperties: false
+      required: [dedupeHash, itemId, state, trashed]
+      properties:
+        dedupeHash:
+          $ref: '#/components/schemas/Hex32'
+        itemId:
+          $ref: '#/components/schemas/Id'
+        state:
+          $ref: '#/components/schemas/ItemState'
+        trashed:
+          type: boolean
+
+    TrashEntry:
+      type: object
+      additionalProperties: false
+      required: [itemId, trashedAt, daysLeft]
+      properties:
+        itemId:
+          $ref: '#/components/schemas/Id'
+        trashedAt:
+          $ref: '#/components/schemas/Timestamp'
+        daysLeft:
+          type: integer
+          minimum: 0
+          maximum: 30
+
+    Status:
+      type: object
+      additionalProperties: false
+      required: [safe, items, devices, drives, lastCopyAt, warnings]
+      properties:
+        safe:
+          type: boolean
+        items:
+          type: object
+          additionalProperties: false
+          required: [total, verified, replicated, notYetCopied, trashed]
+          properties:
+            total:
+              type: integer
+              description: Items not in Trash.
+            verified:
+              type: integer
+            replicated:
+              type: integer
+            notYetCopied:
+              type: integer
+            trashed:
+              type: integer
+        devices:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [id, nameEnc, lastBackupAt]
+            properties:
+              id:
+                $ref: '#/components/schemas/Id'
+              nameEnc:
+                $ref: '#/components/schemas/NameEnc'
+              lastBackupAt:
+                $ref: '#/components/schemas/NullableTimestamp'
+        drives:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [role, sizeBytes, freeBytes]
+            properties:
+              role:
+                type: string
+                enum: [main, backup]
+              sizeBytes:
+                type: integer
+              freeBytes:
+                type: integer
+        lastCopyAt:
+          $ref: '#/components/schemas/NullableTimestamp'
+        warnings:
+          type: array
+          items:
+            $ref: '#/components/schemas/Error'

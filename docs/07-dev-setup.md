@@ -74,10 +74,23 @@ Remove the rules when you no longer need them: `sudo ufw delete <number>`.
 make dev
 ```
 
-This starts:
-- `boxd --hal=sim --data=./.data` on https://localhost:8443
-- the web app with hot reload on http://localhost:5173 (proxies API calls to the box)
-- the simulator page on https://localhost:8443/dev/sim
+This builds `boxd` with the Go build tag `sim` and starts it as
+`boxd --hal=sim --data=./.data` on https://localhost:8443. The web app with hot
+reload (http://localhost:5173) and the simulator page arrive in M2.
+
+The `sim` tag adds a dev API for driving the simulated hardware. It has no
+auth, is not in `api/openapi.yaml`, and a Pi build (`make build-pi`) never
+contains it.
+
+| Method | Path | Body | Does |
+|--------|------|------|------|
+| GET | `/dev/sim/state` | | Light, clock offset, plugged-in drives |
+| POST | `/dev/sim/button` | `{"kind": "short" \| "long"}` | Press the power button |
+| POST | `/dev/sim/drives/{main\|backup}` | `{"present"?: bool, "fillPercent"?: 0–100}` | Unplug or replug the backup drive; set how full a drive is |
+| POST | `/dev/sim/clock/advance` | `{"seconds": n}` | Move the box's clock forward |
+| POST | `/dev/sim/jobs/{name}` | | Run `replicate`, `purge`, `cleanup` or `light` now; returns its result |
+
+For example: `curl -sk -X POST https://localhost:8443/dev/sim/jobs/replicate`.
 
 Phone app:
 
@@ -86,6 +99,16 @@ cd app && npx expo start
 ```
 
 Scan the box's pairing QR (shown in the web app's setup screen) from the app.
+
+## Test
+
+```
+make lint
+make test        # needs Go and Node: Go tests run twice (with and without
+                 # -tags sim), then Vitest, then the contract test, which
+                 # builds and starts a real boxd
+make test-arm64  # box tests on linux/arm64 under QEMU (Docker)
+```
 
 ## Reset
 

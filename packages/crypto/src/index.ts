@@ -28,3 +28,7 @@ export {
 } from './sealed.ts';
 export { generateSigningKeyPair, sign, signingKeyPairFromSeed, verify } from './sign.ts';
 export { sha256 } from './hash.ts';
+export { isId, newId } from './ids.ts';
+export { ad, type BlobRole } from './ad.ts';
+export { authMessage } from './auth.ts';
+export { createDedupeHasher, dedupeHash } from './dedupe.ts';

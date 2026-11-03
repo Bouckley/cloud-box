@@ -155,14 +155,22 @@ const dedupe = [utf8(''), utf8('abc'), new Uint8Array(1000).fill(0x61)].map((inp
 // What the recovery signing key signs to reset a box (ADR 0005). `message` is
 // the UTF-8 text. Built inline here; Task 7 of M2 adds recoverMessage to
 // @cloudbox/crypto and checks it against these rows.
+// The message binds the new device's public key, so a swapped key fails.
 const recover = [
-  { deviceId: ID, challenge: hex(seq(32, 64)), seed: seq(32, 30) },
-  { deviceId: 'ffeeddccbbaa99887766554433221100', challenge: hex(seq(32, 192)), seed: seq(32, 31) },
-].map(({ deviceId, challenge, seed }) => {
+  { deviceId: ID, challenge: hex(seq(32, 64)), seed: seq(32, 30), deviceSeed: seq(32, 32) },
+  {
+    deviceId: 'ffeeddccbbaa99887766554433221100',
+    challenge: hex(seq(32, 192)),
+    seed: seq(32, 31),
+    deviceSeed: seq(32, 33),
+  },
+].map(({ deviceId, challenge, seed, deviceSeed }) => {
   const kp = signingKeyPairFromSeed(seed);
-  const message = `cloudbox/v1/recover/${deviceId}/${challenge}`;
+  const signPublicKey = hex(signingKeyPairFromSeed(deviceSeed).publicKey);
+  const message = `cloudbox/v1/recover/${deviceId}/${signPublicKey}/${challenge}`;
   return {
     deviceId,
+    signPublicKey,
     challenge,
     message,
     seed: hex(seed),

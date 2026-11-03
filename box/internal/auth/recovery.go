@@ -59,7 +59,7 @@ func (s *Service) RecoveryChallenge(ctx context.Context, recoveryPublicKey []byt
 }
 
 // RecoveryReset checks the recovery key's signature over
-// boxcrypto.RecoverMessage(d.ID, challenge), then in one transaction revokes
+// boxcrypto.RecoverMessage(d.ID, d.SignPublicKey, challenge), then in one transaction revokes
 // every device of that user, deletes their sessions and pairing codes, and
 // adds d. The challenge is used up by any attempt. Every failure of key,
 // challenge or signature is ErrUnauthorized; a reused device id is
@@ -73,7 +73,7 @@ func (s *Service) RecoveryReset(ctx context.Context, recoveryPublicKey []byte, c
 	if !ok || !bytes.Equal(pr.publicKey, recoveryPublicKey) || now.After(pr.expires) {
 		return ErrUnauthorized
 	}
-	if !boxcrypto.VerifyEd25519(recoveryPublicKey, boxcrypto.RecoverMessage(d.ID, challenge), sig) {
+	if !boxcrypto.VerifyEd25519(recoveryPublicKey, boxcrypto.RecoverMessage(d.ID, d.SignPublicKey, challenge), sig) {
 		return ErrUnauthorized
 	}
 	ms := now.UnixMilli()

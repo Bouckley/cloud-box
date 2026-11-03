@@ -132,7 +132,7 @@ export interface paths {
     put?: never;
     /**
      * Revoke every device of the user and add this one
-     * @description `signature` is the recovery signing key's Ed25519 signature of UTF-8 `cloudbox/v1/recover/<deviceId>/<challenge>`. In one transaction the box revokes all the user's devices, deletes their sessions and pairing codes, and adds `device`. The challenge is used up by any attempt. Any failure of key, challenge or signature is 401 `unauthorized` with the same body. Errors: 400 `invalid_request`, 401 `unauthorized`, 409 `id_taken`.
+     * @description `signature` is the recovery signing key's Ed25519 signature of UTF-8 `cloudbox/v1/recover/<deviceId>/<signPublicKeyHex>/<challenge>`, where `signPublicKeyHex` is `device.signPublicKey` as lowercase hex, so a request whose device key was swapped fails. In one transaction the box revokes all the user's devices, deletes their sessions and pairing codes, and adds `device`. The challenge is used up by any attempt. Any failure of key, challenge or signature is 401 `unauthorized` with the same body. Errors: 400 `invalid_request`, 401 `unauthorized`, 409 `id_taken`.
      */
     post: operations['recoveryReset'];
     delete?: never;

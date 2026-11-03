@@ -48,7 +48,10 @@ the exact shapes; `docs/plans/M2.md` holds the full scope rulings.
 - *Recovery reset* (no device left): `POST /v1/recovery/challenge
   {recoveryPublicKey}` → a 60-second single-use challenge; `POST
   /v1/recovery/reset` with the recovery key's signature of UTF-8
-  `cloudbox/v1/recover/<deviceId>/<challengeHex>`. In one transaction the box
+  `cloudbox/v1/recover/<deviceId>/<signPublicKeyHex>/<challengeHex>`; the new
+  device's public key is inside the signed message, so someone who intercepts
+  the request (for example after the one-time certificate warning) cannot
+  swap in their own key. In one transaction the box
   revokes every device of the user, deletes their sessions and pairing codes,
   and adds the new device. Every failure is the same `401`, and any attempt
   uses up the challenge.
@@ -93,14 +96,24 @@ the exact shapes; `docs/plans/M2.md` holds the full scope rulings.
 
 ## Consequences
 
-- Setup costs the owner one button press; claiming someone else's new box
-  needs physical access.
+- Setup costs the owner one button press. Claiming a new box needs either
+  physical access or someone on the same network acting during the 10
+  minutes after the owner's press (see Known risks).
 - A recovery key alone can take over the account by design. The printed key
   is the most sensitive object the owner has, and the setup flow says so.
 - The web app does one full metadata sync per unlock (about 1 s per 10,000
   items).
 
 ## Known risks
+
+- **Someone on the home network can claim the box during the setup window.**
+  `/v1/info` is public, so a device on the LAN can watch for `setupOpen` and
+  send its own setup in the 10 minutes after the owner presses the button.
+  The owner then sees "already set up" and, until M5, has no reset short of
+  wiping the data directory. Accepted for M2 (home network, short window).
+  Mitigations to decide in M5: a long-press factory reset, and the setup
+  screen showing a short code the box confirms on its light before it
+  accepts setup.
 
 - **Password wrap replaceable by any signed-in device.** A stolen unlocked
   device can set a new password. The recovery key still unwraps the master

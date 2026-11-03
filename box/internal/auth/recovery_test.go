@@ -41,7 +41,7 @@ func reset(t *testing.T, svc *Service, o owner) (device, error) {
 	}
 	pub, priv, _ := ed25519.GenerateKey(rand.Reader)
 	nd := NewDevice{ID: newID(), SignPublicKey: pub}
-	sig := ed25519.Sign(o.recoveryPriv, boxcrypto.RecoverMessage(nd.ID, ch))
+	sig := ed25519.Sign(o.recoveryPriv, boxcrypto.RecoverMessage(nd.ID, nd.SignPublicKey, ch))
 	if err := svc.RecoveryReset(ctx, o.recoveryPub, ch, sig, nd); err != nil {
 		return device{}, err
 	}
@@ -124,12 +124,12 @@ func TestRecoveryChallengeSingleUse(t *testing.T) {
 	}
 	pub, _, _ := ed25519.GenerateKey(rand.Reader)
 	nd := NewDevice{ID: newID(), SignPublicKey: pub}
-	sig := ed25519.Sign(o.recoveryPriv, boxcrypto.RecoverMessage(nd.ID, ch))
+	sig := ed25519.Sign(o.recoveryPriv, boxcrypto.RecoverMessage(nd.ID, nd.SignPublicKey, ch))
 	if err := svc.RecoveryReset(ctx, o.recoveryPub, ch, sig, nd); err != nil {
 		t.Fatal(err)
 	}
 	nd2 := NewDevice{ID: newID(), SignPublicKey: pub}
-	sig2 := ed25519.Sign(o.recoveryPriv, boxcrypto.RecoverMessage(nd2.ID, ch))
+	sig2 := ed25519.Sign(o.recoveryPriv, boxcrypto.RecoverMessage(nd2.ID, nd2.SignPublicKey, ch))
 	if err := svc.RecoveryReset(ctx, o.recoveryPub, ch, sig2, nd2); !errors.Is(err, ErrUnauthorized) {
 		t.Fatalf("second use of a challenge: %v, want ErrUnauthorized", err)
 	}
@@ -149,7 +149,7 @@ func TestRecoveryChallengeExpires(t *testing.T) {
 	s.Advance(61 * time.Second)
 	pub, _, _ := ed25519.GenerateKey(rand.Reader)
 	nd := NewDevice{ID: newID(), SignPublicKey: pub}
-	sig := ed25519.Sign(o.recoveryPriv, boxcrypto.RecoverMessage(nd.ID, ch))
+	sig := ed25519.Sign(o.recoveryPriv, boxcrypto.RecoverMessage(nd.ID, nd.SignPublicKey, ch))
 	if err := svc.RecoveryReset(ctx, o.recoveryPub, ch, sig, nd); !errors.Is(err, ErrUnauthorized) {
 		t.Fatalf("expired challenge: %v, want ErrUnauthorized", err)
 	}
@@ -166,7 +166,7 @@ func TestRecoveryWrongSignature(t *testing.T) {
 	_, wrongKey, _ := ed25519.GenerateKey(rand.Reader)
 	pub, _, _ := ed25519.GenerateKey(rand.Reader)
 	nd := NewDevice{ID: newID(), SignPublicKey: pub}
-	sig := ed25519.Sign(wrongKey, boxcrypto.RecoverMessage(nd.ID, ch))
+	sig := ed25519.Sign(wrongKey, boxcrypto.RecoverMessage(nd.ID, nd.SignPublicKey, ch))
 	if err := svc.RecoveryReset(ctx, o.recoveryPub, ch, sig, nd); !errors.Is(err, ErrUnauthorized) {
 		t.Fatalf("wrong signature: %v, want ErrUnauthorized", err)
 	}
@@ -186,7 +186,7 @@ func TestRecoverySignatureBindsDevice(t *testing.T) {
 	pub, _, _ := ed25519.GenerateKey(rand.Reader)
 	devA := NewDevice{ID: newID(), SignPublicKey: pub}
 	devB := NewDevice{ID: newID(), SignPublicKey: pub}
-	sig := ed25519.Sign(o.recoveryPriv, boxcrypto.RecoverMessage(devA.ID, ch))
+	sig := ed25519.Sign(o.recoveryPriv, boxcrypto.RecoverMessage(devA.ID, devA.SignPublicKey, ch))
 	if err := svc.RecoveryReset(ctx, o.recoveryPub, ch, sig, devB); !errors.Is(err, ErrUnauthorized) {
 		t.Fatalf("signature for A used with B: %v, want ErrUnauthorized", err)
 	}
@@ -205,7 +205,7 @@ func TestRecoveryResetReusedDeviceID(t *testing.T) {
 	}
 	pub, _, _ := ed25519.GenerateKey(rand.Reader)
 	nd := NewDevice{ID: o.id, SignPublicKey: pub} // the existing device's id
-	sig := ed25519.Sign(o.recoveryPriv, boxcrypto.RecoverMessage(nd.ID, ch))
+	sig := ed25519.Sign(o.recoveryPriv, boxcrypto.RecoverMessage(nd.ID, nd.SignPublicKey, ch))
 	if err := svc.RecoveryReset(ctx, o.recoveryPub, ch, sig, nd); !errors.Is(err, store.ErrIDTaken) {
 		t.Fatalf("reused id: %v, want ErrIDTaken", err)
 	}
@@ -229,8 +229,31 @@ func TestRecoveryChallengesCapped(t *testing.T) {
 	}
 	pub, _, _ := ed25519.GenerateKey(rand.Reader)
 	nd := NewDevice{ID: newID(), SignPublicKey: pub}
-	sig := ed25519.Sign(o.recoveryPriv, boxcrypto.RecoverMessage(nd.ID, first))
+	sig := ed25519.Sign(o.recoveryPriv, boxcrypto.RecoverMessage(nd.ID, nd.SignPublicKey, first))
 	if err := svc.RecoveryReset(ctx, o.recoveryPub, first, sig, nd); !errors.Is(err, ErrUnauthorized) {
 		t.Fatalf("oldest challenge after the cap: %v, want ErrUnauthorized (dropped)", err)
+	}
+}
+
+// A reset request whose device key was swapped in transit must fail: the
+// recovery signature covers the new device's public key (review finding).
+func TestRecoverySignatureBindsDeviceKey(t *testing.T) {
+	svc, _, _ := newService(t)
+	ctx := context.Background()
+	o := setUpWithRecovery(t, svc)
+	ch, _, err := svc.RecoveryChallenge(ctx, o.recoveryPub)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ownerPub, _, _ := ed25519.GenerateKey(rand.Reader)
+	attackerPub, _, _ := ed25519.GenerateKey(rand.Reader)
+	id := newID()
+	sig := ed25519.Sign(o.recoveryPriv, boxcrypto.RecoverMessage(id, ownerPub, ch))
+	swapped := NewDevice{ID: id, SignPublicKey: attackerPub}
+	if err := svc.RecoveryReset(ctx, o.recoveryPub, ch, sig, swapped); !errors.Is(err, ErrUnauthorized) {
+		t.Fatalf("reset with a swapped device key: %v, want ErrUnauthorized", err)
+	}
+	if _, err := login(t, svc, o.device); err != nil {
+		t.Errorf("original device revoked by the swapped reset: %v", err)
 	}
 }

@@ -43,7 +43,7 @@ func TestRecoveryResetHandler(t *testing.T) {
 	ch := e.recoveryChallenge(o.recoveryPub())
 	pub, priv, _ := ed25519.GenerateKey(rand.Reader)
 	id := newID()
-	sig := ed25519.Sign(o.recovery, boxcrypto.RecoverMessage(id, ch))
+	sig := ed25519.Sign(o.recovery, boxcrypto.RecoverMessage(id, pub, ch))
 	if rec := e.call(http.MethodPost, "/v1/recovery/reset", "", resetBody(o.recoveryPub(), ch, sig, id, pub)); rec.Code != http.StatusNoContent {
 		t.Fatalf("reset = %d %s", rec.Code, rec.Body)
 	}
@@ -83,13 +83,13 @@ func TestResetResponseRevealsNothing(t *testing.T) {
 	id := newID()
 	_, wrong, _ := ed25519.GenerateKey(rand.Reader)
 	badSig := e.call(http.MethodPost, "/v1/recovery/reset", "",
-		resetBody(o.recoveryPub(), ch, ed25519.Sign(wrong, boxcrypto.RecoverMessage(id, ch)), id, pub))
+		resetBody(o.recoveryPub(), ch, ed25519.Sign(wrong, boxcrypto.RecoverMessage(id, pub, ch)), id, pub))
 
 	// Expired challenge.
 	ch = e.recoveryChallenge(o.recoveryPub())
 	e.sim.Advance(61 * time.Second)
 	expired := e.call(http.MethodPost, "/v1/recovery/reset", "",
-		resetBody(o.recoveryPub(), ch, ed25519.Sign(o.recovery, boxcrypto.RecoverMessage(id, ch)), id, pub))
+		resetBody(o.recoveryPub(), ch, ed25519.Sign(o.recovery, boxcrypto.RecoverMessage(id, pub, ch)), id, pub))
 
 	// Unknown key at reset (a challenge that was never issued to it).
 	unknownReset := e.call(http.MethodPost, "/v1/recovery/reset", "",
@@ -116,7 +116,7 @@ func TestRecoveryBadShapes(t *testing.T) {
 	o := e.setUpOwner()
 	pub, _, _ := ed25519.GenerateKey(rand.Reader)
 	ch := e.recoveryChallenge(o.recoveryPub())
-	sig := ed25519.Sign(o.recovery, boxcrypto.RecoverMessage(newID(), ch))
+	sig := ed25519.Sign(o.recovery, boxcrypto.RecoverMessage(newID(), pub, ch))
 	cases := map[string]struct {
 		path string
 		body any
@@ -140,7 +140,7 @@ func TestResetReusedDeviceID(t *testing.T) {
 	o := e.setUpOwner()
 	pub, _, _ := ed25519.GenerateKey(rand.Reader)
 	ch := e.recoveryChallenge(o.recoveryPub())
-	sig := ed25519.Sign(o.recovery, boxcrypto.RecoverMessage(o.deviceID, ch))
+	sig := ed25519.Sign(o.recovery, boxcrypto.RecoverMessage(o.deviceID, pub, ch))
 	if rec := e.call(http.MethodPost, "/v1/recovery/reset", "", resetBody(o.recoveryPub(), ch, sig, o.deviceID, pub)); rec.Code != http.StatusConflict {
 		t.Errorf("reset with a reused id = %d, want 409: %s", rec.Code, rec.Body)
 	}

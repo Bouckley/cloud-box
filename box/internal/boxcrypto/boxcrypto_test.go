@@ -112,11 +112,12 @@ func TestVerifyWrongLengths(t *testing.T) {
 // (ADR 0005): what the recovery signing key signs to reset a box.
 type recoverVectors struct {
 	Recover []struct {
-		DeviceID  string `json:"deviceId"`
-		Challenge string `json:"challenge"`
-		Message   string `json:"message"`
-		PublicKey string `json:"publicKey"`
-		Signature string `json:"signature"`
+		DeviceID      string `json:"deviceId"`
+		SignPublicKey string `json:"signPublicKey"`
+		Challenge     string `json:"challenge"`
+		Message       string `json:"message"`
+		PublicKey     string `json:"publicKey"`
+		Signature     string `json:"signature"`
 	} `json:"recover"`
 }
 
@@ -133,7 +134,7 @@ func TestRecoverVectors(t *testing.T) {
 		t.Fatal("no recover vectors")
 	}
 	for i, row := range v.Recover {
-		msg := RecoverMessage(row.DeviceID, row.Challenge)
+		msg := RecoverMessage(row.DeviceID, unhex(t, row.SignPublicKey), row.Challenge)
 		if string(msg) != row.Message {
 			t.Errorf("recover[%d] = %q, want %q", i, msg, row.Message)
 		}

@@ -119,24 +119,32 @@ export class Box {
 
   async #doLogin(): Promise<LoginResult> {
     await ready();
-    this.#token = null;
     const rec = await this.#device.load();
-    if (!rec) return 'not_paired';
-    const ch = await this.#public.POST('/v1/auth/challenge', { body: { deviceId: rec.deviceId } });
-    if (ch.response.status === 401) return this.#forget();
-    const { challenge } = must(ch);
-    const signature = await this.#device.sign(rec, authMessage(rec.deviceId, challenge));
-    const v = await this.#public.POST('/v1/auth/verify', {
-      body: { deviceId: rec.deviceId, challenge, signature: b64(signature) },
-    });
-    if (v.response.status === 401) return this.#forget();
-    this.#token = must(v).token;
-    return 'ok';
-  }
-
-  async #forget(): Promise<LoginResult> {
-    await this.#device.clear();
-    return 'revoked';
+    if (!rec) {
+      this.#token = null;
+      return 'not_paired';
+    }
+    // A verify 401 can mean the challenge expired (60 s) or the box restarted,
+    // so it is retried with a fresh challenge. Only the challenge endpoint
+    // says the box does not know this device: then the key is deleted.
+    for (let attempt = 0; ; attempt++) {
+      const ch = await this.#public.POST('/v1/auth/challenge', {
+        body: { deviceId: rec.deviceId },
+      });
+      if (ch.response.status === 401) {
+        this.#token = null;
+        await this.#device.clear();
+        return 'revoked';
+      }
+      const { challenge } = must(ch);
+      const signature = await this.#device.sign(rec, authMessage(rec.deviceId, challenge));
+      const v = await this.#public.POST('/v1/auth/verify', {
+        body: { deviceId: rec.deviceId, challenge, signature: b64(signature) },
+      });
+      if (v.response.status === 401 && attempt === 0) continue;
+      this.#token = must(v).token;
+      return 'ok';
+    }
   }
 
   /** Generates every key and the recovery words; nothing is sent until commit(). */
@@ -174,7 +182,7 @@ export class Box {
       commit: async () => {
         if (committed) throw new Error('setup was already sent');
         committed = true;
-        const rec = await this.#device.create();
+        const rec = await this.#device.generate();
         const res = await this.#public.POST('/v1/setup', {
           body: {
             user,
@@ -185,10 +193,9 @@ export class Box {
             },
           },
         });
-        if (!res.response.ok) {
-          await this.#device.clear();
-          must(res);
-        }
+        must(res);
+        await this.#device.save(rec);
+        this.#token = null;
         await this.#requireLogin();
         return this.#unlocked(userId, rec.deviceId, { master, identity, dedupe }, kdf);
       },
@@ -227,14 +234,13 @@ export class Box {
   /** Joins this device with a pairing code; its name is sent after the first unlock. */
   async pair(code: string, deviceName: string): Promise<void> {
     await ready();
-    const rec = await this.#device.create();
-    const res = await this.#public.POST('/v1/devices/pair', {
-      body: { code, device: { id: rec.deviceId, signPublicKey: b64(rec.publicKey) } },
-    });
-    if (!res.response.ok) {
-      await this.#device.clear();
-      must(res);
-    }
+    const rec = await this.#device.generate();
+    must(
+      await this.#public.POST('/v1/devices/pair', {
+        body: { code, device: { id: rec.deviceId, signPublicKey: b64(rec.publicKey) } },
+      }),
+    );
+    await this.#device.save(rec);
     await this.#device.setPendingName(deviceName);
     this.#token = null;
   }
@@ -251,25 +257,32 @@ export class Box {
     const rk = parseWords(words);
     const signer = recoverySigningKeyPair(rk);
     const recoveryPublicKey = b64(signer.publicKey);
-    const ch = await this.#public.POST('/v1/recovery/challenge', { body: { recoveryPublicKey } });
-    if (ch.response.status === 401) throw new ClientError('wrong_recovery_key');
-    const { challenge } = must(ch);
-    const rec = await this.#device.create();
-    const res = await this.#public.POST('/v1/recovery/reset', {
-      body: {
-        recoveryPublicKey,
-        challenge,
-        signature: b64(
-          sign(signer.privateKey, recoverMessage(rec.deviceId, rec.publicKey, challenge)),
-        ),
-        device: { id: rec.deviceId, signPublicKey: b64(rec.publicKey) },
-      },
-    });
-    if (!res.response.ok) {
-      await this.#device.clear();
+    const rec = await this.#device.generate();
+    // The box knows the key once it issues a challenge, so a 401 from reset
+    // means that challenge expired: try once more with a fresh one. The new
+    // key is stored only after the box accepts it.
+    for (let attempt = 0; ; attempt++) {
+      const ch = await this.#public.POST('/v1/recovery/challenge', {
+        body: { recoveryPublicKey },
+      });
+      if (ch.response.status === 401) throw new ClientError('wrong_recovery_key');
+      const { challenge } = must(ch);
+      const res = await this.#public.POST('/v1/recovery/reset', {
+        body: {
+          recoveryPublicKey,
+          challenge,
+          signature: b64(
+            sign(signer.privateKey, recoverMessage(rec.deviceId, rec.publicKey, challenge)),
+          ),
+          device: { id: rec.deviceId, signPublicKey: b64(rec.publicKey) },
+        },
+      });
+      if (res.response.status === 401 && attempt === 0) continue;
       if (res.response.status === 401) throw new ClientError('wrong_recovery_key');
       must(res);
+      break;
     }
+    await this.#device.save(rec);
     await this.#device.setPendingName(deviceName);
     this.#token = null;
     return this.unlockWithRecovery(words, newPassword);

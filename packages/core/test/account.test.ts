@@ -20,6 +20,33 @@ function platform(): Platform {
   return nodePlatform(box.fetch);
 }
 
+type Hook = (url: URL) => Promise<Response | undefined>;
+
+/** A platform whose fetch runs hook first; a Response from the hook replaces the box's. */
+function hooked(hook: { fn: Hook | null }): Platform {
+  const p = nodePlatform(box.fetch);
+  p.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const req = new Request(input, init);
+    const replaced = hook.fn ? await hook.fn(new URL(req.url)) : undefined;
+    return replaced ?? box.fetch(req);
+  }) as typeof fetch;
+  return p;
+}
+
+/** Sets holder to run fn once, the first time a request goes to path. */
+function once(
+  holder: { fn: Hook | null },
+  path: string,
+  fn: () => Promise<Response | undefined>,
+): { fn: Hook | null } {
+  holder.fn = async (url) => {
+    if (url.pathname !== path) return undefined;
+    holder.fn = null;
+    return fn();
+  };
+  return holder;
+}
+
 async function setUp(p = platform()): Promise<{ p: Platform; me: Unlocked; words: string[] }> {
   await box.pressButton();
   const prepared = await Box.connect(box.baseUrl, p).prepareSetup({
@@ -180,5 +207,72 @@ describe('accounts on a real box', () => {
     const down = Box.connect(box.baseUrl, p);
     expect((await clientError(down.info())).code).toBe('box_unreachable');
     box = undefined as unknown as RunningBox;
+  });
+
+  it('an expired login challenge keeps the device key', async () => {
+    const hook: { fn: Hook | null } = { fn: null };
+    const p = hooked(hook);
+    await setUp(p);
+    once(hook, '/v1/auth/verify', async () => {
+      await box.advanceClock(61);
+      return undefined;
+    });
+    expect(await Box.connect(box.baseUrl, p).login()).toBe('ok');
+    expect(await p.store.get('device')).toBeDefined();
+  });
+
+  it('a mistyped pairing code keeps a paired device', async () => {
+    const { p, me } = await setUp();
+    const { code } = await me.createPairingCode();
+    const wrong = code.slice(0, -1) + (code.endsWith('0') ? '1' : '0');
+    await expect(Box.connect(box.baseUrl, p).pair(wrong, 'Again')).rejects.toThrow();
+    expect(await Box.connect(box.baseUrl, p).login()).toBe('ok');
+  });
+
+  it('a failed reset keeps the device', async () => {
+    const hook: { fn: Hook | null } = { fn: null };
+    const p = hooked(hook);
+    const { words } = await setUp(p);
+    once(hook, '/v1/recovery/reset', async () =>
+      Response.json({ code: 'internal_error', message: 'x', action: 'y' }, { status: 500 }),
+    );
+    await expect(
+      Box.connect(box.baseUrl, p).resetWithRecovery(words.join(' '), 'after the reset', 'X'),
+    ).rejects.toThrow();
+    expect(await Box.connect(box.baseUrl, p).login()).toBe('ok');
+  });
+
+  it('an expired reset challenge is retried, not reported as the wrong key', async () => {
+    const { words } = await setUp();
+    const hook = once({ fn: null }, '/v1/recovery/reset', async () => {
+      await box.advanceClock(61);
+      return undefined;
+    });
+    const reset = await Box.connect(box.baseUrl, hooked(hook)).resetWithRecovery(
+      words.join(' '),
+      'after the reset',
+      'New laptop',
+    );
+    expect((await reset.devices()).filter((d) => d.revokedAt === null)).toHaveLength(1);
+  });
+
+  it('session expiry retries a request with a body', async () => {
+    const { me } = await setUp();
+    await box.advanceClock(61 * 60);
+    await me.renameDevice(me.deviceId, 'Renamed after expiry');
+    await box.advanceClock(61 * 60);
+    await me.changePassword('changed after expiry');
+    const named = (await me.devices()).find((d) => d.isThis);
+    expect(named?.name).toBe('Renamed after expiry');
+  });
+
+  it('never stores a plaintext device name', async () => {
+    const { me } = await setUp();
+    const p2 = await pairSecond(me, 'Phone-7741');
+    const stored = await p2.store.get('device');
+    expect(JSON.stringify(stored)).not.toContain('Phone-7741');
+    await Box.connect(box.baseUrl, p2).unlock(PASSWORD);
+    const named = (await me.devices()).find((d) => !d.isThis);
+    expect(named?.name).toBe('Phone-7741');
   });
 });

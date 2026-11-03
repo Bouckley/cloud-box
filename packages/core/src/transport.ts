@@ -24,12 +24,12 @@ export type SessionSource = {
 
 /**
  * Adds `Authorization` to every request. A 401 from anything but /v1/auth/*
- * logs in again once and retries a copy of the request.
+ * is retried once with a copy of the request: with the current token if a
+ * login already replaced the one that was sent, else after logging in again.
  */
 export function authedFetch(fetchImpl: typeof fetch, session: SessionSource): typeof fetch {
   const guarded = guardedFetch(fetchImpl);
-  const send = (req: Request) => {
-    const t = session.token();
+  const send = (req: Request, t: string | null) => {
     if (t === null) return guarded(req);
     const headers = new Headers(req.headers);
     headers.set('Authorization', `Bearer ${t}`);
@@ -38,11 +38,14 @@ export function authedFetch(fetchImpl: typeof fetch, session: SessionSource): ty
   return (async (input: RequestInfo | URL, init?: RequestInit) => {
     const req = new Request(input, init);
     const retry = req.clone();
-    const res = await send(req);
+    const sent = session.token();
+    const res = await send(req, sent);
     if (res.status !== 401 || new URL(req.url).pathname.startsWith('/v1/auth/')) return res;
+    const current = session.token();
+    if (current !== null && current !== sent) return send(retry, current);
     const result = await session.relogin();
     if (result !== 'ok') throw new ClientError(result);
-    return send(retry);
+    return send(retry, session.token());
   }) as typeof fetch;
 }
 

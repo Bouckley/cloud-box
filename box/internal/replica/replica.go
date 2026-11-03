@@ -41,8 +41,8 @@ func New(db *store.Store, h hal.HAL) *Service {
 
 // Result counts one run's blobs.
 type Result struct {
-	Copied int
-	Failed int
+	Copied int `json:"copied"`
+	Failed int `json:"failed"`
 }
 
 type pending struct {

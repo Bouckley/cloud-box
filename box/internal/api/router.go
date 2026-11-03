@@ -8,6 +8,8 @@ import (
 
 	"github.com/Bouckley/cloud-box/box/internal/auth"
 	"github.com/Bouckley/cloud-box/box/internal/blobs"
+	"github.com/Bouckley/cloud-box/box/internal/hal/sim"
+	"github.com/Bouckley/cloud-box/box/internal/jobs"
 	"github.com/Bouckley/cloud-box/box/internal/library"
 	"github.com/Bouckley/cloud-box/box/internal/status"
 	"github.com/Bouckley/cloud-box/box/internal/trash"
@@ -23,6 +25,11 @@ type Deps struct {
 	Library *library.Service
 	Trash   *trash.Service
 	Status  *status.Service
+
+	// Sim and Jobs are used only by the dev API, which exists only in
+	// builds with the sim tag.
+	Sim  *sim.Sim
+	Jobs *jobs.Runner
 }
 
 // handlers holds the dependencies every handler method uses.
@@ -76,6 +83,7 @@ func NewRouter(d Deps) http.Handler {
 	if d.Auth != nil && d.Status != nil {
 		mux.HandleFunc("GET /v1/status", h.requireSession(h.getStatus))
 	}
+	registerDevSim(mux, h)
 	return withLogging(logger, withRecover(logger, &jsonErrors{mux: mux}))
 }
 

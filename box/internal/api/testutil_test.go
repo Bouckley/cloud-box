@@ -14,6 +14,7 @@ import (
 	"github.com/Bouckley/cloud-box/box/internal/auth"
 	"github.com/Bouckley/cloud-box/box/internal/blobs"
 	"github.com/Bouckley/cloud-box/box/internal/hal/sim"
+	"github.com/Bouckley/cloud-box/box/internal/jobs"
 	"github.com/Bouckley/cloud-box/box/internal/library"
 	"github.com/Bouckley/cloud-box/box/internal/replica"
 	"github.com/Bouckley/cloud-box/box/internal/status"
@@ -43,8 +44,17 @@ func newEnv(t *testing.T) *env {
 	clock := s.HAL().Clock
 	b := blobs.New(db, s.HAL())
 	lib := library.New(db, clock)
+	rep := replica.New(db, s.HAL())
+	tr := trash.New(db, s.HAL(), b)
+	st := status.New(db, s.HAL(), lib, rep)
+	runner := &jobs.Runner{
+		Replicate: func(ctx context.Context) (any, error) { return rep.Run(ctx) },
+		Purge:     func(ctx context.Context) (any, error) { return tr.Purge(ctx) },
+		Cleanup:   func(ctx context.Context) (any, error) { return b.CleanupUploads(ctx) },
+		Light:     func(ctx context.Context) (any, error) { return nil, st.UpdateLight(ctx) },
+	}
 	deps := Deps{Version: "test", Auth: auth.New(db, clock), Blobs: b, Library: lib,
-		Trash: trash.New(db, s.HAL(), b), Status: status.New(db, s.HAL(), lib, replica.New(db, s.HAL()))}
+		Trash: tr, Status: st, Sim: s, Jobs: runner}
 	return &env{t: t, db: db, sim: s, dir: dir, deps: deps, router: NewRouter(deps)}
 }
 

@@ -16,10 +16,11 @@ help: ## List targets
 
 dev: ## Run boxd with simulated hardware on https://localhost:8443
 	@echo "web app (Vite on :5173) arrives in M2; starting boxd only"
-	go -C box run ./cmd/boxd --hal=sim --data="$(DATA_DIR)"
+	go -C box run -tags sim ./cmd/boxd --hal=sim --data="$(DATA_DIR)"
 
-test: ## Go tests (with -race) and TypeScript tests
+test: ## Go tests (with -race, with and without the sim tag) and TypeScript tests
 	go -C box test -race -count=1 ./...
+	go -C box test -race -count=1 -tags sim ./...
 	pnpm test
 
 test-e2e: ## Playwright + axe web tests (stub until M2)
@@ -43,6 +44,7 @@ reset-dev: ## Delete local dev data (./.data), including the dev TLS certificate
 lint: ## gofmt, go vet, ESLint and Prettier
 	@unformatted="$$(gofmt -l box)"; if [ -n "$$unformatted" ]; then echo "gofmt needed:"; echo "$$unformatted"; exit 1; fi
 	go -C box vet ./...
+	go -C box vet -tags sim ./...
 	pnpm lint
 
 generate: ## Regenerate packages/api-client from api/openapi.yaml

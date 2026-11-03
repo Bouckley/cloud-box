@@ -116,3 +116,29 @@ func TestRejectsPiHAL(t *testing.T) {
 		t.Fatalf("err = %v, want the pi-not-implemented error", err)
 	}
 }
+
+func TestNewOpensStoreAndServesAPI(t *testing.T) {
+	srv, dataDir := newServer(t)
+	if _, err := os.Stat(filepath.Join(dataDir, "db", "box.sqlite")); err != nil {
+		t.Fatalf("db/box.sqlite: %v", err)
+	}
+	addr, stop := serve(t, srv)
+	defer stop()
+	// The real services are wired: setup is registered (400 for an empty body, not 404).
+	resp, err := pinnedClient(t, dataDir, 0).Post("https://"+addr+"/v1/setup", "application/json", strings.NewReader("{}"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("POST /v1/setup {} = %d, want 400", resp.StatusCode)
+	}
+	resp, err = pinnedClient(t, dataDir, 0).Get("https://" + addr + "/v1/status")
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Errorf("GET /v1/status = %d, want 401", resp.StatusCode)
+	}
+}

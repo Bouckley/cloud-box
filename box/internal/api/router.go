@@ -38,6 +38,10 @@ func NewRouter(d Deps) http.Handler {
 		mux.HandleFunc("POST /v1/auth/challenge", h.createChallenge)
 		mux.HandleFunc("POST /v1/auth/verify", h.verifyChallenge)
 		mux.HandleFunc("GET /v1/account", h.requireSession(h.getAccount))
+		mux.HandleFunc("GET /v1/devices", h.requireSession(h.listDevices))
+		mux.HandleFunc("POST /v1/devices/pairing-codes", h.requireSession(h.createPairingCode))
+		mux.HandleFunc("POST /v1/devices/pair", h.pairDevice)
+		mux.HandleFunc("DELETE /v1/devices/{id}", h.requireSession(h.revokeDevice))
 	}
 	return withLogging(logger, withRecover(logger, &jsonErrors{mux: mux}))
 }

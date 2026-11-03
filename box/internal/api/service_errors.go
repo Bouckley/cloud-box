@@ -22,6 +22,12 @@ func (h *handlers) serviceError(w http.ResponseWriter, r *http.Request, err erro
 			Message: "That id is already in use on the box.",
 			Action:  "Try again; the app will pick a new id.",
 		})
+	case errors.Is(err, auth.ErrLastDevice):
+		writeError(w, http.StatusConflict, apiError{
+			Code:    "last_device",
+			Message: "This is the last device that can sign in to the box.",
+			Action:  "Pair another device first, then remove this one.",
+		})
 	case errors.Is(err, auth.ErrAlreadySetUp):
 		writeError(w, http.StatusConflict, apiError{
 			Code:    "already_set_up",

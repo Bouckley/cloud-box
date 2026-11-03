@@ -32,9 +32,29 @@ export interface paths {
     put?: never;
     /**
      * First run only - create the owner and their first device
-     * @description Works only while the box has no user; afterwards 409 `already_set_up`. Stores wrapped keys only. Errors: 400 `invalid_request`, 409 `id_taken`.
+     * @description Works only while the box has no user; afterwards 409 `already_set_up`. Also needs a short press of the box's power button within the last 10 minutes, else 409 `press_button` (checked after `already_set_up`). Stores wrapped keys only. Errors: 400 `invalid_request`, 409 `id_taken`, 409 `press_button`.
      */
     post: operations['setup'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/info': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Whether the box is set up and whether setup is open
+     * @description Public, so a new browser knows whether to show setup or connect. `setupOpen` is true for 10 minutes after a short press of the power button while the box has no user. Errors: none beyond the default.
+     */
+    get: operations['getInfo'];
+    put?: never;
+    post?: never;
     delete?: never;
     options?: never;
     head?: never;
@@ -55,6 +75,66 @@ export interface paths {
     get: operations['getAccount'];
     put?: never;
     post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/account/password': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /**
+     * Replace the password wrap of the master key
+     * @description The box cannot check the old password (zero knowledge); any signed-in device may replace the wrap. The recovery wrap is unchanged. Same KDF bounds as setup. Errors: 400 `invalid_request`, 401 `unauthorized`.
+     */
+    put: operations['changePassword'];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/recovery/challenge': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Get a single-use challenge for a recovery reset (valid 60 s)
+     * @description For a browser or phone with no device on the box. An unknown recovery key is 401 `unauthorized`. Errors: 400 `invalid_request`, 401 `unauthorized`.
+     */
+    post: operations['recoveryChallenge'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/recovery/reset': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Revoke every device of the user and add this one
+     * @description `signature` is the recovery signing key's Ed25519 signature of UTF-8 `cloudbox/v1/recover/<deviceId>/<challenge>`. In one transaction the box revokes all the user's devices, deletes their sessions and pairing codes, and adds `device`. The challenge is used up by any attempt. Any failure of key, challenge or signature is 401 `unauthorized` with the same body. Errors: 400 `invalid_request`, 401 `unauthorized`, 409 `id_taken`.
+     */
+    post: operations['recoveryReset'];
     delete?: never;
     options?: never;
     head?: never;
@@ -146,7 +226,7 @@ export interface paths {
     put?: never;
     /**
      * Add a new device to the user who created the pairing code
-     * @description A used, expired or unknown code is 401 `unauthorized`. A reused device id is 409 `id_taken`.
+     * @description A used, expired or unknown code is 401 `unauthorized`. A reused device id is 409 `id_taken`. `device.nameEnc` is optional because a new device has no master key yet; it sets its name later with renameDevice. Errors: 400 `invalid_request`, 401 `unauthorized`, 409 `id_taken`.
      */
     post: operations['pairDevice'];
     delete?: never;
@@ -174,7 +254,11 @@ export interface paths {
     delete: operations['revokeDevice'];
     options?: never;
     head?: never;
-    patch?: never;
+    /**
+     * Set a device's encrypted name
+     * @description Only the signed-in user's own devices; another user's device is 404 `not_found`. Errors: 400 `invalid_request`, 404 `not_found`.
+     */
+    patch: operations['renameDevice'];
     trace?: never;
   };
   '/v1/uploads': {
@@ -188,7 +272,7 @@ export interface paths {
     put?: never;
     /**
      * Start a resumable upload of one encrypted blob
-     * @description Parts are 8 MiB (`partBytes`), numbered from 0; every part except the last is exactly `partBytes`. 507 `storage_full` when the main drive cannot hold the blob plus 1 GiB.
+     * @description Parts are 8 MiB (`partBytes`), numbered from 0; every part except the last is exactly `partBytes`. 507 `storage_full` when the main drive cannot hold the blob plus 1 GiB. `sha256` may be sent here or at completeUpload; exactly one of them must carry it. Errors: 400 `invalid_request`, 507 `storage_full`.
      */
     post: operations['createUpload'];
     delete?: never;
@@ -252,7 +336,7 @@ export interface paths {
     put?: never;
     /**
      * Assemble the parts, check the hash and store the blob
-     * @description Safe to retry: a completed upload returns the same blob with 200. Missing parts: 409 `upload_incomplete`. Wrong hash: 422 `hash_mismatch`, and the parts are discarded.
+     * @description Safe to retry: a completed upload returns the same blob with 200. Missing parts: 409 `upload_incomplete`. Wrong hash: 422 `hash_mismatch`, and the parts are discarded. The body's `sha256` is required when createUpload had none; no hash anywhere, or a different hash from the one given at createUpload, is 400 `invalid_request` and nothing is discarded. Errors: 400 `invalid_request`, 409 `upload_incomplete`, 422 `hash_mismatch`.
      */
     post: operations['completeUpload'];
     delete?: never;
@@ -295,7 +379,7 @@ export interface paths {
     put?: never;
     /**
      * Create an album or folder
-     * @description Only folders have a parent, and the parent must be the user's folder (409 `invalid_parent`). A reused id is 409 `id_taken`.
+     * @description Only folders have a parent, and the parent must be the user's folder (409 `invalid_parent`). A reused id is 409 `id_taken`. A deleted parent is 404 `not_found`.
      */
     post: operations['createCollection'];
     delete?: never;
@@ -316,12 +400,16 @@ export interface paths {
     get?: never;
     put?: never;
     post?: never;
-    delete?: never;
+    /**
+     * Delete an empty album or folder (soft)
+     * @description Allowed only when no item outside Trash and no undeleted child collection is in it, else 409 `collection_not_empty`. Sets `deletedAt`; listCollections still returns it, because trashed items need its key. Restoring an item un-deletes its collection and deleted ancestors. Errors: 404 `not_found`, 409 `collection_not_empty`.
+     */
+    delete: operations['deleteCollection'];
     options?: never;
     head?: never;
     /**
      * Rename or move a collection
-     * @description A move that would create a cycle is 409 `invalid_parent`.
+     * @description A move that would create a cycle is 409 `invalid_parent`. Moving into a deleted collection is 404 `not_found`.
      */
     patch: operations['updateCollection'];
     trace?: never;
@@ -489,6 +577,7 @@ export interface components {
     NullableId: string | null;
     /** @description 32 bytes as lowercase hex (SHA-256, dedupe hash, challenge). */
     Hex32: string;
+    NullableHex32: string | null;
     /** @description 32 random bytes, base64url without padding. */
     Token: string;
     /** Format: date-time */
@@ -507,6 +596,8 @@ export interface components {
     Salt: string;
     /** @description Encrypted name, 41 bytes to 4 KiB. */
     NameEnc: string;
+    /** @description Encrypted name, or null when the device has not set one yet. */
+    NullableNameEnc: string | null;
     /** @description Encrypted metadata, 41 bytes to 64 KiB. */
     MetadataEnc: string;
     Kdf: {
@@ -519,6 +610,7 @@ export interface components {
       kdf: components['schemas']['Kdf'];
       masterKeyByPassword: components['schemas']['WrappedKey'];
       masterKeyByRecovery: components['schemas']['WrappedKey'];
+      recoveryPublicKey: components['schemas']['PublicKey'];
       identityPublicKey: components['schemas']['PublicKey'];
       identityKeyEnc: components['schemas']['WrappedKey'];
       dedupeKeyEnc: components['schemas']['WrappedKey'];
@@ -539,13 +631,24 @@ export interface components {
       nameEnc: components['schemas']['NameEnc'];
       signPublicKey: components['schemas']['PublicKey'];
     };
+    PairDevice: {
+      id: components['schemas']['Id'];
+      nameEnc?: components['schemas']['NameEnc'];
+      signPublicKey: components['schemas']['PublicKey'];
+    };
+    BoxInfo: {
+      setUp: boolean;
+      setupOpen: boolean;
+      /** @description boxd build version. */
+      version: string;
+    };
     SetupRequest: {
       user: components['schemas']['NewUser'];
       device: components['schemas']['NewDevice'];
     };
     Device: {
       id: components['schemas']['Id'];
-      nameEnc: components['schemas']['NameEnc'];
+      nameEnc: components['schemas']['NullableNameEnc'];
       signPublicKey: components['schemas']['PublicKey'];
       createdAt: components['schemas']['Timestamp'];
       lastSeen: components['schemas']['Timestamp'];
@@ -566,7 +669,8 @@ export interface components {
     Upload: {
       id: components['schemas']['Id'];
       size: number;
-      sha256: components['schemas']['Hex32'];
+      /** @description Null until the hash is known (sent at createUpload or completeUpload). */
+      sha256: components['schemas']['NullableHex32'];
       /** @constant */
       partBytes: 8388608;
       partCount: number;
@@ -588,6 +692,7 @@ export interface components {
     /** @enum {string} */
     CollectionKind: 'album' | 'folder';
     Collection: {
+      deletedAt: components['schemas']['NullableTimestamp'];
       id: components['schemas']['Id'];
       kind: components['schemas']['CollectionKind'];
       parentId: components['schemas']['NullableId'];
@@ -656,7 +761,7 @@ export interface components {
       };
       devices: {
         id: components['schemas']['Id'];
-        nameEnc: components['schemas']['NameEnc'];
+        nameEnc: components['schemas']['NullableNameEnc'];
         lastBackupAt: components['schemas']['NullableTimestamp'];
       }[];
       drives: {
@@ -735,6 +840,27 @@ export interface operations {
       default: components['responses']['Error'];
     };
   };
+  getInfo: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Box info. */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['BoxInfo'];
+        };
+      };
+      default: components['responses']['Error'];
+    };
+  };
   getAccount: {
     parameters: {
       query?: never;
@@ -752,6 +878,87 @@ export interface operations {
         content: {
           'application/json': components['schemas']['Account'];
         };
+      };
+      default: components['responses']['Error'];
+    };
+  };
+  changePassword: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': {
+          kdf: components['schemas']['Kdf'];
+          masterKeyByPassword: components['schemas']['WrappedKey'];
+        };
+      };
+    };
+    responses: {
+      /** @description The password wrap was replaced. */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      default: components['responses']['Error'];
+    };
+  };
+  recoveryChallenge: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': {
+          recoveryPublicKey: components['schemas']['PublicKey'];
+        };
+      };
+    };
+    responses: {
+      /** @description A challenge to sign with the recovery signing key. */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Challenge'];
+        };
+      };
+      default: components['responses']['Error'];
+    };
+  };
+  recoveryReset: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': {
+          recoveryPublicKey: components['schemas']['PublicKey'];
+          challenge: components['schemas']['Hex32'];
+          signature: components['schemas']['Signature'];
+          device: components['schemas']['PairDevice'];
+        };
+      };
+    };
+    responses: {
+      /** @description Reset; the new device can now log in. */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
       };
       default: components['responses']['Error'];
     };
@@ -867,7 +1074,7 @@ export interface operations {
       content: {
         'application/json': {
           code: components['schemas']['Token'];
-          device: components['schemas']['NewDevice'];
+          device: components['schemas']['PairDevice'];
         };
       };
     };
@@ -908,6 +1115,35 @@ export interface operations {
       default: components['responses']['Error'];
     };
   };
+  renameDevice: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: components['parameters']['IdPath'];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': {
+          nameEnc: components['schemas']['NameEnc'];
+        };
+      };
+    };
+    responses: {
+      /** @description The renamed device. */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Device'];
+        };
+      };
+      default: components['responses']['Error'];
+    };
+  };
   createUpload: {
     parameters: {
       query?: never;
@@ -920,7 +1156,7 @@ export interface operations {
         'application/json': {
           /** @description Ciphertext size in bytes (max 64 GiB). */
           size: number;
-          sha256: components['schemas']['Hex32'];
+          sha256?: components['schemas']['Hex32'];
         };
       };
     };
@@ -995,7 +1231,13 @@ export interface operations {
       };
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody?: {
+      content: {
+        'application/json': {
+          sha256?: components['schemas']['Hex32'];
+        };
+      };
+    };
     responses: {
       /** @description Already completed; the same blob. */
       200: {
@@ -1103,6 +1345,27 @@ export interface operations {
         content: {
           'application/json': components['schemas']['Collection'];
         };
+      };
+      default: components['responses']['Error'];
+    };
+  };
+  deleteCollection: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: components['parameters']['IdPath'];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Deleted. */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
       };
       default: components['responses']['Error'];
     };

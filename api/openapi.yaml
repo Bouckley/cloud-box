@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Cloud Box API
-  version: 0.2.0
+  version: 0.3.0
   description: >
     The box stores ciphertext only. Request and response bodies never carry
     plaintext file contents, names, dates, locations or keys. Conventions
@@ -34,7 +34,10 @@ paths:
       summary: First run only - create the owner and their first device
       description: >
         Works only while the box has no user; afterwards 409 `already_set_up`.
-        Stores wrapped keys only. Errors: 400 `invalid_request`, 409 `id_taken`.
+        Also needs a short press of the box's power button within the last 10
+        minutes, else 409 `press_button` (checked after `already_set_up`).
+        Stores wrapped keys only. Errors: 400 `invalid_request`, 409 `id_taken`,
+        409 `press_button`.
       security: []
       requestBody:
         required: true
@@ -52,6 +55,25 @@ paths:
         default:
           $ref: '#/components/responses/Error'
 
+  /v1/info:
+    get:
+      operationId: getInfo
+      summary: Whether the box is set up and whether setup is open
+      description: >
+        Public, so a new browser knows whether to show setup or connect.
+        `setupOpen` is true for 10 minutes after a short press of the power
+        button while the box has no user. Errors: none beyond the default.
+      security: []
+      responses:
+        '200':
+          description: Box info.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BoxInfo'
+        default:
+          $ref: '#/components/responses/Error'
+
   /v1/account:
     get:
       operationId: getAccount
@@ -64,6 +86,99 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Account'
+        default:
+          $ref: '#/components/responses/Error'
+
+  /v1/account/password:
+    put:
+      operationId: changePassword
+      summary: Replace the password wrap of the master key
+      description: >
+        The box cannot check the old password (zero knowledge); any signed-in
+        device may replace the wrap. The recovery wrap is unchanged. Same KDF
+        bounds as setup. Errors: 400 `invalid_request`, 401 `unauthorized`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [kdf, masterKeyByPassword]
+              properties:
+                kdf:
+                  $ref: '#/components/schemas/Kdf'
+                masterKeyByPassword:
+                  $ref: '#/components/schemas/WrappedKey'
+      responses:
+        '204':
+          description: The password wrap was replaced.
+        default:
+          $ref: '#/components/responses/Error'
+
+  /v1/recovery/challenge:
+    post:
+      operationId: recoveryChallenge
+      summary: Get a single-use challenge for a recovery reset (valid 60 s)
+      description: >
+        For a browser or phone with no device on the box. An unknown recovery
+        key is 401 `unauthorized`. Errors: 400 `invalid_request`,
+        401 `unauthorized`.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [recoveryPublicKey]
+              properties:
+                recoveryPublicKey:
+                  $ref: '#/components/schemas/PublicKey'
+      responses:
+        '200':
+          description: A challenge to sign with the recovery signing key.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Challenge'
+        default:
+          $ref: '#/components/responses/Error'
+
+  /v1/recovery/reset:
+    post:
+      operationId: recoveryReset
+      summary: Revoke every device of the user and add this one
+      description: >
+        `signature` is the recovery signing key's Ed25519 signature of UTF-8
+        `cloudbox/v1/recover/<deviceId>/<challenge>`. In one transaction the box
+        revokes all the user's devices, deletes their sessions and pairing
+        codes, and adds `device`. The challenge is used up by any attempt. Any
+        failure of key, challenge or signature is 401 `unauthorized` with the
+        same body. Errors: 400 `invalid_request`, 401 `unauthorized`,
+        409 `id_taken`.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [recoveryPublicKey, challenge, signature, device]
+              properties:
+                recoveryPublicKey:
+                  $ref: '#/components/schemas/PublicKey'
+                challenge:
+                  $ref: '#/components/schemas/Hex32'
+                signature:
+                  $ref: '#/components/schemas/Signature'
+                device:
+                  $ref: '#/components/schemas/PairDevice'
+      responses:
+        '204':
+          description: Reset; the new device can now log in.
         default:
           $ref: '#/components/responses/Error'
 
@@ -166,7 +281,11 @@ paths:
     post:
       operationId: pairDevice
       summary: Add a new device to the user who created the pairing code
-      description: A used, expired or unknown code is 401 `unauthorized`. A reused device id is 409 `id_taken`.
+      description: >
+        A used, expired or unknown code is 401 `unauthorized`. A reused device
+        id is 409 `id_taken`. `device.nameEnc` is optional because a new device
+        has no master key yet; it sets its name later with renameDevice.
+        Errors: 400 `invalid_request`, 401 `unauthorized`, 409 `id_taken`.
       security: []
       requestBody:
         required: true
@@ -180,7 +299,7 @@ paths:
                 code:
                   $ref: '#/components/schemas/Token'
                 device:
-                  $ref: '#/components/schemas/NewDevice'
+                  $ref: '#/components/schemas/PairDevice'
       responses:
         '201':
           description: The device was added; it can now log in.
@@ -210,6 +329,32 @@ paths:
           description: Revoked.
         default:
           $ref: '#/components/responses/Error'
+    patch:
+      operationId: renameDevice
+      summary: Set a device's encrypted name
+      description: >
+        Only the signed-in user's own devices; another user's device is
+        404 `not_found`. Errors: 400 `invalid_request`, 404 `not_found`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [nameEnc]
+              properties:
+                nameEnc:
+                  $ref: '#/components/schemas/NameEnc'
+      responses:
+        '200':
+          description: The renamed device.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Device'
+        default:
+          $ref: '#/components/responses/Error'
 
   /v1/uploads:
     post:
@@ -218,7 +363,9 @@ paths:
       description: >
         Parts are 8 MiB (`partBytes`), numbered from 0; every part except the last
         is exactly `partBytes`. 507 `storage_full` when the main drive cannot hold
-        the blob plus 1 GiB.
+        the blob plus 1 GiB. `sha256` may be sent here or at completeUpload;
+        exactly one of them must carry it. Errors: 400 `invalid_request`,
+        507 `storage_full`.
       requestBody:
         required: true
         content:
@@ -226,7 +373,7 @@ paths:
             schema:
               type: object
               additionalProperties: false
-              required: [size, sha256]
+              required: [size]
               properties:
                 size:
                   type: integer
@@ -296,7 +443,21 @@ paths:
       description: >
         Safe to retry: a completed upload returns the same blob with 200.
         Missing parts: 409 `upload_incomplete`. Wrong hash: 422 `hash_mismatch`,
-        and the parts are discarded.
+        and the parts are discarded. The body's `sha256` is required when
+        createUpload had none; no hash anywhere, or a different hash from the
+        one given at createUpload, is 400 `invalid_request` and nothing is
+        discarded. Errors: 400 `invalid_request`, 409 `upload_incomplete`,
+        422 `hash_mismatch`.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                sha256:
+                  $ref: '#/components/schemas/Hex32'
       responses:
         '200':
           description: Already completed; the same blob.
@@ -374,7 +535,8 @@ paths:
       summary: Create an album or folder
       description: >
         Only folders have a parent, and the parent must be the user's folder
-        (409 `invalid_parent`). A reused id is 409 `id_taken`.
+        (409 `invalid_parent`). A reused id is 409 `id_taken`. A deleted
+        parent is 404 `not_found`.
       requestBody:
         required: true
         content:
@@ -410,7 +572,9 @@ paths:
     patch:
       operationId: updateCollection
       summary: Rename or move a collection
-      description: A move that would create a cycle is 409 `invalid_parent`.
+      description: >
+        A move that would create a cycle is 409 `invalid_parent`. Moving into a
+        deleted collection is 404 `not_found`.
       requestBody:
         required: true
         content:
@@ -431,6 +595,20 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Collection'
+        default:
+          $ref: '#/components/responses/Error'
+    delete:
+      operationId: deleteCollection
+      summary: Delete an empty album or folder (soft)
+      description: >
+        Allowed only when no item outside Trash and no undeleted child
+        collection is in it, else 409 `collection_not_empty`. Sets `deletedAt`;
+        listCollections still returns it, because trashed items need its key.
+        Restoring an item un-deletes its collection and deleted ancestors.
+        Errors: 404 `not_found`, 409 `collection_not_empty`.
+      responses:
+        '204':
+          description: Deleted.
         default:
           $ref: '#/components/responses/Error'
 
@@ -689,6 +867,9 @@ components:
       type: string
       pattern: '^[0-9a-f]{64}$'
       description: 32 bytes as lowercase hex (SHA-256, dedupe hash, challenge).
+    NullableHex32:
+      type: [string, 'null']
+      pattern: '^[0-9a-f]{64}$'
     Token:
       type: string
       pattern: '^[A-Za-z0-9_-]{43}$'
@@ -733,6 +914,12 @@ components:
       minLength: 56
       maxLength: 5464
       description: Encrypted name, 41 bytes to 4 KiB.
+    NullableNameEnc:
+      type: [string, 'null']
+      contentEncoding: base64
+      minLength: 56
+      maxLength: 5464
+      description: Encrypted name, or null when the device has not set one yet.
     MetadataEnc:
       type: string
       contentEncoding: base64
@@ -765,6 +952,7 @@ components:
           kdf,
           masterKeyByPassword,
           masterKeyByRecovery,
+          recoveryPublicKey,
           identityPublicKey,
           identityKeyEnc,
           dedupeKeyEnc,
@@ -778,6 +966,8 @@ components:
           $ref: '#/components/schemas/WrappedKey'
         masterKeyByRecovery:
           $ref: '#/components/schemas/WrappedKey'
+        recoveryPublicKey:
+          $ref: '#/components/schemas/PublicKey'
         identityPublicKey:
           $ref: '#/components/schemas/PublicKey'
         identityKeyEnc:
@@ -830,6 +1020,31 @@ components:
         signPublicKey:
           $ref: '#/components/schemas/PublicKey'
 
+    PairDevice:
+      type: object
+      additionalProperties: false
+      required: [id, signPublicKey]
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        nameEnc:
+          $ref: '#/components/schemas/NameEnc'
+        signPublicKey:
+          $ref: '#/components/schemas/PublicKey'
+
+    BoxInfo:
+      type: object
+      additionalProperties: false
+      required: [setUp, setupOpen, version]
+      properties:
+        setUp:
+          type: boolean
+        setupOpen:
+          type: boolean
+        version:
+          type: string
+          description: boxd build version.
+
     SetupRequest:
       type: object
       additionalProperties: false
@@ -848,7 +1063,7 @@ components:
         id:
           $ref: '#/components/schemas/Id'
         nameEnc:
-          $ref: '#/components/schemas/NameEnc'
+          $ref: '#/components/schemas/NullableNameEnc'
         signPublicKey:
           $ref: '#/components/schemas/PublicKey'
         createdAt:
@@ -898,7 +1113,8 @@ components:
         size:
           type: integer
         sha256:
-          $ref: '#/components/schemas/Hex32'
+          $ref: '#/components/schemas/NullableHex32'
+          description: Null until the hash is known (sent at createUpload or completeUpload).
         partBytes:
           type: integer
           const: 8388608
@@ -938,8 +1154,10 @@ components:
     Collection:
       type: object
       additionalProperties: false
-      required: [id, kind, parentId, nameEnc, keyEnc, seq]
+      required: [id, kind, parentId, nameEnc, keyEnc, deletedAt, seq]
       properties:
+        deletedAt:
+          $ref: '#/components/schemas/NullableTimestamp'
         id:
           $ref: '#/components/schemas/Id'
         kind:
@@ -1116,7 +1334,7 @@ components:
               id:
                 $ref: '#/components/schemas/Id'
               nameEnc:
-                $ref: '#/components/schemas/NameEnc'
+                $ref: '#/components/schemas/NullableNameEnc'
               lastBackupAt:
                 $ref: '#/components/schemas/NullableTimestamp'
         drives:

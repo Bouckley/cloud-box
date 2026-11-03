@@ -12,6 +12,7 @@
     "gen-vectors": "node scripts/gen-vectors.ts"
   },
   "dependencies": {
+    "@scure/bip39": "^2.4.0",
     "libsodium-wrappers-sumo": "^0.8.4"
   },
   "devDependencies": {

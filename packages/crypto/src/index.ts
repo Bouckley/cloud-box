@@ -11,6 +11,7 @@ export {
   wrapKey,
 } from './aead.ts';
 export {
+  ciphertextSize,
   createFileDecryptor,
   createFileEncryptor,
   decryptFile,
@@ -27,8 +28,17 @@ export {
   type KeyPair,
 } from './sealed.ts';
 export { generateSigningKeyPair, sign, signingKeyPairFromSeed, verify } from './sign.ts';
-export { sha256 } from './hash.ts';
+export { createSha256, sha256, type Sha256 } from './hash.ts';
 export { isId, newId } from './ids.ts';
 export { ad, type BlobRole } from './ad.ts';
-export { authMessage } from './auth.ts';
+export { authMessage, recoverMessage } from './auth.ts';
+export {
+  newRecoveryKey,
+  parseRecoveryKey,
+  recoverySigningKeyPair,
+  recoveryWrapKey,
+  RecoveryWordsError,
+  type RecoveryKey,
+  type RecoveryWordsReason,
+} from './recovery.ts';
 export { createDedupeHasher, dedupeHash } from './dedupe.ts';

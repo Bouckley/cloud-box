@@ -13,6 +13,9 @@ import {
   generateBoxKeyPair,
   generateSigningKeyPair,
   newId,
+  newRecoveryKey,
+  recoverySigningKeyPair,
+  recoveryWrapKey,
   newSalt,
   randomKey,
   ready,
@@ -70,13 +73,13 @@ describe('a real box', () => {
     const master = randomKey();
     const salt = newSalt();
     const kek = deriveKek(PASSWORD, salt, FAST_KDF);
-    const recovery = randomKey();
+    const recoveryKey = newRecoveryKey();
+    const recovery = recoveryWrapKey(recoveryKey);
     const identity = generateBoxKeyPair();
     const dedupeKey = randomKey();
     const signing = generateSigningKeyPair();
-    // Stand-in for the recovery signing key until Task 7 derives it from the
-    // recovery key; the box only stores its public half here.
-    const recoverySigning = generateSigningKeyPair();
+    // The box stores only the public half of the recovery signing key.
+    const recoverySigning = recoverySigningKeyPair(recoveryKey);
     const deviceId = newId();
     const wrapped = {
       masterKeyByPassword: wrapKey(kek, master, ad.masterKeyByPassword(userId)),
@@ -228,6 +231,12 @@ describe('a real box', () => {
       b64(master),
       hex(fileKey),
       b64(fileKey),
+      hex(recoveryKey.entropy),
+      b64(recoveryKey.entropy),
+      recoveryKey.words.join(' '),
+      hex(recovery),
+      b64(recovery),
+      hex(recoverySigning.privateKey),
     ];
     const files = await allFiles(box.dataDir);
     const blobFiles = files.filter((f) => f.includes(`${join('blobs', '')}`));

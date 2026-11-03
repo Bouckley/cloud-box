@@ -17,6 +17,9 @@ import { boxKeyPairFromSeed, sealTo } from '../src/sealed.ts';
 import { sign, signingKeyPairFromSeed } from '../src/sign.ts';
 import { ready } from '../src/sodium.ts';
 import { encryptFile } from '../src/stream.ts';
+import { recoverySigningKeyPair, recoveryWrapKey } from '../src/recovery.ts';
+import { entropyToMnemonic } from '@scure/bip39';
+import { wordlist } from '@scure/bip39/wordlists/english.js';
 
 const out = resolve(
   dirname(fileURLToPath(import.meta.url)),
@@ -179,6 +182,18 @@ const recover = [
   };
 });
 
+// Recovery key words and the two subkeys derived from its entropy
+// (crypto_kdf_derive_from_key, context "cbrecov1": 1 = wrap key, 2 = signing seed).
+const recovery = [new Uint8Array(32), seq(32, 100)].map((entropy) => {
+  const rk = { entropy, words: entropyToMnemonic(entropy, wordlist).split(' ') };
+  return {
+    entropy: hex(entropy),
+    words: rk.words,
+    wrapKey: hex(recoveryWrapKey(rk)),
+    signPublicKey: hex(recoverySigningKeyPair(rk).publicKey),
+  };
+});
+
 const generated = {
   version: 1,
   note: 'Generated once by packages/crypto/scripts/gen-vectors.ts and committed. Binary values are lowercase hex. Do not edit by hand.',
@@ -192,6 +207,7 @@ const generated = {
   authMessage: authMessageVectors,
   dedupe,
   recover,
+  recovery,
 };
 
 let vectors: Record<string, unknown> = generated;

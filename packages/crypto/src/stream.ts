@@ -82,6 +82,19 @@ export function createFileDecryptor(
   };
 }
 
+/**
+ * The size of encryptFile's output for plaintextBytes, known before encrypting:
+ * header + plaintext + 17 bytes per chunk (an empty file is one chunk).
+ */
+export function ciphertextSize(plaintextBytes: number, chunkBytes = FILE_CHUNK_BYTES): number {
+  if (!Number.isSafeInteger(plaintextBytes) || plaintextBytes < 0) {
+    throw new CryptoError('invalid_input');
+  }
+  if (!Number.isSafeInteger(chunkBytes) || chunkBytes < 1) throw new CryptoError('invalid_input');
+  const chunks = Math.max(1, Math.ceil(plaintextBytes / chunkBytes));
+  return HEADER_BYTES + plaintextBytes + CHUNK_OVERHEAD * chunks;
+}
+
 /** Encrypts a whole file: header ‖ chunks, the last chunk tagged FINAL. */
 export function encryptFile(
   key: Uint8Array,

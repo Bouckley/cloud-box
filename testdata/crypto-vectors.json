@@ -280,5 +280,69 @@
       "publicKey": "af3d20264f9c26ef085b5ce537f417d424037a0963a6386ff6d050e5bf773714",
       "signature": "8fa3e594a9756b0fa11ca4fa48307c705ec49054d1562ae968f70b54182a645305af48a2de81956929f32e9fb7aad64a8b02f6f83eebe6f2225f3d582ac60c0a"
     }
+  ],
+  "recovery": [
+    {
+      "entropy": "0000000000000000000000000000000000000000000000000000000000000000",
+      "words": [
+        "abandon",
+        "abandon",
+        "abandon",
+        "abandon",
+        "abandon",
+        "abandon",
+        "abandon",
+        "abandon",
+        "abandon",
+        "abandon",
+        "abandon",
+        "abandon",
+        "abandon",
+        "abandon",
+        "abandon",
+        "abandon",
+        "abandon",
+        "abandon",
+        "abandon",
+        "abandon",
+        "abandon",
+        "abandon",
+        "abandon",
+        "art"
+      ],
+      "wrapKey": "543e318c25e5a9f4d9b3765445e4630cc88c45883265c7f0a2e185ed8efab08b",
+      "signPublicKey": "4089b10b731e13a1dd3a742ab97b206954aec683d43ece759520e49420b643e6"
+    },
+    {
+      "entropy": "6465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f80818283",
+      "words": [
+        "good",
+        "clinic",
+        "oil",
+        "speak",
+        "note",
+        "cup",
+        "random",
+        "punch",
+        "hunt",
+        "logic",
+        "frame",
+        "tragic",
+        "elder",
+        "robot",
+        "target",
+        "august",
+        "kidney",
+        "swim",
+        "butter",
+        "woman",
+        "way",
+        "dolphin",
+        "anxiety",
+        "ladder"
+      ],
+      "wrapKey": "9b8b628feca1f8c4a2cd13161bb3aa1e9e15c0ea9dcaa979e34bdd38264d7243",
+      "signPublicKey": "49b9590e715533a2087ac2e777c0ae317a403d851feb49cc8ca5816a71dc16ae"
+    }
   ]
 }

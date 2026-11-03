@@ -2,7 +2,8 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import vectors from '../../../testdata/crypto-vectors.json' with { type: 'json' };
 import { ad as adFor, type BlobRole } from './ad.ts';
 import { aeadDecrypt, aeadEncryptWithNonce } from './aead.ts';
-import { authMessage } from './auth.ts';
+import { authMessage, recoverMessage } from './auth.ts';
+import { recoverySigningKeyPair, recoveryWrapKey } from './recovery.ts';
 import { dedupeHash } from './dedupe.ts';
 import { deriveKek } from './kdf.ts';
 import { boxKeyPairFromSeed, openSealed } from './sealed.ts';
@@ -79,6 +80,20 @@ describe('crypto-vectors.json', () => {
 
   it.each(vectors.dedupe)('dedupe: $input', (v) => {
     expect(dedupeHash(b(v.key), b(v.input))).toBe(v.hash);
+  });
+
+  it.each(vectors.recover)('recover: $deviceId', (v) => {
+    const message = recoverMessage(v.deviceId, b(v.signPublicKey), v.challenge);
+    expect(new TextDecoder().decode(message)).toBe(v.message);
+    const kp = signingKeyPairFromSeed(b(v.seed));
+    expect(kp.publicKey).toEqual(b(v.publicKey));
+    expect(sign(kp.privateKey, message)).toEqual(b(v.signature));
+  });
+
+  it.each(vectors.recovery)('recovery: $words.0 $words.1 …', (v) => {
+    const rk = { entropy: b(v.entropy), words: v.words };
+    expect(recoveryWrapKey(rk)).toEqual(b(v.wrapKey));
+    expect(recoverySigningKeyPair(rk).publicKey).toEqual(b(v.signPublicKey));
   });
 
   it('sha256 covers the empty input', () => {

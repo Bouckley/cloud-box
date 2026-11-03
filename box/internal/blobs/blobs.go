@@ -8,9 +8,12 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
+	"fmt"
+	"hash/fnv"
 	"os"
 	"path/filepath"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/Bouckley/cloud-box/box/internal/hal"
@@ -58,7 +61,25 @@ type Service struct {
 	db  *store.Store
 	hal hal.HAL
 
-	completing sync.Map // upload id → *sync.Mutex, so one upload completes once
+	// locks serialize work on one upload: parts take a read lock (they write
+	// separate byte ranges), complete and reset take the write lock. Striped
+	// by upload id so memory stays fixed however many uploads there are.
+	locks [64]sync.RWMutex
+}
+
+func (s *Service) lock(uploadID string) *sync.RWMutex {
+	h := fnv.New32a()
+	_, _ = h.Write([]byte(uploadID))
+	return &s.locks[h.Sum32()%uint32(len(s.locks))]
+}
+
+// diskErr turns "no space left on device" into ErrStorageFull (507) and
+// returns every other error unchanged.
+func diskErr(err error) error {
+	if errors.Is(err, syscall.ENOSPC) {
+		return fmt.Errorf("%w: %v", ErrStorageFull, err)
+	}
+	return err
 }
 
 // New returns the blob service.

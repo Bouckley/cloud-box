@@ -149,3 +149,13 @@ func TestIsUniqueViolation(t *testing.T) {
 		t.Error("IsUniqueViolation true for a non-constraint error")
 	}
 }
+
+// A commit the box acknowledged (for example a 201 for a new blob) must
+// survive a power cut: synchronous=FULL.
+func TestSynchronousFull(t *testing.T) {
+	s, _ := open(t)
+	var mode int
+	if err := s.DB().QueryRow("PRAGMA synchronous").Scan(&mode); err != nil || mode != 2 {
+		t.Errorf("synchronous = %d (%v), want 2 (FULL)", mode, err)
+	}
+}

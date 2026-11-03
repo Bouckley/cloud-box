@@ -76,3 +76,18 @@ func TestGetBlobAccess(t *testing.T) {
 		t.Errorf("bad id: %d, want 400", rec.Code)
 	}
 }
+
+// An impossible range is still the JSON error shape.
+func TestGetBlobRangeErrorIsJSON(t *testing.T) {
+	e := newEnv(t)
+	o := e.setUpOwner()
+	id := e.uploadBlob(o.token, randBytes(100))
+	rec := e.getBlob(o.token, id, "bytes=999999999-")
+	if rec.Code != http.StatusRequestedRangeNotSatisfiable {
+		t.Fatalf("status = %d, want 416", rec.Code)
+	}
+	assertError(t, decode(t, rec), "range_not_satisfiable")
+	if got := rec.Header().Get("Content-Range"); got != "bytes */100" {
+		t.Errorf("Content-Range = %q, want bytes */100", got)
+	}
+}

@@ -270,7 +270,10 @@ export interface paths {
       };
       cookie?: never;
     };
-    /** Download an encrypted blob (supports Range) */
+    /**
+     * Download an encrypted blob (supports Range)
+     * @description A range outside the blob is 416 `range_not_satisfiable` with `Content-Range: bytes *\/<size>`.
+     */
     get: operations['getBlob'];
     put?: never;
     post?: never;
@@ -1003,7 +1006,7 @@ export interface operations {
           'application/json': components['schemas']['Blob'];
         };
       };
-      /** @description The blob was stored and verified. */
+      /** @description The blob was stored. `state` is `verified` when the re-read from the drive matched, otherwise `stored`. */
       201: {
         headers: {
           [name: string]: unknown;

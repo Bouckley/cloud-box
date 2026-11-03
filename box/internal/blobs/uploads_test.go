@@ -141,17 +141,24 @@ func TestPartResentAndWrongSize(t *testing.T) {
 			t.Errorf("part %d: %v, want ErrBadPart", n, err)
 		}
 	}
+	// A rejected re-send may have overwritten part 0's bytes, so part 0 is
+	// no longer received: the box never counts damaged bytes as received.
 	got, _ := f.svc.GetUpload(ctx, f.sess.UserID, up.ID)
-	if !slices.Equal(got.Received, []int{0}) {
-		t.Errorf("received = %v, want [0] (bad parts must not be kept)", got.Received)
+	if len(got.Received) != 0 {
+		t.Errorf("received = %v, want none (a failed re-send un-receives the part)", got.Received)
+	}
+	if _, _, err := f.svc.Complete(ctx, f.sess.UserID, up.ID); !errors.Is(err, ErrUploadIncomplete) {
+		t.Errorf("Complete after rejected parts = %v, want ErrUploadIncomplete", err)
 	}
 
-	// The good part 0 survived the rejected attempts.
-	if err := put(1, part(data, 1)); err != nil {
-		t.Fatal(err)
+	// Re-sending the good parts completes the upload.
+	for n := range 2 {
+		if err := put(n, part(data, n)); err != nil {
+			t.Fatal(err)
+		}
 	}
 	if blob, _, err := f.svc.Complete(ctx, f.sess.UserID, up.ID); err != nil || blob.SHA256 != sha(data) {
-		t.Fatalf("Complete after rejected parts = %+v, %v", blob, err)
+		t.Fatalf("Complete after re-sending = %+v, %v", blob, err)
 	}
 }
 
@@ -241,9 +248,12 @@ func TestPartsAndBlobsArePrivateFiles(t *testing.T) {
 	f := newFixture(t)
 	ctx := context.Background()
 	up := upload(t, f, randBytes(10))
-	partFile := filepath.Join(f.dir, "uploads", up.ID, "0")
-	if fi, err := os.Stat(partFile); err != nil || fi.Mode().Perm() != 0o600 {
-		t.Errorf("part file mode = %v (%v), want 0600", fi.Mode().Perm(), err)
+	dataFile := filepath.Join(f.dir, "uploads", up.ID)
+	if fi, err := os.Stat(dataFile); err != nil || fi.Mode().Perm() != 0o600 {
+		t.Fatalf("upload data file: %v, want mode 0600", err)
+	}
+	if fi, err := os.Stat(filepath.Join(f.dir, "uploads")); err != nil || fi.Mode().Perm() != 0o700 {
+		t.Errorf("uploads dir: %v, want mode 0700", err)
 	}
 	blob, _, err := f.svc.Complete(ctx, f.sess.UserID, up.ID)
 	if err != nil {

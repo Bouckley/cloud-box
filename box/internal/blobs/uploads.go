@@ -10,8 +10,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"strconv"
-	"sync"
 	"time"
 
 	"github.com/Bouckley/cloud-box/box/internal/auth"
@@ -34,28 +32,33 @@ type Upload struct {
 
 // CreateUpload starts an upload of size bytes whose ciphertext has the given
 // SHA-256 (hex). Inputs must already be validated. It refuses with
-// ErrStorageFull when the main drive cannot hold the blob plus ReserveBytes.
+// ErrStorageFull when the main drive cannot hold this blob, the bytes still
+// owed to other unfinished uploads, and ReserveBytes. Nothing is written to
+// disk until the first part arrives.
 func (s *Service) CreateUpload(ctx context.Context, sess auth.Session, size int64, sha256Hex string) (Upload, error) {
-	root, drive, err := s.mainRoot(ctx)
+	_, drive, err := s.mainRoot(ctx)
 	if err != nil {
 		return Upload{}, err
 	}
-	if size < 0 || uint64(size)+ReserveBytes > drive.FreeBytes {
+	now := s.hal.Clock.Now()
+	var owed int64
+	if err := s.db.DB().QueryRowContext(ctx, `SELECT COALESCE(SUM(u.size -
+		COALESCE((SELECT SUM(p.size) FROM upload_parts p WHERE p.upload_id = u.id), 0)), 0)
+		FROM uploads u WHERE u.blob_id IS NULL AND u.expires_at > ?`, now.UnixMilli()).Scan(&owed); err != nil {
+		return Upload{}, err
+	}
+	if size < 0 || uint64(size)+uint64(max(owed, 0))+ReserveBytes > drive.FreeBytes {
 		return Upload{}, ErrStorageFull
 	}
 	id, err := newBoxID()
 	if err != nil {
 		return Upload{}, err
 	}
-	now := s.hal.Clock.Now()
 	up := Upload{
 		ID: id, SHA256: sha256Hex, Size: size,
 		PartCount: int((size + PartBytes - 1) / PartBytes),
 		Received:  []int{},
 		ExpiresAt: now.Add(UploadTTL).UTC(),
-	}
-	if err := os.MkdirAll(filepath.Join(root, "uploads", id), 0o700); err != nil {
-		return Upload{}, err
 	}
 	_, err = s.db.DB().ExecContext(ctx, `INSERT INTO uploads (id, user_id, device_id, size, sha256,
 		part_count, created_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -64,6 +67,11 @@ func (s *Service) CreateUpload(ctx context.Context, sess auth.Session, size int6
 		return Upload{}, err
 	}
 	return up, nil
+}
+
+// dataPath is the single file an upload's parts are written into.
+func dataPath(root, uploadID string) string {
+	return filepath.Join(root, "uploads", uploadID)
 }
 
 // load returns the user's unexpired upload, or store.ErrNotFound.
@@ -111,9 +119,14 @@ func (b *bodyReader) Read(p []byte) (int, error) {
 	return n, err
 }
 
-// PutPart stores part n. Re-sending a part replaces it. A part of the wrong
-// size is ErrBadPart and is not kept. On a completed upload it is a no-op.
+// PutPart writes part n into the upload's data file at byte n × PartBytes.
+// Re-sending a part replaces it. A part of the wrong size is ErrBadPart and is
+// not counted as received. On a completed upload it is a no-op.
 func (s *Service) PutPart(ctx context.Context, userID, uploadID string, n int, body io.Reader) error {
+	l := s.lock(uploadID)
+	l.RLock()
+	defer l.RUnlock()
+
 	up, err := s.load(ctx, userID, uploadID)
 	if err != nil {
 		return err
@@ -128,42 +141,42 @@ func (s *Service) PutPart(ctx context.Context, userID, uploadID string, n int, b
 	if err != nil {
 		return err
 	}
-	dir := filepath.Join(root, "uploads", uploadID)
-	if err := os.MkdirAll(dir, 0o700); err != nil {
+	// The part's bytes are about to change: it is not received until they
+	// are written and synced again.
+	if _, err := s.db.DB().ExecContext(ctx,
+		"DELETE FROM upload_parts WHERE upload_id = ? AND n = ?", uploadID, n); err != nil {
 		return err
 	}
-	tmp, err := os.CreateTemp(dir, ".part-*")
+	if err := os.MkdirAll(filepath.Join(root, "uploads"), 0o700); err != nil {
+		return diskErr(err)
+	}
+	f, err := os.OpenFile(dataPath(root, uploadID), os.O_WRONLY|os.O_CREATE, 0o600)
 	if err != nil {
-		return err
+		return diskErr(err)
 	}
-	defer os.Remove(tmp.Name()) // no-op after a successful rename
-
 	want := up.partSize(n)
 	br := &bodyReader{r: body}
-	written, err := io.Copy(tmp, io.LimitReader(br, want+1))
+	written, err := io.Copy(io.NewOffsetWriter(f, int64(n)*PartBytes), io.LimitReader(br, want+1))
 	if br.err != nil {
-		tmp.Close()
+		f.Close()
 		return fmt.Errorf("%w: %v", ErrBadPart, br.err)
 	}
 	if err != nil {
-		tmp.Close()
-		return err
+		f.Close()
+		return diskErr(err)
 	}
 	if written != want {
-		tmp.Close()
+		f.Close()
 		return ErrBadPart
 	}
-	if err := tmp.Sync(); err != nil {
-		tmp.Close()
-		return err
+	if err := f.Sync(); err != nil {
+		f.Close()
+		return diskErr(err)
 	}
-	if err := tmp.Close(); err != nil {
-		return err
+	if err := f.Close(); err != nil {
+		return diskErr(err)
 	}
-	if err := os.Rename(tmp.Name(), filepath.Join(dir, strconv.Itoa(n))); err != nil {
-		return err
-	}
-	if err := syncDir(dir); err != nil {
+	if err := syncDir(filepath.Join(root, "uploads")); err != nil {
 		return err
 	}
 	_, err = s.db.DB().ExecContext(ctx, `INSERT INTO upload_parts (upload_id, n, size) VALUES (?, ?, ?)
@@ -198,17 +211,16 @@ func (s *Service) received(ctx context.Context, uploadID string) ([]int, error) 
 	return parts, rows.Err()
 }
 
-// Complete assembles the parts, checks the SHA-256 and stores the blob, then
-// re-reads it to mark it verified. It is safe to retry: a completed upload
-// returns its blob with created=false. On a hash mismatch the parts are
-// discarded and must be sent again.
+// Complete checks the data file's SHA-256 and stores it as a blob, then
+// re-reads it from the drive to mark it verified. It is safe to retry: a
+// completed upload returns its blob with created=false. On a hash mismatch the
+// parts are discarded and must be sent again. It finishes even if ctx is
+// cancelled (the client went away), so no half-recorded blob is left behind.
 func (s *Service) Complete(ctx context.Context, userID, uploadID string) (Blob, bool, error) {
-	lock, _ := s.completing.LoadOrStore(uploadID, &sync.Mutex{})
-	lock.(*sync.Mutex).Lock()
-	defer func() {
-		lock.(*sync.Mutex).Unlock()
-		s.completing.Delete(uploadID)
-	}()
+	ctx = context.WithoutCancel(ctx)
+	l := s.lock(uploadID)
+	l.Lock()
+	defer l.Unlock()
 
 	up, err := s.load(ctx, userID, uploadID)
 	if err != nil {
@@ -229,15 +241,25 @@ func (s *Service) Complete(ctx context.Context, userID, uploadID string) (Blob, 
 	if err != nil {
 		return Blob{}, false, err
 	}
-	partsDir := filepath.Join(root, "uploads", uploadID)
+	src := dataPath(root, uploadID)
 
-	tmpPath, digest, err := assemble(root, partsDir, up.PartCount)
+	// The parts were recorded but their data is gone or short (for example
+	// a drive problem): forget them so the client sends them again.
+	if fi, err := os.Stat(src); errors.Is(err, os.ErrNotExist) || (err == nil && fi.Size() != up.Size) {
+		if err := s.resetParts(ctx, uploadID, src); err != nil {
+			return Blob{}, false, err
+		}
+		return Blob{}, false, ErrUploadIncomplete
+	} else if err != nil {
+		return Blob{}, false, err
+	}
+
+	digest, err := hashFile(src)
 	if err != nil {
 		return Blob{}, false, err
 	}
-	defer os.Remove(tmpPath) // no-op after a successful rename
 	if digest != up.SHA256 {
-		if err := s.resetParts(ctx, uploadID, partsDir); err != nil {
+		if err := s.resetParts(ctx, uploadID, src); err != nil {
 			return Blob{}, false, err
 		}
 		return Blob{}, false, ErrHashMismatch
@@ -249,10 +271,10 @@ func (s *Service) Complete(ctx context.Context, userID, uploadID string) (Blob, 
 	}
 	dest := BlobPath(root, blobID)
 	if err := os.MkdirAll(filepath.Dir(dest), 0o700); err != nil {
-		return Blob{}, false, err
+		return Blob{}, false, diskErr(err)
 	}
-	if err := os.Rename(tmpPath, dest); err != nil {
-		return Blob{}, false, err
+	if err := os.Rename(src, dest); err != nil {
+		return Blob{}, false, diskErr(err)
 	}
 	if err := syncDir(filepath.Dir(dest)); err != nil {
 		return Blob{}, false, err
@@ -262,7 +284,7 @@ func (s *Service) Complete(ctx context.Context, userID, uploadID string) (Blob, 
 	b := Blob{ID: blobID, SHA256: digest, Size: up.Size}
 	millis(&b.StoredAt, now.UnixMilli())
 	var verifiedAt sql.NullInt64
-	if got, err := hashFile(dest); err == nil && got == digest {
+	if got, err := hashFileUncached(dest); err == nil && got == digest {
 		verifiedAt = sql.NullInt64{Int64: now.UnixMilli(), Valid: true}
 		v := b.StoredAt
 		b.VerifiedAt = &v
@@ -273,7 +295,7 @@ func (s *Service) Complete(ctx context.Context, userID, uploadID string) (Blob, 
 			VALUES (?, ?, ?, ?, ?, ?)`, blobID, userID, up.Size, digest, now.UnixMilli(), verifiedAt); err != nil {
 			return err
 		}
-		// Claim the upload only if no other Complete got there first.
+		// Claim the upload only if nothing else got there first.
 		res, err := tx.ExecContext(ctx, "UPDATE uploads SET blob_id = ? WHERE id = ? AND blob_id IS NULL", blobID, uploadID)
 		if err != nil {
 			return err
@@ -294,51 +316,13 @@ func (s *Service) Complete(ctx context.Context, userID, uploadID string) (Blob, 
 		return b, false, err
 	}
 	if err != nil {
-		// The file is in place but unrecorded; M4's scrub reports orphans.
+		// Not recorded: put the data back so a retry can complete it.
+		if os.Rename(dest, src) != nil {
+			_ = os.Remove(dest)
+		}
 		return Blob{}, false, err
 	}
-	_ = os.RemoveAll(partsDir)
 	return b, true, nil
-}
-
-// assemble concatenates the parts into a new file under <root>/tmp while
-// hashing, fsyncs it, and returns its path and SHA-256 (hex).
-func assemble(root, partsDir string, count int) (string, string, error) {
-	tmpDir := filepath.Join(root, "tmp")
-	if err := os.MkdirAll(tmpDir, 0o700); err != nil {
-		return "", "", err
-	}
-	out, err := os.CreateTemp(tmpDir, "blob-*")
-	if err != nil {
-		return "", "", err
-	}
-	h := sha256.New()
-	w := io.MultiWriter(out, h)
-	for n := range count {
-		in, err := os.Open(filepath.Join(partsDir, strconv.Itoa(n)))
-		if err != nil {
-			out.Close()
-			os.Remove(out.Name())
-			return "", "", err
-		}
-		_, err = io.Copy(w, in)
-		in.Close()
-		if err != nil {
-			out.Close()
-			os.Remove(out.Name())
-			return "", "", err
-		}
-	}
-	if err := out.Sync(); err != nil {
-		out.Close()
-		os.Remove(out.Name())
-		return "", "", err
-	}
-	if err := out.Close(); err != nil {
-		os.Remove(out.Name())
-		return "", "", err
-	}
-	return out.Name(), hex.EncodeToString(h.Sum(nil)), nil
 }
 
 func hashFile(path string) (string, error) {
@@ -347,22 +331,39 @@ func hashFile(path string) (string, error) {
 		return "", err
 	}
 	defer f.Close()
+	return hashReader(f)
+}
+
+// hashFileUncached hashes the file as it is on the drive, not as it is in
+// the page cache, so "verified" means the drive really holds these bytes.
+func hashFileUncached(path string) (string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+	dropCache(f)
+	return hashReader(f)
+}
+
+func hashReader(r io.Reader) (string, error) {
 	h := sha256.New()
-	if _, err := io.Copy(h, f); err != nil {
+	if _, err := io.Copy(h, r); err != nil {
 		return "", err
 	}
 	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
 // resetParts discards every received part so the client sends them again.
-func (s *Service) resetParts(ctx context.Context, uploadID, partsDir string) error {
+// The caller holds the upload's write lock.
+func (s *Service) resetParts(ctx context.Context, uploadID, dataFile string) error {
 	if _, err := s.db.DB().ExecContext(ctx, "DELETE FROM upload_parts WHERE upload_id = ?", uploadID); err != nil {
 		return err
 	}
-	if err := os.RemoveAll(partsDir); err != nil {
+	if err := os.Remove(dataFile); err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
-	return os.MkdirAll(partsDir, 0o700)
+	return nil
 }
 
 // blob loads one of the user's blobs.

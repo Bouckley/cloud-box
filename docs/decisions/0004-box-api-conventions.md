@@ -56,7 +56,19 @@ means. `api/openapi.yaml` holds the exact shapes; this records why.
 - Complete is safe to retry: the upload keeps its `blob_id`, so a client
   whose response was lost gets the same blob back (200) instead of a second one.
 - Max blob 64 GiB. The box refuses a new upload (`507 storage_full`) when the
-  main drive's free space is less than the size plus 1 GiB.
+  main drive's free space is less than the size, plus the bytes still owed to
+  other unfinished uploads, plus 1 GiB. Running out of space while writing is
+  also `507 storage_full`.
+- Each upload writes its parts straight into one file, part n at byte
+  n × 8 MiB. Complete hashes that file and renames it into `blobs/`, so a blob
+  is written once, with no assembly copy. If a re-sent part fails, that part
+  counts as not received (its bytes may be half-replaced); the client sends it
+  again.
+- Complete finishes even if the client disconnects. If recording the blob
+  fails, the file goes back to the upload so a retry can complete it.
+- `verified` means re-read from the drive: before the re-read the box asks
+  Linux to drop the file from its page cache (`fadvise DONTNEED`), so the hash
+  is of the drive's bytes, not of memory.
 - Abandoned uploads expire after 24 hours.
 
 **Item state is computed, not stored**

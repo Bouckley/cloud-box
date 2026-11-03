@@ -305,7 +305,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/Blob'
         '201':
-          description: The blob was stored and verified.
+          description: >
+            The blob was stored. `state` is `verified` when the re-read from the
+            drive matched, otherwise `stored`.
           content:
             application/json:
               schema:
@@ -319,6 +321,9 @@ paths:
     get:
       operationId: getBlob
       summary: Download an encrypted blob (supports Range)
+      description: >
+        A range outside the blob is 416 `range_not_satisfiable` with
+        `Content-Range: bytes */<size>`.
       parameters:
         - name: Range
           in: header

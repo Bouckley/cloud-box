@@ -31,5 +31,35 @@ func (h *handlers) getBlob(w http.ResponseWriter, r *http.Request, sess auth.Ses
 	hdr.Set("Cache-Control", "private, no-store")
 	hdr.Set("ETag", `"`+b.SHA256+`"`)
 	// ServeContent handles Range, If-Range and If-None-Match.
-	http.ServeContent(w, r, "", b.StoredAt, f)
+	http.ServeContent(&rangeErrorWriter{ResponseWriter: w}, r, "", b.StoredAt, f)
 }
+
+// rangeErrorWriter replaces ServeContent's plain-text 416 with the API's
+// JSON error shape, keeping its Content-Range: bytes */<size> header.
+type rangeErrorWriter struct {
+	http.ResponseWriter
+	swallow bool
+}
+
+func (w *rangeErrorWriter) WriteHeader(status int) {
+	if status != http.StatusRequestedRangeNotSatisfiable {
+		w.ResponseWriter.WriteHeader(status)
+		return
+	}
+	w.swallow = true
+	w.Header().Del("Content-Length")
+	writeError(w.ResponseWriter, status, apiError{
+		Code:    "range_not_satisfiable",
+		Message: "The requested byte range is outside this file.",
+		Action:  "Update the app, then try again.",
+	})
+}
+
+func (w *rangeErrorWriter) Write(b []byte) (int, error) {
+	if w.swallow {
+		return len(b), nil // drop ServeContent's plain-text body
+	}
+	return w.ResponseWriter.Write(b)
+}
+
+func (w *rangeErrorWriter) Unwrap() http.ResponseWriter { return w.ResponseWriter }

@@ -42,7 +42,10 @@ func Open(ctx context.Context, path string) (*Store, error) {
 	}
 	dsn := "file:" + path +
 		"?_pragma=journal_mode(WAL)&_pragma=foreign_keys(1)" +
-		"&_pragma=busy_timeout(5000)&_pragma=synchronous(NORMAL)"
+		"&_pragma=busy_timeout(5000)&_pragma=synchronous(FULL)"
+	// synchronous=FULL: once a commit returns (and the box has answered
+	// 201), it survives a power cut. NORMAL could lose the last commits in
+	// WAL mode while the blob file itself is already on the drive.
 	db, err := sql.Open("sqlite", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("open db: %w", err)

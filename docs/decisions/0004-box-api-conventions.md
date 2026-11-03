@@ -33,8 +33,15 @@ means. `api/openapi.yaml` holds the exact shapes; this records why.
   `Authorization: Bearer <token>`, valid 1 hour, and stored only as SHA-256.
   Revoking a device deletes its sessions at once.
 - Every login failure (unknown device, revoked device, bad or expired
-  challenge, bad signature) is the same `401 unauthorized`, so the box is not
-  an oracle for which ids exist.
+  challenge, bad signature) is the same `401 unauthorized`, so the box never
+  reveals *why* a login failed. Device ids are not secret: asking for a
+  challenge shows whether an id belongs to an active device. Ids are 128-bit
+  random, so they cannot be guessed, and issuing challenges for unknown ids
+  would only make the challenge cap easier to flood.
+- Tokens, pairing codes and challenges are looked up by value (tokens and
+  codes by their SHA-256), never compared byte by byte with attacker input, so
+  no constant-time comparison is needed. The Ed25519 check itself is
+  constant-time.
 
 **Pairing**
 - A signed-in device asks for a pairing code (same format as a session
@@ -80,6 +87,24 @@ means. `api/openapi.yaml` holds the exact shapes; this records why.
 - The simulator's `/dev/sim/*` API is compiled only with the Go build tag
   `sim`; a Pi build never serves it.
 - The HAL gains `Clock` and `Drive.Path` (doc 06).
+
+## Known risks (accepted for M1)
+
+- **A stolen, unlocked device can lock the owner out.** Any signed-in device
+  can revoke the user's other devices, and the last active device cannot be
+  revoked, so a thief could revoke the owner's devices first. The data stays
+  encrypted, but the owner loses access. **M2 fixes this** with a
+  recovery-key reset: at setup the app derives a signing key from the
+  recovery key and the box stores only its public half; a signature with it
+  revokes every device and pairs a new one, without the box ever seeing the
+  recovery key.
+- **Challenge flooding:** anyone who knows one active device id can request
+  enough challenges to push other devices' pending challenges out of the
+  1024-entry cap, so their login fails once and must be retried. Memory stays
+  bounded. Rate limiting arrives in M8.
+- **JSON field names are matched case-insensitively** (Go `encoding/json`),
+  so the box accepts `"DEVICEID"` although the contract says `deviceId`. No
+  security effect; clients must still send the contract's names.
 
 ## Alternatives considered
 

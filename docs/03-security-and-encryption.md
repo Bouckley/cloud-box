@@ -82,7 +82,7 @@ Recovery key (24 words) ───┤
 |--------|---------|
 | Box stolen | Blobs and metadata encrypted; disks also encrypted at rest (LUKS) later |
 | Someone on home Wi-Fi | Pinned TLS, device-key login, rate limits |
-| Lost phone | Revoke the device from another device; app has biometric lock |
+| Lost phone | Revoke the device from another device; app has biometric lock. If a thief revokes your other devices first, the recovery key resets all devices (M2, see ADR 0004) |
 | Malicious update | Updates signed with an offline key; box verifies before installing |
 | Company compelled to hand over data | Company never holds keys or data |
 

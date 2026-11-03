@@ -9,6 +9,7 @@ import (
 	"github.com/Bouckley/cloud-box/box/internal/auth"
 	"github.com/Bouckley/cloud-box/box/internal/blobs"
 	"github.com/Bouckley/cloud-box/box/internal/library"
+	"github.com/Bouckley/cloud-box/box/internal/status"
 	"github.com/Bouckley/cloud-box/box/internal/trash"
 )
 
@@ -21,6 +22,7 @@ type Deps struct {
 	Blobs   *blobs.Service
 	Library *library.Service
 	Trash   *trash.Service
+	Status  *status.Service
 }
 
 // handlers holds the dependencies every handler method uses.
@@ -70,6 +72,9 @@ func NewRouter(d Deps) http.Handler {
 		mux.HandleFunc("POST /v1/items/{id}/restore", h.requireSession(itemIDHandler(h.restoreItem)))
 		mux.HandleFunc("GET /v1/trash", h.requireSession(h.listTrash))
 		mux.HandleFunc("DELETE /v1/trash/{id}", h.requireSession(itemIDHandler(h.deleteFromTrash)))
+	}
+	if d.Auth != nil && d.Status != nil {
+		mux.HandleFunc("GET /v1/status", h.requireSession(h.getStatus))
 	}
 	return withLogging(logger, withRecover(logger, &jsonErrors{mux: mux}))
 }

@@ -15,6 +15,8 @@ import (
 	"github.com/Bouckley/cloud-box/box/internal/blobs"
 	"github.com/Bouckley/cloud-box/box/internal/hal/sim"
 	"github.com/Bouckley/cloud-box/box/internal/library"
+	"github.com/Bouckley/cloud-box/box/internal/replica"
+	"github.com/Bouckley/cloud-box/box/internal/status"
 	"github.com/Bouckley/cloud-box/box/internal/store"
 	"github.com/Bouckley/cloud-box/box/internal/trash"
 )
@@ -40,8 +42,9 @@ func newEnv(t *testing.T) *env {
 	s := sim.New(dir)
 	clock := s.HAL().Clock
 	b := blobs.New(db, s.HAL())
-	deps := Deps{Version: "test", Auth: auth.New(db, clock), Blobs: b,
-		Library: library.New(db, clock), Trash: trash.New(db, s.HAL(), b)}
+	lib := library.New(db, clock)
+	deps := Deps{Version: "test", Auth: auth.New(db, clock), Blobs: b, Library: lib,
+		Trash: trash.New(db, s.HAL(), b), Status: status.New(db, s.HAL(), lib, replica.New(db, s.HAL()))}
 	return &env{t: t, db: db, sim: s, dir: dir, deps: deps, router: NewRouter(deps)}
 }
 

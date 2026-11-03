@@ -26,9 +26,12 @@ type NewUser struct {
 	KDF                 KDF    `json:"kdf"`
 	MasterKeyByPassword []byte `json:"masterKeyByPassword"`
 	MasterKeyByRecovery []byte `json:"masterKeyByRecovery"`
-	IdentityPublicKey   []byte `json:"identityPublicKey"`
-	IdentityKeyEnc      []byte `json:"identityKeyEnc"`
-	DedupeKeyEnc        []byte `json:"dedupeKeyEnc"`
+	// RecoveryPublicKey is required at setup but never returned in Account
+	// (the API's Account shape does not carry it), hence omitempty.
+	RecoveryPublicKey []byte `json:"recoveryPublicKey,omitempty"`
+	IdentityPublicKey []byte `json:"identityPublicKey"`
+	IdentityKeyEnc    []byte `json:"identityKeyEnc"`
+	DedupeKeyEnc      []byte `json:"dedupeKeyEnc"`
 }
 
 // Account is a user's role plus their wrapped key material.
@@ -45,7 +48,9 @@ type NewDevice struct {
 }
 
 // Setup creates the owner and their first device. It works only while the
-// box has no user. Inputs must already be validated by the caller.
+// box has no user (else ErrAlreadySetUp) and the setup window is open (else
+// ErrPressButton, checked second). Inputs must already be validated by the
+// caller.
 func (s *Service) Setup(ctx context.Context, u NewUser, d NewDevice) (Account, error) {
 	now := s.clock.Now().UnixMilli()
 	err := s.db.Tx(ctx, func(tx *sql.Tx) error {
@@ -56,11 +61,14 @@ func (s *Service) Setup(ctx context.Context, u NewUser, d NewDevice) (Account, e
 		if n > 0 {
 			return ErrAlreadySetUp
 		}
+		if !s.SetupOpen(s.clock.Now()) {
+			return ErrPressButton
+		}
 		if _, err := tx.ExecContext(ctx, `INSERT INTO users (id, role, kdf_salt, kdf_ops, kdf_mem,
-			master_key_password, master_key_recovery, identity_public_key, identity_key_enc,
-			dedupe_key_enc, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			master_key_password, master_key_recovery, recovery_public_key, identity_public_key,
+			identity_key_enc, dedupe_key_enc, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 			u.ID, RoleOwner, u.KDF.Salt, u.KDF.OpsLimit, u.KDF.MemLimitBytes,
-			u.MasterKeyByPassword, u.MasterKeyByRecovery, u.IdentityPublicKey,
+			u.MasterKeyByPassword, u.MasterKeyByRecovery, u.RecoveryPublicKey, u.IdentityPublicKey,
 			u.IdentityKeyEnc, u.DedupeKeyEnc, now); err != nil {
 			return err
 		}
@@ -72,6 +80,8 @@ func (s *Service) Setup(ctx context.Context, u NewUser, d NewDevice) (Account, e
 	if err != nil {
 		return Account{}, err
 	}
+	s.closeSetupWindow()
+	u.RecoveryPublicKey = nil
 	return Account{Role: RoleOwner, NewUser: u}, nil
 }
 

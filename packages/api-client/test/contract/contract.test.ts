@@ -74,6 +74,9 @@ describe('a real box', () => {
     const identity = generateBoxKeyPair();
     const dedupeKey = randomKey();
     const signing = generateSigningKeyPair();
+    // Stand-in for the recovery signing key until Task 7 derives it from the
+    // recovery key; the box only stores its public half here.
+    const recoverySigning = generateSigningKeyPair();
     const deviceId = newId();
     const wrapped = {
       masterKeyByPassword: wrapKey(kek, master, ad.masterKeyByPassword(userId)),
@@ -82,6 +85,7 @@ describe('a real box', () => {
       dedupeKeyEnc: wrapKey(master, dedupeKey, ad.dedupeKey(userId)),
     };
 
+    await box.pressButton();
     const setup = await client.POST('/v1/setup', {
       body: {
         user: {
@@ -89,6 +93,7 @@ describe('a real box', () => {
           kdf: { salt: b64(salt), ...FAST_KDF },
           masterKeyByPassword: b64(wrapped.masterKeyByPassword),
           masterKeyByRecovery: b64(wrapped.masterKeyByRecovery),
+          recoveryPublicKey: b64(recoverySigning.publicKey),
           identityPublicKey: b64(identity.publicKey),
           identityKeyEnc: b64(wrapped.identityKeyEnc),
           dedupeKeyEnc: b64(wrapped.dedupeKeyEnc),

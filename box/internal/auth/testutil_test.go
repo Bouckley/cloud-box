@@ -13,7 +13,17 @@ import (
 	"github.com/Bouckley/cloud-box/box/internal/store"
 )
 
+// newService returns a service whose setup window is open, as if the power
+// button had just been pressed.
 func newService(t *testing.T) (*Service, *store.Store, *sim.Sim) {
+	t.Helper()
+	svc, db, s := newServiceNoPress(t)
+	svc.OpenSetupWindow(s.HAL().Clock.Now())
+	return svc, db, s
+}
+
+// newServiceNoPress returns a service whose setup window was never opened.
+func newServiceNoPress(t *testing.T) (*Service, *store.Store, *sim.Sim) {
 	t.Helper()
 	dir := filepath.Join(t.TempDir(), "with space")
 	db, err := store.Open(context.Background(), filepath.Join(dir, "db", "box.sqlite"))
@@ -40,6 +50,7 @@ func testUser() NewUser {
 		KDF:                 KDF{Salt: randBytes(16), OpsLimit: 3, MemLimitBytes: 268435456},
 		MasterKeyByPassword: randBytes(72),
 		MasterKeyByRecovery: randBytes(72),
+		RecoveryPublicKey:   randBytes(32),
 		IdentityPublicKey:   randBytes(32),
 		IdentityKeyEnc:      randBytes(72),
 		DedupeKeyEnc:        randBytes(72),

@@ -12,6 +12,8 @@ export type RunningBox = {
   baseUrl: string;
   dataDir: string;
   fetch: typeof fetch;
+  /** Short-press the sim power button and wait until setup is open. */
+  pressButton(): Promise<void>;
   logs(): string;
   stop(): Promise<void>;
 };
@@ -80,6 +82,24 @@ export async function startBoxd(): Promise<RunningBox> {
     baseUrl,
     dataDir,
     fetch: pinnedFetch,
+    async pressButton() {
+      const res = await pinnedFetch(`${baseUrl}/dev/sim/button`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kind: 'short' }),
+      });
+      if (res.status !== 200) throw new Error(`press button: ${res.status}`);
+      // The box handles the press on another goroutine; wait for it.
+      const deadline = Date.now() + 5_000;
+      for (;;) {
+        const info = (await (await pinnedFetch(`${baseUrl}/v1/info`)).json()) as {
+          setupOpen: boolean;
+        };
+        if (info.setupOpen) return;
+        if (Date.now() > deadline) throw new Error('setup did not open after the button press');
+        await new Promise((r) => setTimeout(r, 20));
+      }
+    },
     logs: () => output,
     async stop() {
       child.kill('SIGTERM');

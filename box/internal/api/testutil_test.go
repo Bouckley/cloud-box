@@ -32,7 +32,17 @@ type env struct {
 	router http.Handler
 }
 
+// newEnv returns an env whose setup window is open, as if the power button
+// had just been pressed.
 func newEnv(t *testing.T) *env {
+	t.Helper()
+	e := newEnvNoPress(t)
+	e.deps.Auth.OpenSetupWindow(e.sim.HAL().Clock.Now())
+	return e
+}
+
+// newEnvNoPress returns an env whose setup window was never opened.
+func newEnvNoPress(t *testing.T) *env {
 	t.Helper()
 	dir := filepath.Join(t.TempDir(), "with space")
 	db, err := store.Open(context.Background(), filepath.Join(dir, "db", "box.sqlite"))
@@ -103,6 +113,7 @@ func setupBody(signPublicKey []byte) map[string]any {
 			"kdf":                 map[string]any{"salt": randBytes(16), "opsLimit": 3, "memLimitBytes": 268435456},
 			"masterKeyByPassword": randBytes(72),
 			"masterKeyByRecovery": randBytes(72),
+			"recoveryPublicKey":   randBytes(32),
 			"identityPublicKey":   randBytes(32),
 			"identityKeyEnc":      randBytes(72),
 			"dedupeKeyEnc":        randBytes(72),

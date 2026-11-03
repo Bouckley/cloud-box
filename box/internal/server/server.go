@@ -18,6 +18,7 @@ import (
 	"github.com/Bouckley/cloud-box/box/internal/blobs"
 	"github.com/Bouckley/cloud-box/box/internal/config"
 	"github.com/Bouckley/cloud-box/box/internal/devcert"
+	"github.com/Bouckley/cloud-box/box/internal/hal"
 	"github.com/Bouckley/cloud-box/box/internal/hal/sim"
 	"github.com/Bouckley/cloud-box/box/internal/jobs"
 	"github.com/Bouckley/cloud-box/box/internal/library"
@@ -36,6 +37,8 @@ type Server struct {
 	logger      *slog.Logger
 	db          *store.Store
 	jobs        *jobs.Runner
+	auth        *auth.Service
+	hal         hal.HAL
 }
 
 // New prepares the data directory, TLS certificate and database, builds
@@ -100,6 +103,8 @@ func New(cfg config.Config, version string, logger *slog.Logger) (*Server, error
 	return &Server{
 		db:   db,
 		jobs: runner,
+		auth: authSvc,
+		hal:  h,
 		http: &http.Server{
 			Addr:              cfg.Addr,
 			Handler:           api.NewRouter(deps),
@@ -126,7 +131,9 @@ func (s *Server) Serve(ctx context.Context, ln net.Listener) error {
 	jobsCtx, stopJobs := context.WithCancel(ctx)
 	jobsDone := make(chan struct{})
 	go func() { s.jobs.Run(jobsCtx); close(jobsDone) }()
-	defer func() { stopJobs(); <-jobsDone }()
+	buttonDone := make(chan struct{})
+	go func() { s.watchButton(jobsCtx); close(buttonDone) }()
+	defer func() { stopJobs(); <-jobsDone; <-buttonDone }()
 
 	errc := make(chan error, 1)
 	go func() { errc <- s.http.Serve(tls.NewListener(ln, s.http.TLSConfig)) }()
@@ -145,4 +152,21 @@ func (s *Server) Serve(ctx context.Context, ln net.Listener) error {
 		return err
 	}
 	return nil
+}
+
+// watchButton opens the setup window on each short press of the power button
+// until ctx ends. Long presses are for shutdown (M5) and ignored here.
+func (s *Server) watchButton(ctx context.Context) {
+	presses := s.hal.Button.Presses()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case p := <-presses:
+			if p.Kind == hal.ShortPress {
+				s.auth.OpenSetupWindow(s.hal.Clock.Now())
+				s.logger.Info("setup window opened by button press")
+			}
+		}
+	}
 }

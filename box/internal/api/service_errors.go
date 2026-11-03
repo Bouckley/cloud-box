@@ -85,6 +85,12 @@ func (h *handlers) serviceError(w http.ResponseWriter, r *http.Request, err erro
 			Message: "This is the last device that can sign in to the box.",
 			Action:  "Pair another device first, then remove this one.",
 		})
+	case errors.Is(err, auth.ErrPressButton):
+		writeError(w, http.StatusConflict, apiError{
+			Code:    "press_button",
+			Message: "Setup is not open yet.",
+			Action:  "Press the button on the front of your box once, then try again.",
+		})
 	case errors.Is(err, auth.ErrAlreadySetUp):
 		writeError(w, http.StatusConflict, apiError{
 			Code:    "already_set_up",

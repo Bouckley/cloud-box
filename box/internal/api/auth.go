@@ -64,6 +64,7 @@ func validateNewUser(u auth.NewUser) error {
 		checkLen("kdf.salt", u.KDF.Salt, saltBytes, saltBytes),
 		checkLen("masterKeyByPassword", u.MasterKeyByPassword, wrappedKeyBytes, wrappedKeyBytes),
 		checkLen("masterKeyByRecovery", u.MasterKeyByRecovery, wrappedKeyBytes, wrappedKeyBytes),
+		checkLen("recoveryPublicKey", u.RecoveryPublicKey, publicKeyBytes, publicKeyBytes),
 		checkLen("identityPublicKey", u.IdentityPublicKey, publicKeyBytes, publicKeyBytes),
 		checkLen("identityKeyEnc", u.IdentityKeyEnc, wrappedKeyBytes, wrappedKeyBytes),
 		checkLen("dedupeKeyEnc", u.DedupeKeyEnc, wrappedKeyBytes, wrappedKeyBytes),

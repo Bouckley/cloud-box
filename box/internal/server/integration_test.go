@@ -152,16 +152,36 @@ func (b *box) setUp() (deviceA string, key ed25519.PrivateKey, token string) {
 	b.t.Helper()
 	pub, priv, _ := ed25519.GenerateKey(rand.Reader)
 	deviceA = newID()
+	b.pressButton()
 	b.do("POST", "/v1/setup", "", map[string]any{
 		"user": map[string]any{
 			"id":                  newID(),
 			"kdf":                 map[string]any{"salt": randBytes(16), "opsLimit": 3, "memLimitBytes": 268435456},
 			"masterKeyByPassword": randBytes(72), "masterKeyByRecovery": randBytes(72),
-			"identityPublicKey": randBytes(32), "identityKeyEnc": randBytes(72), "dedupeKeyEnc": randBytes(72),
+			"recoveryPublicKey": randBytes(32), "identityPublicKey": randBytes(32), "identityKeyEnc": randBytes(72), "dedupeKeyEnc": randBytes(72),
 		},
 		"device": map[string]any{"id": deviceA, "nameEnc": randBytes(60), "signPublicKey": pub},
 	}, nil, 201, nil)
 	return deviceA, priv, b.login(deviceA, priv)
+}
+
+// pressButton presses the sim power button and waits until the box reports
+// that setup is open (the press is handled on another goroutine).
+func (b *box) pressButton() {
+	b.t.Helper()
+	b.do("POST", "/dev/sim/button", "", map[string]string{"kind": "short"}, nil, 200, nil)
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		var info struct{ SetupOpen bool }
+		b.do("GET", "/v1/info", "", nil, nil, 200, &info)
+		if info.SetupOpen {
+			return
+		}
+		if time.Now().After(deadline) {
+			b.t.Fatal("setup did not open within 5 s of the button press")
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
 }
 
 // upload sends data in parts (in the given part order) and completes it.
@@ -355,5 +375,23 @@ func TestStorageFullRefusesUpload(t *testing.T) {
 	b.do("POST", "/v1/uploads", token, map[string]any{"size": 10, "sha256": shaHex(randBytes(10))}, nil, 507, &e)
 	if e.Code != "storage_full" || e.Action == "" {
 		t.Errorf("error = %+v", e)
+	}
+}
+
+func TestButtonOpensSetup(t *testing.T) {
+	b := boot(t)
+	var info struct {
+		SetUp, SetupOpen bool
+		Version          string
+	}
+	b.do("GET", "/v1/info", "", nil, nil, 200, &info)
+	if info.SetUp || info.SetupOpen || info.Version != "it" {
+		t.Fatalf("fresh box info = %+v, want not set up, closed, version it", info)
+	}
+	b.pressButton()
+	b.setUp()
+	b.do("GET", "/v1/info", "", nil, nil, 200, &info)
+	if !info.SetUp || info.SetupOpen {
+		t.Errorf("after setup info = %+v, want set up and closed", info)
 	}
 }

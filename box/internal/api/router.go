@@ -49,6 +49,7 @@ func NewRouter(d Deps) http.Handler {
 	h := &handlers{d: d, log: logger}
 	mux.HandleFunc("GET /v1/health", healthHandler(d.Version))
 	if d.Auth != nil {
+		mux.HandleFunc("GET /v1/info", h.getInfo)
 		mux.HandleFunc("POST /v1/setup", h.setup)
 		mux.HandleFunc("POST /v1/auth/challenge", h.createChallenge)
 		mux.HandleFunc("POST /v1/auth/verify", h.verifyChallenge)

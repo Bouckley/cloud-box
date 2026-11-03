@@ -4,6 +4,7 @@ package auth
 
 import (
 	"sync"
+	"time"
 
 	"github.com/Bouckley/cloud-box/box/internal/hal"
 	"github.com/Bouckley/cloud-box/box/internal/store"
@@ -22,6 +23,7 @@ type Service struct {
 	mu             sync.Mutex
 	challenges     map[string]pendingChallenge // by challenge hex
 	challengeOrder []string                    // oldest first, for eviction
+	setupUntil     time.Time                   // setup is open before this time
 }
 
 // New returns the auth service.

@@ -23,6 +23,13 @@ type vectors struct {
 		Input  string `json:"input"`
 		Digest string `json:"digest"`
 	} `json:"sha256"`
+	AuthMessage []struct {
+		DeviceID  string `json:"deviceId"`
+		Challenge string `json:"challenge"`
+		Message   string `json:"message"`
+		PublicKey string `json:"publicKey"`
+		Signature string `json:"signature"`
+	} `json:"authMessage"`
 }
 
 func loadVectors(t *testing.T) vectors {
@@ -35,8 +42,9 @@ func loadVectors(t *testing.T) vectors {
 	if err := json.Unmarshal(raw, &v); err != nil {
 		t.Fatalf("parse vectors: %v", err)
 	}
-	if v.Version != 1 || len(v.Ed25519) == 0 || len(v.SHA256) == 0 {
-		t.Fatalf("unexpected vectors: version %d, %d ed25519, %d sha256", v.Version, len(v.Ed25519), len(v.SHA256))
+	if v.Version != 1 || len(v.Ed25519) == 0 || len(v.SHA256) == 0 || len(v.AuthMessage) == 0 {
+		t.Fatalf("unexpected vectors: version %d, %d ed25519, %d sha256, %d authMessage",
+			v.Version, len(v.Ed25519), len(v.SHA256), len(v.AuthMessage))
 	}
 	return v
 }
@@ -70,6 +78,16 @@ func TestVectors(t *testing.T) {
 		got := SHA256(unhex(t, row.Input))
 		if hex.EncodeToString(got[:]) != row.Digest {
 			t.Errorf("sha256[%d] = %x, want %s", i, got, row.Digest)
+		}
+	}
+
+	for i, row := range v.AuthMessage {
+		msg := AuthMessage(row.DeviceID, row.Challenge)
+		if hex.EncodeToString(msg) != row.Message {
+			t.Errorf("authMessage[%d] = %q, want hex %s", i, msg, row.Message)
+		}
+		if !VerifyEd25519(unhex(t, row.PublicKey), msg, unhex(t, row.Signature)) {
+			t.Errorf("authMessage[%d]: signature does not verify over the Go-built message", i)
 		}
 	}
 }

@@ -1,6 +1,9 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import vectors from '../../../testdata/crypto-vectors.json' with { type: 'json' };
+import { ad as adFor, type BlobRole } from './ad.ts';
 import { aeadDecrypt, aeadEncryptWithNonce } from './aead.ts';
+import { authMessage } from './auth.ts';
+import { dedupeHash } from './dedupe.ts';
 import { deriveKek } from './kdf.ts';
 import { boxKeyPairFromSeed, openSealed } from './sealed.ts';
 import { sign, signingKeyPairFromSeed, verify } from './sign.ts';
@@ -49,6 +52,33 @@ describe('crypto-vectors.json', () => {
 
   it.each(vectors.sha256)('sha256: $input', (v) => {
     expect(sha256(b(v.input))).toEqual(b(v.digest));
+  });
+
+  it.each(vectors.ad)('ad: $fn $args', (v) => {
+    const [id, role] = v.args as [string, BlobRole?];
+    const bytes =
+      v.fn === 'itemBlob'
+        ? adFor.itemBlob(id, role!)
+        : (adFor[v.fn as Exclude<keyof typeof adFor, 'itemBlob'>] as (id: string) => Uint8Array)(
+            id,
+          );
+    expect(new TextDecoder().decode(bytes)).toBe(v.ad);
+  });
+
+  it('ad covers every builder', () => {
+    expect(new Set(vectors.ad.map((v) => v.fn))).toEqual(new Set(Object.keys(adFor)));
+  });
+
+  it.each(vectors.authMessage)('authMessage: $deviceId', (v) => {
+    const message = authMessage(v.deviceId, v.challenge);
+    expect(message).toEqual(b(v.message));
+    const kp = signingKeyPairFromSeed(b(v.seed));
+    expect(kp.publicKey).toEqual(b(v.publicKey));
+    expect(sign(kp.privateKey, message)).toEqual(b(v.signature));
+  });
+
+  it.each(vectors.dedupe)('dedupe: $input', (v) => {
+    expect(dedupeHash(b(v.key), b(v.input))).toBe(v.hash);
   });
 
   it('sha256 covers the empty input', () => {

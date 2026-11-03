@@ -1,6 +1,6 @@
-// Package boxcrypto holds the only two primitives the box runs itself
+// Package boxcrypto holds the only primitives the box runs itself
 // (docs/decisions/0002-crypto-primitives.md): verifying Ed25519 device
-// signatures and SHA-256 hashing of ciphertext. All encryption happens on
+// signatures (over AuthMessage) and SHA-256 hashing of ciphertext. All encryption happens on
 // clients; the box never holds a key that can decrypt anything.
 package boxcrypto
 
@@ -21,4 +21,12 @@ func VerifyEd25519(publicKey, message, signature []byte) bool {
 // SHA256 returns the SHA-256 digest of data.
 func SHA256(data []byte) [32]byte {
 	return sha256.Sum256(data)
+}
+
+// AuthMessage is the message a device signs to log in (ADR 0004):
+// UTF-8 "cloudbox/v1/auth/<deviceID>/<challengeHex>". It must match
+// authMessage in @cloudbox/crypto; testdata/crypto-vectors.json checks both.
+// Callers validate deviceID and challengeHex first.
+func AuthMessage(deviceID, challengeHex string) []byte {
+	return []byte("cloudbox/v1/auth/" + deviceID + "/" + challengeHex)
 }

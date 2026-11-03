@@ -18,3 +18,9 @@ node_modules/
 
 # Plan execution scratch
 .superpowers/
+
+# Impeccable scratch (screenshots, mocks, build state)
+.impeccable/review/
+.impeccable/mocks/
+.impeccable/build/
+.impeccable/config.local.json

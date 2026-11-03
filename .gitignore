@@ -3,6 +3,11 @@
 
 # Build output
 dist/
+# The web app is built into box/web/dist and embedded by boxd; keep only
+# the placeholder that lets go:embed compile before the first build.
+!box/web/dist/
+box/web/dist/*
+!box/web/dist/.gitkeep
 coverage/
 
 # Dependencies

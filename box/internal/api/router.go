@@ -5,6 +5,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"strings"
 
 	"github.com/Bouckley/cloud-box/box/internal/auth"
 	"github.com/Bouckley/cloud-box/box/internal/blobs"
@@ -30,6 +31,10 @@ type Deps struct {
 	// builds with the sim tag.
 	Sim  *sim.Sim
 	Jobs *jobs.Runner
+
+	// Web serves every path outside /v1 and /dev (the web app). Nil: those
+	// paths are 404 like any unknown route.
+	Web http.Handler
 }
 
 // handlers holds the dependencies every handler method uses.
@@ -38,8 +43,9 @@ type handlers struct {
 	log *slog.Logger
 }
 
-// NewRouter returns the handler for every /v1 endpoint, wrapped with
-// request logging (no secrets) and panic recovery.
+// NewRouter returns the handler for every /v1 endpoint, with every other
+// path (except /dev) going to d.Web, wrapped with request logging (no
+// secrets) and panic recovery.
 func NewRouter(d Deps) http.Handler {
 	logger := d.Logger
 	if logger == nil {
@@ -90,7 +96,28 @@ func NewRouter(d Deps) http.Handler {
 		mux.HandleFunc("GET /v1/status", h.requireSession(h.getStatus))
 	}
 	registerDevSim(mux, h)
-	return withLogging(logger, withRecover(logger, &jsonErrors{mux: mux}))
+	var root http.Handler = &jsonErrors{mux: mux}
+	if d.Web != nil {
+		root = &splitWeb{api: root, web: d.Web}
+	}
+	return withLogging(logger, withRecover(logger, root))
+}
+
+// splitWeb sends /v1 and /dev to the API and everything else to the web app,
+// so no web route can ever shadow an API path.
+type splitWeb struct {
+	api, web http.Handler
+}
+
+func (s *splitWeb) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	p := r.URL.Path
+	for _, prefix := range []string{"/v1", "/dev"} {
+		if p == prefix || strings.HasPrefix(p, prefix+"/") {
+			s.api.ServeHTTP(w, r)
+			return
+		}
+	}
+	s.web.ServeHTTP(w, r)
 }
 
 // jsonErrors turns the mux's plain-text 404 and 405 into the JSON error shape.

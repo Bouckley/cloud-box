@@ -26,6 +26,7 @@ import (
 	"github.com/Bouckley/cloud-box/box/internal/status"
 	"github.com/Bouckley/cloud-box/box/internal/store"
 	"github.com/Bouckley/cloud-box/box/internal/trash"
+	"github.com/Bouckley/cloud-box/box/web"
 )
 
 const shutdownTimeout = 10 * time.Second
@@ -97,7 +98,7 @@ func New(cfg config.Config, version string, logger *slog.Logger) (*Server, error
 	}
 	deps := api.Deps{
 		Version: version, Logger: logger, Auth: authSvc, Blobs: blobSvc, Library: lib,
-		Trash: trashSvc, Status: st, Sim: hw, Jobs: runner,
+		Trash: trashSvc, Status: st, Sim: hw, Jobs: runner, Web: web.Handler(),
 	}
 
 	return &Server{

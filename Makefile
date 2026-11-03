@@ -9,14 +9,16 @@ DATA_DIR := $(CURDIR)/.data
 DIST_DIR := $(CURDIR)/dist
 VERSION  ?= $(shell git describe --always --dirty 2>/dev/null || echo dev)
 
-.PHONY: help dev test test-e2e test-arm64 build-pi reset-dev lint generate check-generated
+.PHONY: help dev web test test-e2e test-arm64 build-pi reset-dev lint generate check-generated
 
 help: ## List targets
 	@grep -E '^[a-z0-9-]+:.*## ' Makefile | awk 'BEGIN {FS = ":.*## "} {printf "  %-16s %s\n", $$1, $$2}'
 
-dev: ## Run boxd with simulated hardware on https://localhost:8443
-	@echo "web app (Vite on :5173) arrives in M2; starting boxd only"
-	go -C box run -tags sim ./cmd/boxd --hal=sim --data="$(DATA_DIR)"
+dev: ## Run boxd (simulated hardware, https://localhost:8443) and the web app (Vite, http://localhost:5173)
+	DATA_DIR="$(DATA_DIR)" "$(CURDIR)/scripts/dev.sh"
+
+web: ## Build the web app into box/web/dist (embedded by boxd)
+	pnpm --filter @cloudbox/web build
 
 test: ## Go tests (with -race, with and without the sim tag), TypeScript tests and the contract test
 	go -C box test -race -count=1 ./...
@@ -30,8 +32,7 @@ test-e2e: ## Playwright + axe web tests (stub until M2)
 test-arm64: ## Go tests on linux/arm64 under QEMU (Docker)
 	"$(CURDIR)/deploy/docker/test-arm64.sh"
 
-build-pi: ## Cross-compile boxd for the Raspberry Pi (linux/arm64)
-	@echo "web app embedding arrives in M2; building boxd only (version $(VERSION))"
+build-pi: web ## Cross-compile boxd, with the web app embedded, for the Raspberry Pi (linux/arm64)
 	mkdir -p "$(DIST_DIR)"
 	GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go -C box build -trimpath \
 		-ldflags "-s -w -X main.version=$(VERSION)" \

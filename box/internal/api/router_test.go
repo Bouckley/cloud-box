@@ -67,3 +67,32 @@ func assertError(t *testing.T, body map[string]string, code string) {
 		}
 	}
 }
+
+func TestAPIRoutesNotShadowed(t *testing.T) {
+	web := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		_, _ = w.Write([]byte("index"))
+	})
+	router := NewRouter(Deps{Version: "test", Web: web})
+	for _, p := range []string{"/v1/nope", "/v1", "/dev/sim/state"} {
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, p, nil))
+		if rec.Code != http.StatusNotFound {
+			t.Errorf("%s = %d, want 404", p, rec.Code)
+			continue
+		}
+		assertError(t, decode(t, rec), "not_found")
+	}
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/v1/health", nil))
+	if rec.Code != http.StatusOK || decode(t, rec)["status"] != "ok" {
+		t.Errorf("/v1/health = %d", rec.Code)
+	}
+	for _, p := range []string{"/", "/photos/abc", "/v1x", "/development"} {
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, p, nil))
+		if rec.Body.String() != "index" {
+			t.Errorf("%s = %d %q, want the web app", p, rec.Code, rec.Body)
+		}
+	}
+}

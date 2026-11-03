@@ -339,7 +339,7 @@ export class Box {
   #unlocked(userId: string, deviceId: string, keys: Keys, kdf: KdfParams): Unlocked {
     const api = this.#api;
     const platform = this.#platform;
-    const library = new Library(api, keys.master);
+    const library = new Library(api, keys);
     let locked = false;
     const open = () => {
       if (locked) throw new Error('This account is locked. Unlock it again.');

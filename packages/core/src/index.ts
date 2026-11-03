@@ -22,3 +22,12 @@ export {
   type TrashView,
 } from './library.ts';
 export { decodeMeta, encodeMeta, parseMeta, type CollectionName, type ItemMeta } from './meta.ts';
+export {
+  noMedia,
+  RETRY_DELAYS_MS,
+  type MediaAdapter,
+  type MediaInfo,
+  type SourceFile,
+  type UploadOptions,
+  type UploadResult,
+} from './upload.ts';

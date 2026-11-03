@@ -10,6 +10,13 @@ import {
 } from '@cloudbox/crypto';
 import { decodeMeta, decodeName, encodeMeta, encodeName, type ItemMeta } from './meta.ts';
 import { b64, fromB64, must, type AuthedClient } from './transport.ts';
+import {
+  uploadFile,
+  type MediaAdapter,
+  type SourceFile,
+  type UploadOptions,
+  type UploadResult,
+} from './upload.ts';
 
 type ApiCollection = components['schemas']['Collection'];
 type ApiItem = components['schemas']['Item'];
@@ -56,6 +63,7 @@ const SYNC_PAGE = 500;
 export class Library {
   readonly #api: AuthedClient;
   readonly #master: Uint8Array;
+  readonly #dedupe: Uint8Array;
   readonly #listeners = new Set<() => void>();
   #snapshot: LibrarySnapshot = { collections: new Map(), items: new Map(), syncedAt: null };
   #cursor = '0';
@@ -66,9 +74,10 @@ export class Library {
   #again = false;
   #locked = false;
 
-  constructor(api: AuthedClient, master: Uint8Array) {
+  constructor(api: AuthedClient, keys: { master: Uint8Array; dedupe: Uint8Array }) {
     this.#api = api;
-    this.#master = master;
+    this.#master = keys.master;
+    this.#dedupe = keys.dedupe;
   }
 
   subscribe(fn: () => void): () => void {
@@ -245,13 +254,38 @@ export class Library {
     const blob = item.blobs[role];
     const fileKey = this.#fileKeys.get(item.id);
     if (!blob || !fileKey) throw notFound();
+    signal?.throwIfAborted();
     const res = await this.#api.GET('/v1/blobs/{id}', {
       params: { path: { id: blob.id } },
       parseAs: 'arrayBuffer',
       ...(signal ? { signal } : {}),
     });
     const bytes = new Uint8Array(must(res) as unknown as ArrayBuffer);
+    signal?.throwIfAborted();
     return decryptFile(fileKey, bytes, ad.itemBlob(item.id, role));
+  }
+
+  /**
+   * Encrypts and uploads one file into a collection, then syncs. A file the
+   * box already has (by keyed content hash) is not sent again.
+   */
+  async upload(
+    f: SourceFile,
+    collectionId: string,
+    media: MediaAdapter,
+    o?: UploadOptions,
+  ): Promise<UploadResult> {
+    this.#open();
+    const col = this.#snapshot.collections.get(collectionId);
+    if (!col || col.deletedAt) throw notFound();
+    const r = await uploadFile(
+      { api: this.#api, dedupeKey: this.#dedupe, collectionKey: col.key, collectionId },
+      f,
+      media,
+      o,
+    );
+    if (r.kind === 'uploaded') await this.sync();
+    return r;
   }
 
   /** Wipes every key this library holds. Called by Unlocked.lock(). */

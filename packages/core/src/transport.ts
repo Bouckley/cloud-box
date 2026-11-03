@@ -10,7 +10,9 @@ export function guardedFetch(fetchImpl: typeof fetch): typeof fetch {
   return (async (input: RequestInfo | URL, init?: RequestInit) => {
     try {
       return await fetchImpl(input, init);
-    } catch {
+    } catch (e) {
+      // A request the caller stopped is not an unreachable box.
+      if (e instanceof Error && e.name === 'AbortError') throw e;
       throw new ClientError('box_unreachable');
     }
   }) as typeof fetch;

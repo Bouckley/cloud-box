@@ -61,15 +61,20 @@ means. `api/openapi.yaml` holds the exact shapes; this records why.
   also `507 storage_full`.
 - Each upload writes its parts straight into one file, part n at byte
   n × 8 MiB. Complete hashes that file and renames it into `blobs/`, so a blob
-  is written once, with no assembly copy. If a re-sent part fails, that part
-  counts as not received (its bytes may be half-replaced); the client sends it
-  again.
+  is written once, with no assembly copy. A part never writes past its own
+  slot: a part that is too long is refused after its slot is filled. If a
+  re-sent part fails, that part counts as not received (its bytes may be
+  half-replaced); the client sends it again.
 - Complete finishes even if the client disconnects. If recording the blob
   fails, the file goes back to the upload so a retry can complete it.
 - `verified` means re-read from the drive: before the re-read the box asks
   Linux to drop the file from its page cache (`fadvise DONTNEED`), so the hash
-  is of the drive's bytes, not of memory.
-- Abandoned uploads expire after 24 hours.
+  is of the drive's bytes, not of memory. If that re-read does not match,
+  the blob stays `stored`; copying it to the backup hashes the main file
+  again (also uncached), and a match there marks it verified too.
+- An upload expires 24 hours after its last activity (start, a part, or
+  Complete). A completed upload's row lives 24 hours after Complete, so a
+  retried Complete still gets its blob.
 
 **Item state is computed, not stored**
 - An item's state is the lowest state of its blobs: `stored` (file written

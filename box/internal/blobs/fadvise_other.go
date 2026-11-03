@@ -4,5 +4,5 @@ package blobs
 
 import "os"
 
-// dropCache is a no-op off Linux; the box only runs on Linux.
-func dropCache(*os.File) {}
+// DropCache is a no-op off Linux; the box only runs on Linux.
+func DropCache(*os.File) {}

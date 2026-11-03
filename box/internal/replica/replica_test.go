@@ -261,3 +261,29 @@ func TestPartialItemNotReplicated(t *testing.T) {
 		t.Errorf("state = %s, want verified", got.State)
 	}
 }
+
+// Final review M-3 (re-graded Important): a blob whose verification re-read
+// failed at upload time is verified by the backup copy, which hashes the main
+// file and must match its SHA-256; otherwise it would stay "stored" forever.
+func TestCopyVerifiesUnverifiedBlob(t *testing.T) {
+	f := newFixture(t)
+	ctx := context.Background()
+	it := f.item(t)
+	if _, err := f.db.DB().Exec("UPDATE blobs SET verified_at = NULL"); err != nil {
+		t.Fatal(err)
+	}
+	if got := f.get(t, it.ID); got.State != "stored" {
+		t.Fatalf("state = %s, want stored", got.State)
+	}
+	if res, err := f.svc.Run(ctx); err != nil || res.Copied != 2 {
+		t.Fatalf("Run = %+v, %v", res, err)
+	}
+	if got := f.get(t, it.ID); got.State != "replicated" {
+		t.Errorf("state after backup = %s, want replicated", got.State)
+	}
+	var unverified int
+	_ = f.db.DB().QueryRow("SELECT COUNT(*) FROM blobs WHERE verified_at IS NULL").Scan(&unverified)
+	if unverified != 0 {
+		t.Errorf("%d blobs still unverified", unverified)
+	}
+}

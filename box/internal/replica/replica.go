@@ -110,6 +110,7 @@ func copyBlob(mainRoot, backupRoot string, p pending) error {
 		return err
 	}
 	defer src.Close()
+	blobs.DropCache(src) // hash the main drive's bytes, not memory
 	tmpDir := filepath.Join(backupRoot, "tmp")
 	if err := os.MkdirAll(tmpDir, 0o700); err != nil {
 		return err
@@ -156,9 +157,16 @@ func copyBlob(mainRoot, backupRoot string, p pending) error {
 }
 
 // record marks the blob's backup copy verified and bumps its item's seq.
+// The copy's hash was taken while reading the main file and matched the
+// blob's SHA-256, so the main copy is verified too: this also settles a blob
+// whose re-read at upload time failed, which would otherwise stay "stored".
 func (s *Service) record(ctx context.Context, blobID string) error {
 	now := s.hal.Clock.Now().UnixMilli()
 	return s.db.Tx(ctx, func(tx *sql.Tx) error {
+		if _, err := tx.ExecContext(ctx, "UPDATE blobs SET verified_at = ? WHERE id = ? AND verified_at IS NULL",
+			now, blobID); err != nil {
+			return err
+		}
 		if _, err := tx.ExecContext(ctx, `INSERT INTO replicas (blob_id, target, copied_at, verified_at)
 			VALUES (?, ?, ?, ?) ON CONFLICT (blob_id, target) DO UPDATE
 			SET copied_at = excluded.copied_at, verified_at = excluded.verified_at`,

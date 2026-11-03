@@ -156,7 +156,9 @@ func (s *Service) PutPart(ctx context.Context, userID, uploadID string, n int, b
 	}
 	want := up.partSize(n)
 	br := &bodyReader{r: body}
-	written, err := io.Copy(io.NewOffsetWriter(f, int64(n)*PartBytes), io.LimitReader(br, want+1))
+	// Write exactly the part's own byte range, never a byte past it: a part
+	// that turns out too long must not touch the next part or the file size.
+	written, err := io.Copy(io.NewOffsetWriter(f, int64(n)*PartBytes), io.LimitReader(br, want))
 	if br.err != nil {
 		f.Close()
 		return fmt.Errorf("%w: %v", ErrBadPart, br.err)
@@ -167,7 +169,12 @@ func (s *Service) PutPart(ctx context.Context, userID, uploadID string, n int, b
 	}
 	if written != want {
 		f.Close()
-		return ErrBadPart
+		return ErrBadPart // too short
+	}
+	var extra [1]byte
+	if k, _ := io.ReadFull(br, extra[:]); k > 0 || br.err != nil {
+		f.Close()
+		return ErrBadPart // too long (or the body failed at the end)
 	}
 	if err := f.Sync(); err != nil {
 		f.Close()
@@ -179,9 +186,17 @@ func (s *Service) PutPart(ctx context.Context, userID, uploadID string, n int, b
 	if err := syncDir(filepath.Join(root, "uploads")); err != nil {
 		return err
 	}
-	_, err = s.db.DB().ExecContext(ctx, `INSERT INTO upload_parts (upload_id, n, size) VALUES (?, ?, ?)
-		ON CONFLICT (upload_id, n) DO UPDATE SET size = excluded.size`, uploadID, n, want)
-	return err
+	// Record the part and keep the upload alive: it expires UploadTTL after
+	// the last part arrived, not after it was created.
+	return s.db.Tx(ctx, func(tx *sql.Tx) error {
+		if _, err := tx.ExecContext(ctx, `INSERT INTO upload_parts (upload_id, n, size) VALUES (?, ?, ?)
+			ON CONFLICT (upload_id, n) DO UPDATE SET size = excluded.size`, uploadID, n, want); err != nil {
+			return err
+		}
+		_, err := tx.ExecContext(ctx, "UPDATE uploads SET expires_at = ? WHERE id = ?",
+			s.hal.Clock.Now().Add(UploadTTL).UnixMilli(), uploadID)
+		return err
+	})
 }
 
 // GetUpload returns the upload with the parts received so far, ascending.
@@ -296,7 +311,10 @@ func (s *Service) Complete(ctx context.Context, userID, uploadID string) (Blob, 
 			return err
 		}
 		// Claim the upload only if nothing else got there first.
-		res, err := tx.ExecContext(ctx, "UPDATE uploads SET blob_id = ? WHERE id = ? AND blob_id IS NULL", blobID, uploadID)
+		// The row stays for UploadTTL more, so a retry after a lost response
+		// still gets this blob.
+		res, err := tx.ExecContext(ctx, "UPDATE uploads SET blob_id = ?, expires_at = ? WHERE id = ? AND blob_id IS NULL",
+			blobID, now.Add(UploadTTL).UnixMilli(), uploadID)
 		if err != nil {
 			return err
 		}
@@ -343,7 +361,7 @@ func HashFileUncached(path string) (string, error) {
 		return "", err
 	}
 	defer f.Close()
-	dropCache(f)
+	DropCache(f)
 	return hashReader(f)
 }
 

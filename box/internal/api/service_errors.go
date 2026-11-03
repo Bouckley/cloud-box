@@ -6,6 +6,7 @@ import (
 
 	"github.com/Bouckley/cloud-box/box/internal/auth"
 	"github.com/Bouckley/cloud-box/box/internal/blobs"
+	"github.com/Bouckley/cloud-box/box/internal/library"
 	"github.com/Bouckley/cloud-box/box/internal/store"
 )
 
@@ -42,6 +43,12 @@ func (h *handlers) serviceError(w http.ResponseWriter, r *http.Request, err erro
 			Code:    "hash_mismatch",
 			Message: "The uploaded file was damaged on the way.",
 			Action:  "The app will upload it again.",
+		})
+	case errors.Is(err, library.ErrInvalidParent):
+		writeError(w, http.StatusConflict, apiError{
+			Code:    "invalid_parent",
+			Message: "A collection cannot go there: albums stay at the top, and a folder cannot go inside itself.",
+			Action:  "Choose another folder, then try again.",
 		})
 	case errors.Is(err, auth.ErrLastDevice):
 		writeError(w, http.StatusConflict, apiError{

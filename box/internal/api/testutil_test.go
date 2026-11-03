@@ -14,6 +14,7 @@ import (
 	"github.com/Bouckley/cloud-box/box/internal/auth"
 	"github.com/Bouckley/cloud-box/box/internal/blobs"
 	"github.com/Bouckley/cloud-box/box/internal/hal/sim"
+	"github.com/Bouckley/cloud-box/box/internal/library"
 	"github.com/Bouckley/cloud-box/box/internal/store"
 )
 
@@ -37,7 +38,8 @@ func newEnv(t *testing.T) *env {
 	t.Cleanup(func() { _ = db.Close() })
 	s := sim.New(dir)
 	clock := s.HAL().Clock
-	deps := Deps{Version: "test", Auth: auth.New(db, clock), Blobs: blobs.New(db, s.HAL())}
+	deps := Deps{Version: "test", Auth: auth.New(db, clock), Blobs: blobs.New(db, s.HAL()),
+		Library: library.New(db, clock)}
 	return &env{t: t, db: db, sim: s, dir: dir, deps: deps, router: NewRouter(deps)}
 }
 

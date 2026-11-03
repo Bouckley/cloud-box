@@ -32,6 +32,11 @@ func newFixture(t *testing.T) *fixture {
 // addUser inserts a user directly (setup is auth's job) and returns its id.
 func (f *fixture) addUser(t *testing.T) string {
 	t.Helper()
+	return f.addUserTB(t)
+}
+
+func (f *fixture) addUserTB(t testing.TB) string {
+	t.Helper()
 	id := newID()
 	if _, err := f.db.DB().Exec(`INSERT INTO users (id, role, kdf_salt, kdf_ops, kdf_mem, master_key_password,
 		master_key_recovery, identity_public_key, identity_key_enc, dedupe_key_enc, created_at)

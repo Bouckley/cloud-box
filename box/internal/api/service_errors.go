@@ -50,6 +50,28 @@ func (h *handlers) serviceError(w http.ResponseWriter, r *http.Request, err erro
 			Message: "A collection cannot go there: albums stay at the top, and a folder cannot go inside itself.",
 			Action:  "Choose another folder, then try again.",
 		})
+	case errors.Is(err, library.ErrAlreadyStored):
+		writeError(w, http.StatusConflict, apiError{
+			Code:    "already_stored",
+			Message: "This file is already on the box.",
+			Action:  "Nothing to do; the app will show the copy that is already stored.",
+		})
+	case errors.Is(err, library.ErrBlobInUse):
+		writeError(w, http.StatusConflict, apiError{
+			Code:    "blob_in_use",
+			Message: "This upload already belongs to another item.",
+			Action:  "Upload the file again.",
+		})
+	case errors.Is(err, library.ErrRewrapRequired):
+		writeError(w, http.StatusConflict, apiError{
+			Code:    "rewrap_required",
+			Message: "Moving this item needs its key for the new album or folder.",
+			Action:  "Update the app, then try again.",
+		})
+	case errors.Is(err, library.ErrBadBlob):
+		badRequest(w, "blobs must include an original, and each blob must be one of your completed uploads, used once.")
+	case errors.Is(err, library.ErrTooManyHashes):
+		badRequest(w, "send at most 1000 dedupeHashes")
 	case errors.Is(err, auth.ErrLastDevice):
 		writeError(w, http.StatusConflict, apiError{
 			Code:    "last_device",

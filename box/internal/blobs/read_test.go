@@ -14,7 +14,7 @@ func TestOpenBlob(t *testing.T) {
 	ctx := context.Background()
 	data := randBytes(1234)
 	up := upload(t, f, data)
-	b, _, err := f.svc.Complete(ctx, f.sess.UserID, up.ID)
+	b, _, err := f.svc.Complete(ctx, f.sess.UserID, up.ID, "")
 	if err != nil {
 		t.Fatal(err)
 	}

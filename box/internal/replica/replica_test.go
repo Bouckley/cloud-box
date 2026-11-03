@@ -82,7 +82,7 @@ func (f *fixture) upload(t *testing.T, data []byte) string {
 	if err := f.blobs.PutPart(ctx, f.sess.UserID, up.ID, 0, bytes.NewReader(data)); err != nil {
 		t.Fatal(err)
 	}
-	b, _, err := f.blobs.Complete(ctx, f.sess.UserID, up.ID)
+	b, _, err := f.blobs.Complete(ctx, f.sess.UserID, up.ID, "")
 	if err != nil {
 		t.Fatal(err)
 	}

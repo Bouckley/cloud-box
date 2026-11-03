@@ -35,6 +35,10 @@ var (
 	ErrBadPart = errors.New("bad part")
 	// ErrUploadIncomplete means complete was called before every part arrived.
 	ErrUploadIncomplete = errors.New("upload incomplete")
+	// ErrBadRequest means the request contradicts itself or the upload, for
+	// example no hash at create or complete, or two different hashes.
+	ErrBadRequest = errors.New("bad request")
+
 	// ErrHashMismatch means the assembled blob's SHA-256 differs from the declared one.
 	ErrHashMismatch = errors.New("hash mismatch")
 )

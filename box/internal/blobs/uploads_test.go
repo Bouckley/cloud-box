@@ -52,7 +52,7 @@ func TestUploadRoundTrip(t *testing.T) {
 		t.Fatalf("GetUpload = %+v, %v; want received [0 1]", got, err)
 	}
 
-	blob, created, err := f.svc.Complete(ctx, f.sess.UserID, up.ID)
+	blob, created, err := f.svc.Complete(ctx, f.sess.UserID, up.ID, "")
 	if err != nil || !created {
 		t.Fatalf("Complete = %+v, %v, %v", blob, created, err)
 	}
@@ -97,11 +97,11 @@ func TestCompleteIsIdempotent(t *testing.T) {
 	f := newFixture(t)
 	ctx := context.Background()
 	up := upload(t, f, randBytes(100))
-	first, created, err := f.svc.Complete(ctx, f.sess.UserID, up.ID)
+	first, created, err := f.svc.Complete(ctx, f.sess.UserID, up.ID, "")
 	if err != nil || !created {
 		t.Fatal(err, created)
 	}
-	again, created, err := f.svc.Complete(ctx, f.sess.UserID, up.ID)
+	again, created, err := f.svc.Complete(ctx, f.sess.UserID, up.ID, "")
 	if err != nil || created || again.ID != first.ID {
 		t.Fatalf("second Complete = %+v, created=%v, %v; want same blob, created=false", again, created, err)
 	}
@@ -147,7 +147,7 @@ func TestPartResentAndWrongSize(t *testing.T) {
 	if len(got.Received) != 0 {
 		t.Errorf("received = %v, want none (a failed re-send un-receives the part)", got.Received)
 	}
-	if _, _, err := f.svc.Complete(ctx, f.sess.UserID, up.ID); !errors.Is(err, ErrUploadIncomplete) {
+	if _, _, err := f.svc.Complete(ctx, f.sess.UserID, up.ID, ""); !errors.Is(err, ErrUploadIncomplete) {
 		t.Errorf("Complete after rejected parts = %v, want ErrUploadIncomplete", err)
 	}
 
@@ -157,7 +157,7 @@ func TestPartResentAndWrongSize(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if blob, _, err := f.svc.Complete(ctx, f.sess.UserID, up.ID); err != nil || blob.SHA256 != sha(data) {
+	if blob, _, err := f.svc.Complete(ctx, f.sess.UserID, up.ID, ""); err != nil || blob.SHA256 != sha(data) {
 		t.Fatalf("Complete after re-sending = %+v, %v", blob, err)
 	}
 }
@@ -168,7 +168,7 @@ func TestCompleteMissingPart(t *testing.T) {
 	data := twoParts()
 	up, _ := f.svc.CreateUpload(ctx, f.sess, int64(len(data)), sha(data))
 	_ = f.svc.PutPart(ctx, f.sess.UserID, up.ID, 1, bytes.NewReader(part(data, 1)))
-	if _, _, err := f.svc.Complete(ctx, f.sess.UserID, up.ID); !errors.Is(err, ErrUploadIncomplete) {
+	if _, _, err := f.svc.Complete(ctx, f.sess.UserID, up.ID, ""); !errors.Is(err, ErrUploadIncomplete) {
 		t.Fatalf("Complete with part 0 missing: %v, want ErrUploadIncomplete", err)
 	}
 }
@@ -180,7 +180,7 @@ func TestHashMismatch(t *testing.T) {
 	up, _ := f.svc.CreateUpload(ctx, f.sess, int64(len(data)), sha(randBytes(10)))
 	_ = f.svc.PutPart(ctx, f.sess.UserID, up.ID, 0, bytes.NewReader(data))
 
-	if _, _, err := f.svc.Complete(ctx, f.sess.UserID, up.ID); !errors.Is(err, ErrHashMismatch) {
+	if _, _, err := f.svc.Complete(ctx, f.sess.UserID, up.ID, ""); !errors.Is(err, ErrHashMismatch) {
 		t.Fatalf("Complete: %v, want ErrHashMismatch", err)
 	}
 	if n := f.count(t, "blobs"); n != 0 {
@@ -226,7 +226,7 @@ func TestUploadsScopedToUser(t *testing.T) {
 	if err := f.svc.PutPart(ctx, other.UserID, up.ID, 0, bytes.NewReader(randBytes(10))); !errors.Is(err, store.ErrNotFound) {
 		t.Errorf("PutPart by another user: %v", err)
 	}
-	if _, _, err := f.svc.Complete(ctx, other.UserID, up.ID); !errors.Is(err, store.ErrNotFound) {
+	if _, _, err := f.svc.Complete(ctx, other.UserID, up.ID, ""); !errors.Is(err, store.ErrNotFound) {
 		t.Errorf("Complete by another user: %v", err)
 	}
 }
@@ -239,7 +239,7 @@ func TestExpiredUploadIsGone(t *testing.T) {
 	if _, err := f.svc.GetUpload(ctx, f.sess.UserID, up.ID); !errors.Is(err, store.ErrNotFound) {
 		t.Errorf("expired upload: %v, want ErrNotFound", err)
 	}
-	if _, _, err := f.svc.Complete(ctx, f.sess.UserID, up.ID); !errors.Is(err, store.ErrNotFound) {
+	if _, _, err := f.svc.Complete(ctx, f.sess.UserID, up.ID, ""); !errors.Is(err, store.ErrNotFound) {
 		t.Errorf("Complete of expired upload: %v", err)
 	}
 }
@@ -255,7 +255,7 @@ func TestPartsAndBlobsArePrivateFiles(t *testing.T) {
 	if fi, err := os.Stat(filepath.Join(f.dir, "uploads")); err != nil || fi.Mode().Perm() != 0o700 {
 		t.Errorf("uploads dir: %v, want mode 0700", err)
 	}
-	blob, _, err := f.svc.Complete(ctx, f.sess.UserID, up.ID)
+	blob, _, err := f.svc.Complete(ctx, f.sess.UserID, up.ID, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -272,7 +272,7 @@ func TestConcurrentCompletes(t *testing.T) {
 	ids := make(chan string, 8)
 	for range 8 {
 		go func() {
-			b, _, err := f.svc.Complete(ctx, f.sess.UserID, up.ID)
+			b, _, err := f.svc.Complete(ctx, f.sess.UserID, up.ID, "")
 			if err != nil {
 				t.Error(err)
 			}

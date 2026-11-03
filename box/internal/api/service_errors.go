@@ -34,6 +34,8 @@ func (h *handlers) serviceError(w http.ResponseWriter, r *http.Request, err erro
 			Message: "The box is full. Nothing already on it was lost.",
 			Action:  "Delete things you no longer need and empty Trash, or add a bigger drive, then try again.",
 		})
+	case errors.Is(err, blobs.ErrBadRequest):
+		badRequest(w, strings.TrimPrefix(err.Error(), blobs.ErrBadRequest.Error()+": "))
 	case errors.Is(err, blobs.ErrBadPart):
 		badRequest(w, "This part has the wrong number or size.")
 	case errors.Is(err, blobs.ErrUploadIncomplete):

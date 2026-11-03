@@ -22,7 +22,7 @@ func TestCompleteSurvivesCancelledContext(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	b, created, err := f.svc.Complete(ctx, f.sess.UserID, up.ID)
+	b, created, err := f.svc.Complete(ctx, f.sess.UserID, up.ID, "")
 	if err != nil || !created {
 		t.Fatalf("Complete with a cancelled context = %v, created=%v; want it to finish", err, created)
 	}
@@ -55,7 +55,7 @@ func TestCompleteWithLostPartData(t *testing.T) {
 	if err := os.RemoveAll(filepath.Join(f.dir, "uploads", up.ID)); err != nil {
 		t.Fatal(err)
 	}
-	if _, _, err := f.svc.Complete(ctx, f.sess.UserID, up.ID); !errors.Is(err, ErrUploadIncomplete) {
+	if _, _, err := f.svc.Complete(ctx, f.sess.UserID, up.ID, ""); !errors.Is(err, ErrUploadIncomplete) {
 		t.Fatalf("Complete = %v, want ErrUploadIncomplete", err)
 	}
 	got, err := f.svc.GetUpload(ctx, f.sess.UserID, up.ID)
@@ -66,7 +66,7 @@ func TestCompleteWithLostPartData(t *testing.T) {
 	data := randBytes(500)
 	up2, _ := f.svc.CreateUpload(ctx, f.sess, 500, sha(data))
 	_ = f.svc.PutPart(ctx, f.sess.UserID, up2.ID, 0, bytes.NewReader(data))
-	if _, _, err := f.svc.Complete(ctx, f.sess.UserID, up2.ID); err != nil {
+	if _, _, err := f.svc.Complete(ctx, f.sess.UserID, up2.ID, ""); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -118,7 +118,7 @@ func TestPartsRacingCompletes(t *testing.T) {
 		})
 		wg.Go(func() {
 			for range 3 {
-				_, _, err := f.svc.Complete(ctx, f.sess.UserID, up.ID)
+				_, _, err := f.svc.Complete(ctx, f.sess.UserID, up.ID, "")
 				if err != nil && !errors.Is(err, ErrUploadIncomplete) && !errors.Is(err, ErrHashMismatch) {
 					t.Errorf("Complete: %v", err)
 				}
@@ -138,7 +138,7 @@ func TestPartsRacingCompletes(t *testing.T) {
 			_ = f.svc.PutPart(ctx, f.sess.UserID, up.ID, n, bytes.NewReader(part(data, n)))
 		}
 	}
-	if _, _, err := f.svc.Complete(ctx, f.sess.UserID, up.ID); !errors.Is(err, ErrHashMismatch) {
+	if _, _, err := f.svc.Complete(ctx, f.sess.UserID, up.ID, ""); !errors.Is(err, ErrHashMismatch) {
 		t.Errorf("final Complete = %v, want ErrHashMismatch (all parts present, declared hash wrong)", err)
 	}
 }

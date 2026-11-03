@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/Bouckley/cloud-box/box/internal/blobs"
@@ -116,7 +117,7 @@ func TestUploadBadInput(t *testing.T) {
 		"size 0":        {"size": 0, "sha256": shaHex(nil)},
 		"size > 64 GiB": {"size": blobs.MaxBlobBytes + 1, "sha256": shaHex(nil)},
 		"bad sha":       {"size": 10, "sha256": "abc"},
-		"missing sha":   {"size": 10},
+		"empty sha":     {"size": 10, "sha256": ""},
 	} {
 		if rec := e.call(http.MethodPost, "/v1/uploads", o.token, body); rec.Code != http.StatusBadRequest {
 			t.Errorf("%s: %d, want 400", name, rec.Code)
@@ -187,5 +188,66 @@ func TestUploadRoutesNeedSession(t *testing.T) {
 	// A real token but someone else's (unknown) upload id → 404.
 	if rec := e.call(http.MethodGet, "/v1/uploads/"+id, o.token, nil); rec.Code != http.StatusNotFound {
 		t.Errorf("unknown upload = %d, want 404", rec.Code)
+	}
+}
+
+func TestUploadHashAtCompleteHandler(t *testing.T) {
+	e := newEnv(t)
+	o := e.setUpOwner()
+	data := randBytes(10)
+	rec := e.call(http.MethodPost, "/v1/uploads", o.token, map[string]any{"size": 10})
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("create without sha256 = %d %s, want 201", rec.Code, rec.Body)
+	}
+	if !strings.Contains(rec.Body.String(), `"sha256":null`) {
+		t.Errorf("create response %s, want sha256 null", rec.Body)
+	}
+	var up uploadJSON
+	decodeInto(t, rec, &up)
+	e.raw(http.MethodPut, "/v1/uploads/"+up.ID+"/parts/0", o.token, data)
+
+	rec = e.call(http.MethodPost, "/v1/uploads/"+up.ID+"/complete", o.token, nil)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("complete with no hash anywhere = %d, want 400", rec.Code)
+	}
+	assertError(t, decode(t, rec), "invalid_request")
+	if rec := e.call(http.MethodPost, "/v1/uploads/"+up.ID+"/complete", o.token, map[string]any{"sha256": "abc"}); rec.Code != http.StatusBadRequest {
+		t.Errorf("complete with a malformed hash = %d, want 400", rec.Code)
+	}
+
+	rec = e.call(http.MethodPost, "/v1/uploads/"+up.ID+"/complete", o.token, map[string]any{"sha256": shaHex(data)})
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("complete with hash = %d %s, want 201", rec.Code, rec.Body)
+	}
+	var b blobJSON
+	decodeInto(t, rec, &b)
+	if b.SHA256 != shaHex(data) || b.State != "verified" {
+		t.Errorf("blob = %+v, want hash and verified", b)
+	}
+	for _, body := range []any{nil, map[string]any{"sha256": shaHex(data)}} {
+		rec = e.call(http.MethodPost, "/v1/uploads/"+up.ID+"/complete", o.token, body)
+		var again blobJSON
+		decodeInto(t, rec, &again)
+		if rec.Code != http.StatusOK || again.ID != b.ID {
+			t.Errorf("retried complete (%v) = %d %+v, want 200 with blob %s", body, rec.Code, again, b.ID)
+		}
+	}
+}
+
+func TestUploadHashConflictHandler(t *testing.T) {
+	e := newEnv(t)
+	o := e.setUpOwner()
+	data := randBytes(10)
+	rec := e.call(http.MethodPost, "/v1/uploads", o.token, map[string]any{"size": 10, "sha256": shaHex(data)})
+	var up uploadJSON
+	decodeInto(t, rec, &up)
+	e.raw(http.MethodPut, "/v1/uploads/"+up.ID+"/parts/0", o.token, data)
+	rec = e.call(http.MethodPost, "/v1/uploads/"+up.ID+"/complete", o.token, map[string]any{"sha256": shaHex([]byte("x"))})
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("complete with a different hash = %d, want 400", rec.Code)
+	}
+	assertError(t, decode(t, rec), "invalid_request")
+	if rec := e.call(http.MethodPost, "/v1/uploads/"+up.ID+"/complete", o.token, nil); rec.Code != http.StatusCreated {
+		t.Fatalf("complete with the stored hash = %d %s, want 201", rec.Code, rec.Body)
 	}
 }

@@ -31,7 +31,8 @@ type Upload struct {
 }
 
 // CreateUpload starts an upload of size bytes whose ciphertext has the given
-// SHA-256 (hex). Inputs must already be validated. It refuses with
+// SHA-256 (hex), or "" when the client sends the hash at Complete instead.
+// Inputs must already be validated. It refuses with
 // ErrStorageFull when the main drive cannot hold this blob, the bytes still
 // owed to other unfinished uploads, and ReserveBytes. Nothing is written to
 // disk until the first part arrives.
@@ -62,7 +63,7 @@ func (s *Service) CreateUpload(ctx context.Context, sess auth.Session, size int6
 	}
 	_, err = s.db.DB().ExecContext(ctx, `INSERT INTO uploads (id, user_id, device_id, size, sha256,
 		part_count, created_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-		id, sess.UserID, sess.DeviceID, size, sha256Hex, up.PartCount, now.UnixMilli(), up.ExpiresAt.UnixMilli())
+		id, sess.UserID, sess.DeviceID, size, sql.NullString{String: sha256Hex, Valid: sha256Hex != ""}, up.PartCount, now.UnixMilli(), up.ExpiresAt.UnixMilli())
 	if err != nil {
 		return Upload{}, err
 	}
@@ -78,16 +79,17 @@ func dataPath(root, uploadID string) string {
 func (s *Service) load(ctx context.Context, userID, uploadID string) (Upload, error) {
 	up := Upload{ID: uploadID, userID: userID}
 	var expires int64
-	var blobID sql.NullString
+	var blobID, hash sql.NullString
 	err := s.db.DB().QueryRowContext(ctx, `SELECT sha256, size, part_count, expires_at, blob_id
 		FROM uploads WHERE id = ? AND user_id = ?`, uploadID, userID).
-		Scan(&up.SHA256, &up.Size, &up.PartCount, &expires, &blobID)
+		Scan(&hash, &up.Size, &up.PartCount, &expires, &blobID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return Upload{}, store.ErrNotFound
 	}
 	if err != nil {
 		return Upload{}, err
 	}
+	up.SHA256 = hash.String
 	up.blobID = blobID.String
 	millis(&up.ExpiresAt, expires)
 	if !blobID.Valid && s.hal.Clock.Now().After(up.ExpiresAt) {
@@ -227,11 +229,13 @@ func (s *Service) received(ctx context.Context, uploadID string) ([]int, error) 
 }
 
 // Complete checks the data file's SHA-256 and stores it as a blob, then
-// re-reads it from the drive to mark it verified. It is safe to retry: a
+// re-reads it from the drive to mark it verified. The hash comes from
+// CreateUpload or from sha256Hex ("" = use the stored one); none, or two that
+// differ, is ErrBadRequest and discards nothing. It is safe to retry: a
 // completed upload returns its blob with created=false. On a hash mismatch the
 // parts are discarded and must be sent again. It finishes even if ctx is
 // cancelled (the client went away), so no half-recorded blob is left behind.
-func (s *Service) Complete(ctx context.Context, userID, uploadID string) (Blob, bool, error) {
+func (s *Service) Complete(ctx context.Context, userID, uploadID, sha256Hex string) (Blob, bool, error) {
 	ctx = context.WithoutCancel(ctx)
 	l := s.lock(uploadID)
 	l.Lock()
@@ -241,9 +245,19 @@ func (s *Service) Complete(ctx context.Context, userID, uploadID string) (Blob, 
 	if err != nil {
 		return Blob{}, false, err
 	}
+	if sha256Hex != "" && up.SHA256 != "" && sha256Hex != up.SHA256 {
+		return Blob{}, false, fmt.Errorf("%w: sha256 differs from the one sent when the upload started", ErrBadRequest)
+	}
 	if up.blobID != "" {
 		b, err := s.blob(ctx, userID, up.blobID)
 		return b, false, err
+	}
+	want := up.SHA256
+	if want == "" {
+		want = sha256Hex
+	}
+	if want == "" {
+		return Blob{}, false, fmt.Errorf("%w: send sha256 when starting or completing the upload", ErrBadRequest)
 	}
 	received, err := s.received(ctx, uploadID)
 	if err != nil {
@@ -273,7 +287,7 @@ func (s *Service) Complete(ctx context.Context, userID, uploadID string) (Blob, 
 	if err != nil {
 		return Blob{}, false, err
 	}
-	if digest != up.SHA256 {
+	if digest != want {
 		if err := s.resetParts(ctx, uploadID, src); err != nil {
 			return Blob{}, false, err
 		}
@@ -313,8 +327,8 @@ func (s *Service) Complete(ctx context.Context, userID, uploadID string) (Blob, 
 		// Claim the upload only if nothing else got there first.
 		// The row stays for UploadTTL more, so a retry after a lost response
 		// still gets this blob.
-		res, err := tx.ExecContext(ctx, "UPDATE uploads SET blob_id = ?, expires_at = ? WHERE id = ? AND blob_id IS NULL",
-			blobID, now.Add(UploadTTL).UnixMilli(), uploadID)
+		res, err := tx.ExecContext(ctx, "UPDATE uploads SET blob_id = ?, sha256 = ?, expires_at = ? WHERE id = ? AND blob_id IS NULL",
+			blobID, digest, now.Add(UploadTTL).UnixMilli(), uploadID)
 		if err != nil {
 			return err
 		}

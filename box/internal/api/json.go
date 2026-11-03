@@ -1,6 +1,7 @@
 package api
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"io"
@@ -36,6 +37,25 @@ func readJSON(w http.ResponseWriter, r *http.Request, v any) bool {
 	badRequest(w, "The request is not valid JSON for this endpoint.")
 	return false
 }
+
+// readOptionalJSON is readJSON for a body that may be left out: an empty
+// body leaves v as it is.
+func readOptionalJSON(w http.ResponseWriter, r *http.Request, v any) bool {
+	raw, err := io.ReadAll(http.MaxBytesReader(w, r.Body, maxJSONBytes))
+	if err == nil && len(bytes.TrimSpace(raw)) == 0 {
+		return true
+	}
+	if err == nil {
+		r.Body = io.NopCloser(bytes.NewReader(raw))
+	} else {
+		r.Body = io.NopCloser(errReader{err})
+	}
+	return readJSON(w, r, v)
+}
+
+type errReader struct{ err error }
+
+func (e errReader) Read([]byte) (int, error) { return 0, e.err }
 
 // badRequest writes 400 invalid_request with message (which must not echo
 // request data).

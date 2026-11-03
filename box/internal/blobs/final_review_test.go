@@ -33,7 +33,7 @@ func TestTooLongPartKeepsNeighbours(t *testing.T) {
 		if err := put(tooLong, part(data, tooLong)); err != nil {
 			t.Fatal(err)
 		}
-		if b, _, err := f.svc.Complete(ctx, f.sess.UserID, up.ID); err != nil || b.SHA256 != sha(data) {
+		if b, _, err := f.svc.Complete(ctx, f.sess.UserID, up.ID, ""); err != nil || b.SHA256 != sha(data) {
 			t.Errorf("part %d too long, then re-sent: Complete = %v (want the blob)", tooLong, err)
 		}
 	}
@@ -61,7 +61,7 @@ func TestUploadExpirySlidesWithActivity(t *testing.T) {
 	if err != nil || len(got.Received) != 2 {
 		t.Fatalf("GetUpload 20 h after the last part = %+v, %v; want both parts", got, err)
 	}
-	b, _, err := f.svc.Complete(ctx, f.sess.UserID, up.ID)
+	b, _, err := f.svc.Complete(ctx, f.sess.UserID, up.ID, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -70,7 +70,7 @@ func TestUploadExpirySlidesWithActivity(t *testing.T) {
 	if _, err := f.svc.CleanupUploads(ctx); err != nil {
 		t.Fatal(err)
 	}
-	again, created, err := f.svc.Complete(ctx, f.sess.UserID, up.ID)
+	again, created, err := f.svc.Complete(ctx, f.sess.UserID, up.ID, "")
 	if err != nil || created || again.ID != b.ID {
 		t.Errorf("retry 23 h after complete = %+v created=%v, %v; want the same blob", again, created, err)
 	}

@@ -89,7 +89,7 @@ func (f *fixture) item(t *testing.T, sess auth.Session) library.Item {
 	if err := f.blobs.PutPart(ctx, sess.UserID, up.ID, 0, bytes.NewReader(data)); err != nil {
 		t.Fatal(err)
 	}
-	b, _, err := f.blobs.Complete(ctx, sess.UserID, up.ID)
+	b, _, err := f.blobs.Complete(ctx, sess.UserID, up.ID, "")
 	if err != nil {
 		t.Fatal(err)
 	}

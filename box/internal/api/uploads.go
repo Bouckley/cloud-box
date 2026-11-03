@@ -29,7 +29,7 @@ func extendDeadlines(w http.ResponseWriter, d time.Duration) {
 type uploadResponse struct {
 	ID        string    `json:"id"`
 	Size      int64     `json:"size"`
-	SHA256    string    `json:"sha256"`
+	SHA256    *string   `json:"sha256"`
 	PartBytes int       `json:"partBytes"`
 	PartCount int       `json:"partCount"`
 	Received  []int     `json:"received"`
@@ -41,8 +41,12 @@ func toUploadResponse(u blobs.Upload) uploadResponse {
 	if received == nil {
 		received = []int{}
 	}
+	var hash *string
+	if u.SHA256 != "" {
+		hash = &u.SHA256
+	}
 	return uploadResponse{
-		ID: u.ID, Size: u.Size, SHA256: u.SHA256, PartBytes: blobs.PartBytes,
+		ID: u.ID, Size: u.Size, SHA256: hash, PartBytes: blobs.PartBytes,
 		PartCount: u.PartCount, Received: received, ExpiresAt: u.ExpiresAt.UTC(),
 	}
 }
@@ -56,8 +60,8 @@ type blobResponse struct {
 
 func (h *handlers) createUpload(w http.ResponseWriter, r *http.Request, sess auth.Session) {
 	var req struct {
-		Size   int64  `json:"size"`
-		SHA256 string `json:"sha256"`
+		Size   int64   `json:"size"`
+		SHA256 *string `json:"sha256"`
 	}
 	if !readJSON(w, r, &req) {
 		return
@@ -66,11 +70,15 @@ func (h *handlers) createUpload(w http.ResponseWriter, r *http.Request, sess aut
 		badRequest(w, "size must be 1 byte to 64 GiB")
 		return
 	}
-	if !validHex(req.SHA256, 32) {
-		badRequest(w, "sha256 must be 64 lowercase hex characters")
-		return
+	hash := ""
+	if req.SHA256 != nil {
+		if !validHex(*req.SHA256, 32) {
+			badRequest(w, "sha256 must be 64 lowercase hex characters")
+			return
+		}
+		hash = *req.SHA256
 	}
-	up, err := h.d.Blobs.CreateUpload(r.Context(), sess, req.Size, req.SHA256)
+	up, err := h.d.Blobs.CreateUpload(r.Context(), sess, req.Size, hash)
 	if err != nil {
 		h.serviceError(w, r, err)
 		return
@@ -114,8 +122,22 @@ func (h *handlers) completeUpload(w http.ResponseWriter, r *http.Request, sess a
 		badRequest(w, "id must be 32 lowercase hex characters")
 		return
 	}
+	var req struct {
+		SHA256 *string `json:"sha256"`
+	}
+	if !readOptionalJSON(w, r, &req) {
+		return
+	}
+	hash := ""
+	if req.SHA256 != nil {
+		if !validHex(*req.SHA256, 32) {
+			badRequest(w, "sha256 must be 64 lowercase hex characters")
+			return
+		}
+		hash = *req.SHA256
+	}
 	extendDeadlines(w, completeTimeout)
-	b, created, err := h.d.Blobs.Complete(r.Context(), sess.UserID, id)
+	b, created, err := h.d.Blobs.Complete(r.Context(), sess.UserID, id, hash)
 	if err != nil {
 		h.serviceError(w, r, err)
 		return

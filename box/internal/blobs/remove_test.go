@@ -11,7 +11,7 @@ import (
 func TestRemove(t *testing.T) {
 	f := newFixture(t)
 	ctx := context.Background()
-	b, _, err := f.svc.Complete(ctx, f.sess.UserID, upload(t, f, randBytes(100)).ID)
+	b, _, err := f.svc.Complete(ctx, f.sess.UserID, upload(t, f, randBytes(100)).ID, "")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -21,7 +21,7 @@ func TestCleanupUploads(t *testing.T) {
 		t.Fatal(err)
 	}
 	// A completed blob never attached to an item, with a backup copy.
-	loose, _, err := f.svc.Complete(ctx, f.sess.UserID, upload(t, f, randBytes(20)).ID)
+	loose, _, err := f.svc.Complete(ctx, f.sess.UserID, upload(t, f, randBytes(20)).ID, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -29,7 +29,7 @@ func TestCleanupUploads(t *testing.T) {
 	_ = os.MkdirAll(filepath.Dir(backupCopy), 0o700)
 	_ = os.WriteFile(backupCopy, []byte("x"), 0o600)
 	// A blob attached to an item must survive.
-	kept, _, err := f.svc.Complete(ctx, f.sess.UserID, upload(t, f, randBytes(30)).ID)
+	kept, _, err := f.svc.Complete(ctx, f.sess.UserID, upload(t, f, randBytes(30)).ID, "")
 	if err != nil {
 		t.Fatal(err)
 	}

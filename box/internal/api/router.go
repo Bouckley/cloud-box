@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/Bouckley/cloud-box/box/internal/auth"
+	"github.com/Bouckley/cloud-box/box/internal/blobs"
 )
 
 // Deps are the services the handlers use. Each milestone task adds the
@@ -15,6 +16,7 @@ type Deps struct {
 	Version string
 	Logger  *slog.Logger
 	Auth    *auth.Service
+	Blobs   *blobs.Service
 }
 
 // handlers holds the dependencies every handler method uses.
@@ -42,6 +44,12 @@ func NewRouter(d Deps) http.Handler {
 		mux.HandleFunc("POST /v1/devices/pairing-codes", h.requireSession(h.createPairingCode))
 		mux.HandleFunc("POST /v1/devices/pair", h.pairDevice)
 		mux.HandleFunc("DELETE /v1/devices/{id}", h.requireSession(h.revokeDevice))
+	}
+	if d.Auth != nil && d.Blobs != nil {
+		mux.HandleFunc("POST /v1/uploads", h.requireSession(h.createUpload))
+		mux.HandleFunc("GET /v1/uploads/{id}", h.requireSession(h.getUpload))
+		mux.HandleFunc("PUT /v1/uploads/{id}/parts/{n}", h.requireSession(h.putUploadPart))
+		mux.HandleFunc("POST /v1/uploads/{id}/complete", h.requireSession(h.completeUpload))
 	}
 	return withLogging(logger, withRecover(logger, &jsonErrors{mux: mux}))
 }

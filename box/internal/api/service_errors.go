@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/Bouckley/cloud-box/box/internal/auth"
+	"github.com/Bouckley/cloud-box/box/internal/blobs"
 	"github.com/Bouckley/cloud-box/box/internal/store"
 )
 
@@ -21,6 +22,26 @@ func (h *handlers) serviceError(w http.ResponseWriter, r *http.Request, err erro
 			Code:    "id_taken",
 			Message: "That id is already in use on the box.",
 			Action:  "Try again; the app will pick a new id.",
+		})
+	case errors.Is(err, blobs.ErrStorageFull):
+		writeError(w, http.StatusInsufficientStorage, apiError{
+			Code:    "storage_full",
+			Message: "The box is full. Nothing already on it was lost.",
+			Action:  "Delete things you no longer need and empty Trash, or add a bigger drive, then try again.",
+		})
+	case errors.Is(err, blobs.ErrBadPart):
+		badRequest(w, "This part has the wrong number or size.")
+	case errors.Is(err, blobs.ErrUploadIncomplete):
+		writeError(w, http.StatusConflict, apiError{
+			Code:    "upload_incomplete",
+			Message: "Some parts of this upload have not arrived yet.",
+			Action:  "The app will send the missing parts and try again.",
+		})
+	case errors.Is(err, blobs.ErrHashMismatch):
+		writeError(w, http.StatusUnprocessableEntity, apiError{
+			Code:    "hash_mismatch",
+			Message: "The uploaded file was damaged on the way.",
+			Action:  "The app will upload it again.",
 		})
 	case errors.Is(err, auth.ErrLastDevice):
 		writeError(w, http.StatusConflict, apiError{

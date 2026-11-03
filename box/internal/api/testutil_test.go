@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/Bouckley/cloud-box/box/internal/auth"
+	"github.com/Bouckley/cloud-box/box/internal/blobs"
 	"github.com/Bouckley/cloud-box/box/internal/hal/sim"
 	"github.com/Bouckley/cloud-box/box/internal/store"
 )
@@ -36,7 +37,7 @@ func newEnv(t *testing.T) *env {
 	t.Cleanup(func() { _ = db.Close() })
 	s := sim.New(dir)
 	clock := s.HAL().Clock
-	deps := Deps{Version: "test", Auth: auth.New(db, clock)}
+	deps := Deps{Version: "test", Auth: auth.New(db, clock), Blobs: blobs.New(db, s.HAL())}
 	return &env{t: t, db: db, sim: s, dir: dir, deps: deps, router: NewRouter(deps)}
 }
 
@@ -105,5 +106,18 @@ func newRequest(method, path string) *http.Request { return httptest.NewRequest(
 func serve(e *env, r *http.Request) *httptest.ResponseRecorder {
 	rec := httptest.NewRecorder()
 	e.router.ServeHTTP(rec, r)
+	return rec
+}
+
+// raw sends a request with a raw body.
+func (e *env) raw(method, path, token string, body []byte) *httptest.ResponseRecorder {
+	e.t.Helper()
+	req := httptest.NewRequest(method, path, bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/octet-stream")
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+	rec := httptest.NewRecorder()
+	e.router.ServeHTTP(rec, req)
 	return rec
 }

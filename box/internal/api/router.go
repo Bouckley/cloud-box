@@ -5,6 +5,8 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+
+	"github.com/Bouckley/cloud-box/box/internal/auth"
 )
 
 // Deps are the services the handlers use. Each milestone task adds the
@@ -12,6 +14,13 @@ import (
 type Deps struct {
 	Version string
 	Logger  *slog.Logger
+	Auth    *auth.Service
+}
+
+// handlers holds the dependencies every handler method uses.
+type handlers struct {
+	d   Deps
+	log *slog.Logger
 }
 
 // NewRouter returns the handler for every /v1 endpoint, wrapped with
@@ -22,7 +31,11 @@ func NewRouter(d Deps) http.Handler {
 		logger = slog.New(slog.NewTextHandler(io.Discard, nil))
 	}
 	mux := http.NewServeMux()
+	h := &handlers{d: d, log: logger}
 	mux.HandleFunc("GET /v1/health", healthHandler(d.Version))
+	if d.Auth != nil {
+		mux.HandleFunc("POST /v1/setup", h.setup)
+	}
 	return withLogging(logger, withRecover(logger, &jsonErrors{mux: mux}))
 }
 

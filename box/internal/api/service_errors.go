@@ -12,6 +12,8 @@ import (
 // are logged (without request data) and become 500 internal_error.
 func (h *handlers) serviceError(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
+	case errors.Is(err, auth.ErrUnauthorized):
+		unauthorized(w)
 	case errors.Is(err, store.ErrNotFound):
 		notFound(w, r)
 	case errors.Is(err, store.ErrIDTaken):

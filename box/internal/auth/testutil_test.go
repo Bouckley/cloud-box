@@ -1,8 +1,10 @@
 package auth
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
+	"database/sql"
 	"encoding/hex"
 	"path/filepath"
 	"testing"
@@ -46,4 +48,50 @@ func testUser() NewUser {
 
 func testDevice(signPublicKey []byte) NewDevice {
 	return NewDevice{ID: newID(), NameEnc: randBytes(60), SignPublicKey: signPublicKey}
+}
+
+// assertNotInDB fails if secret appears in any TEXT or BLOB cell of any table.
+func assertNotInDB(t *testing.T, db *sql.DB, secret []byte) {
+	t.Helper()
+	tables, err := db.Query("SELECT name FROM sqlite_master WHERE type = 'table'")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var names []string
+	for tables.Next() {
+		var n string
+		_ = tables.Scan(&n)
+		names = append(names, n)
+	}
+	tables.Close()
+	for _, table := range names {
+		rows, err := db.Query("SELECT * FROM " + table)
+		if err != nil {
+			t.Fatal(err)
+		}
+		cols, _ := rows.Columns()
+		for rows.Next() {
+			vals := make([]any, len(cols))
+			ptrs := make([]any, len(cols))
+			for i := range vals {
+				ptrs[i] = &vals[i]
+			}
+			if err := rows.Scan(ptrs...); err != nil {
+				t.Fatal(err)
+			}
+			for i, v := range vals {
+				var b []byte
+				switch x := v.(type) {
+				case []byte:
+					b = x
+				case string:
+					b = []byte(x)
+				}
+				if bytes.Contains(b, secret) {
+					t.Errorf("secret found in %s.%s", table, cols[i])
+				}
+			}
+		}
+		rows.Close()
+	}
 }

@@ -3,6 +3,8 @@
 package auth
 
 import (
+	"sync"
+
 	"github.com/Bouckley/cloud-box/box/internal/hal"
 	"github.com/Bouckley/cloud-box/box/internal/store"
 )
@@ -16,9 +18,13 @@ const (
 type Service struct {
 	db    *store.Store
 	clock hal.Clock
+
+	mu             sync.Mutex
+	challenges     map[string]pendingChallenge // by challenge hex
+	challengeOrder []string                    // oldest first, for eviction
 }
 
 // New returns the auth service.
 func New(db *store.Store, clock hal.Clock) *Service {
-	return &Service{db: db, clock: clock}
+	return &Service{db: db, clock: clock, challenges: map[string]pendingChallenge{}}
 }

@@ -99,3 +99,11 @@ func decodeInto(t *testing.T, rec *httptest.ResponseRecorder, v any) {
 		t.Fatalf("body %q: %v", rec.Body.String(), err)
 	}
 }
+
+func newRequest(method, path string) *http.Request { return httptest.NewRequest(method, path, nil) }
+
+func serve(e *env, r *http.Request) *httptest.ResponseRecorder {
+	rec := httptest.NewRecorder()
+	e.router.ServeHTTP(rec, r)
+	return rec
+}

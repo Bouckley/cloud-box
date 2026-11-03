@@ -191,9 +191,18 @@ importers:
         specifier: ^0.17.0
         version: 0.17.0
     devDependencies:
+      '@cloudbox/crypto':
+        specifier: workspace:*
+        version: link:../crypto
+      '@types/node':
+        specifier: ^26.6.6
+        version: 26.6.6
       openapi-typescript:
         specifier: ^7.13.0
         version: 7.13.0(typescript@6.0.3)
+      undici:
+        specifier: 8.12.2
+        version: 8.12.2
 
   packages/crypto:
     dependencies:
@@ -990,6 +999,10 @@ packages:
 
   undici-types@8.9.0:
     resolution: {integrity: sha512-KTDyRTYX8sWmKXAikPHHSyc63CRPETMctyjKFupcC6OBLXT3xsN0e9aF7m+mIXutFWpUXuedtowG7iLOzp0kQg==}
+
+  undici@8.12.2:
+    resolution: {integrity: sha512-XtuDWVdqTLr3NAxm2ly9/hU6kUsJOgGh1RASzMBbsw6aWCOaQzHdW+QQDfdERjfJ2V5vL5pRPa4RetO9UfivDg==}
+    engines: {node: '>=22.19.0'}
 
   uri-js-replace@1.0.2:
     resolution: {integrity: sha512-VeBBt/nMxedczht3KDL2yBBMJqIxpCQLMZp3UJ1otcWwUHdQW4IiyHpJivExzSK+FdxTowRfGL4FmwDqH9+S8Q==}
@@ -1825,6 +1838,8 @@ snapshots:
   typescript@6.0.3: {}
 
   undici-types@8.9.0: {}
+
+  undici@8.12.2: {}
 
   uri-js-replace@1.0.2: {}
 

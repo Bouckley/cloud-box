@@ -18,10 +18,11 @@ dev: ## Run boxd with simulated hardware on https://localhost:8443
 	@echo "web app (Vite on :5173) arrives in M2; starting boxd only"
 	go -C box run -tags sim ./cmd/boxd --hal=sim --data="$(DATA_DIR)"
 
-test: ## Go tests (with -race, with and without the sim tag) and TypeScript tests
+test: ## Go tests (with -race, with and without the sim tag), TypeScript tests and the contract test
 	go -C box test -race -count=1 ./...
 	go -C box test -race -count=1 -tags sim ./...
 	pnpm test
+	pnpm --filter @cloudbox/api-client test:contract
 
 test-e2e: ## Playwright + axe web tests (stub until M2)
 	@echo "Playwright + axe web tests arrive in M2 (e2e/). Nothing to run yet."

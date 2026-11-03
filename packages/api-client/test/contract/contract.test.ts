@@ -24,7 +24,7 @@ import {
   wrapKey,
 } from '@cloudbox/crypto';
 import { createBoxClient } from '../../src/index.ts';
-import { startBoxd, type RunningBox } from './boxd.ts';
+import { startBoxd, type RunningBox } from '@cloudbox/testbox';
 
 const MARKER = 'CLOUDBOX-PLAINTEXT-MARKER';
 const FILE_NAME = 'IMG_MARKER.jpg';

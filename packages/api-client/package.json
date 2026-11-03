@@ -17,8 +17,8 @@
   },
   "devDependencies": {
     "@cloudbox/crypto": "workspace:*",
+    "@cloudbox/testbox": "workspace:*",
     "@types/node": "^26.6.6",
-    "openapi-typescript": "^7.13.0",
-    "undici": "8.12.2"
+    "openapi-typescript": "^7.13.0"
   }
 }

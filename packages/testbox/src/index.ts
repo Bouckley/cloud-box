@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 import { Agent, fetch as undiciFetch } from 'undici';
 
-const repoRoot = fileURLToPath(new URL('../../../../', import.meta.url));
+const repoRoot = fileURLToPath(new URL('../../../', import.meta.url));
 
 export type RunningBox = {
   baseUrl: string;
@@ -14,11 +14,19 @@ export type RunningBox = {
   fetch: typeof fetch;
   /** Short-press the sim power button and wait until setup is open. */
   pressButton(): Promise<void>;
+  /** Move the box's simulated clock forward. */
+  advanceClock(seconds: number): Promise<void>;
+  /** Run one of the box's jobs now (replicate, purge, cleanup, light). */
+  runJob(name: string): Promise<unknown>;
+  /** Plug in or unplug the simulated backup drive. */
+  setBackupPresent(present: boolean): Promise<void>;
   logs(): string;
   stop(): Promise<void>;
 };
 
 /**
+ * Test helper: a real boxd with simulated hardware, for contract and core tests.
+ *
  * Builds boxd with the sim tag into a temp dir, starts it on a free port with
  * a data dir whose path has a space, and returns a fetch that trusts only the
  * certificate boxd wrote.
@@ -78,17 +86,29 @@ export async function startBoxd(): Promise<RunningBox> {
     return res as unknown as Response;
   }) as typeof fetch;
 
+  const devPost = async (path: string, body?: unknown): Promise<unknown> => {
+    const res = await pinnedFetch(`${baseUrl}${path}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    });
+    if (res.status !== 200) throw new Error(`POST ${path}: ${res.status} ${await res.text()}`);
+    return res.json();
+  };
+
   return {
     baseUrl,
     dataDir,
     fetch: pinnedFetch,
+    async advanceClock(seconds) {
+      await devPost('/dev/sim/clock/advance', { seconds });
+    },
+    runJob: (name) => devPost(`/dev/sim/jobs/${encodeURIComponent(name)}`),
+    async setBackupPresent(present) {
+      await devPost('/dev/sim/drives/backup', { present });
+    },
     async pressButton() {
-      const res = await pinnedFetch(`${baseUrl}/dev/sim/button`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ kind: 'short' }),
-      });
-      if (res.status !== 200) throw new Error(`press button: ${res.status}`);
+      await devPost('/dev/sim/button', { kind: 'short' });
       // The box handles the press on another goroutine; wait for it.
       const deadline = Date.now() + 5_000;
       for (;;) {

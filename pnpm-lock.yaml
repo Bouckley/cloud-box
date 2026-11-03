@@ -194,15 +194,31 @@ importers:
       '@cloudbox/crypto':
         specifier: workspace:*
         version: link:../crypto
+      '@cloudbox/testbox':
+        specifier: workspace:*
+        version: link:../testbox
       '@types/node':
         specifier: ^26.6.6
         version: 26.6.6
       openapi-typescript:
         specifier: ^7.13.0
         version: 7.13.0(typescript@6.0.3)
-      undici:
-        specifier: 8.12.2
-        version: 8.12.2
+
+  packages/core:
+    dependencies:
+      '@cloudbox/api-client':
+        specifier: workspace:*
+        version: link:../api-client
+      '@cloudbox/crypto':
+        specifier: workspace:*
+        version: link:../crypto
+    devDependencies:
+      '@cloudbox/testbox':
+        specifier: workspace:*
+        version: link:../testbox
+      '@types/node':
+        specifier: ^26.6.6
+        version: 26.6.6
 
   packages/crypto:
     dependencies:
@@ -216,6 +232,16 @@ importers:
       '@types/libsodium-wrappers-sumo':
         specifier: ^0.8.2
         version: 0.8.2
+      '@types/node':
+        specifier: ^26.6.6
+        version: 26.6.6
+
+  packages/testbox:
+    dependencies:
+      undici:
+        specifier: 8.12.2
+        version: 8.12.2
+    devDependencies:
       '@types/node':
         specifier: ^26.6.6
         version: 26.6.6

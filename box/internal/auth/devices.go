@@ -56,18 +56,16 @@ func (s *Service) Pair(ctx context.Context, code string, d NewDevice) (string, e
 	now := s.clock.Now().UnixMilli()
 	var userID string
 	err := s.db.Tx(ctx, func(tx *sql.Tx) error {
-		err := tx.QueryRowContext(ctx, `SELECT p.user_id FROM pairing_codes p
-			JOIN devices c ON c.id = p.created_by
-			WHERE p.code_hash = ? AND p.used_at IS NULL AND p.expires_at > ? AND c.revoked_at IS NULL`,
-			tokenHash(code), now).Scan(&userID)
+		// One conditional UPDATE claims the code, so it is single-use even
+		// without relying on the store's single connection.
+		err := tx.QueryRowContext(ctx, `UPDATE pairing_codes SET used_at = ?
+			WHERE code_hash = ? AND used_at IS NULL AND expires_at > ?
+			AND created_by IN (SELECT id FROM devices WHERE revoked_at IS NULL)
+			RETURNING user_id`, now, tokenHash(code), now).Scan(&userID)
 		if errors.Is(err, sql.ErrNoRows) {
 			return ErrBadPairingCode
 		}
 		if err != nil {
-			return err
-		}
-		if _, err := tx.ExecContext(ctx, "UPDATE pairing_codes SET used_at = ? WHERE code_hash = ?",
-			now, tokenHash(code)); err != nil {
 			return err
 		}
 		return insertDevice(ctx, tx, userID, d, now)

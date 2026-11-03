@@ -240,3 +240,20 @@ func TestPendingChallengesCapped(t *testing.T) {
 		t.Errorf("evicted challenge still works: %v", err)
 	}
 }
+
+// A session row of a revoked device must be useless even if it was never
+// deleted (e.g. Verify raced Revoke). Pins the revoked_at check in Authenticate.
+func TestSessionOfRevokedDeviceRejected(t *testing.T) {
+	svc, db, _ := newService(t)
+	d := setUp(t, svc)
+	token, err := login(t, svc, d)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.DB().Exec("UPDATE devices SET revoked_at = 1 WHERE id = ?", d.id); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.Authenticate(context.Background(), token); !errors.Is(err, ErrUnauthorized) {
+		t.Fatalf("session of a revoked device: %v, want ErrUnauthorized", err)
+	}
+}

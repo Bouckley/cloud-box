@@ -138,3 +138,16 @@ func TestLoginBadShapes(t *testing.T) {
 		}
 	}
 }
+
+// RFC 7235: the auth scheme is case-insensitive.
+func TestBearerSchemeCaseInsensitive(t *testing.T) {
+	e := newEnv(t)
+	o := e.setUpOwner()
+	for _, scheme := range []string{"bearer", "BEARER", "Bearer"} {
+		r := newRequest(http.MethodGet, "/v1/account")
+		r.Header.Set("Authorization", scheme+" "+o.token)
+		if rec := serve(e, r); rec.Code != http.StatusOK {
+			t.Errorf("scheme %q: status = %d, want 200", scheme, rec.Code)
+		}
+	}
+}

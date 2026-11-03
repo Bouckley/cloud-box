@@ -76,8 +76,8 @@ func (h *handlers) getAccount(w http.ResponseWriter, r *http.Request, sess auth.
 // requireSession runs next only with a valid `Authorization: Bearer <token>`.
 func (h *handlers) requireSession(next func(http.ResponseWriter, *http.Request, auth.Session)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		token, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
-		if !ok || !validToken(token) {
+		scheme, token, ok := strings.Cut(r.Header.Get("Authorization"), " ")
+		if !ok || !strings.EqualFold(scheme, "Bearer") || !validToken(token) {
 			unauthorized(w)
 			return
 		}

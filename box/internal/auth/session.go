@@ -36,7 +36,7 @@ type pendingChallenge struct {
 
 // Challenge issues a single-use challenge for an active device.
 func (s *Service) Challenge(ctx context.Context, deviceID string) (string, time.Time, error) {
-	if _, _, err := s.activeDevice(ctx, deviceID); err != nil {
+	if _, _, err := activeDevice(ctx, s.db.DB(), deviceID); err != nil {
 		return "", time.Time{}, err
 	}
 	b := make([]byte, 32)
@@ -86,27 +86,28 @@ func (s *Service) Verify(ctx context.Context, deviceID, challenge string, sig []
 		return "", time.Time{}, ErrUnauthorized
 	}
 
-	userID, pub, err := s.activeDevice(ctx, deviceID)
-	if err != nil {
-		return "", time.Time{}, err
-	}
-	if !boxcrypto.VerifyEd25519(pub, boxcrypto.AuthMessage(deviceID, challenge), sig) {
-		return "", time.Time{}, ErrUnauthorized
-	}
-
 	raw := make([]byte, 32)
 	if _, err := rand.Read(raw); err != nil {
 		return "", time.Time{}, err
 	}
 	token := base64.RawURLEncoding.EncodeToString(raw)
 	expires := now.Add(SessionTTL)
-	err = s.db.Tx(ctx, func(tx *sql.Tx) error {
+	// The device check and the session insert share one transaction, so a
+	// concurrent Revoke cannot slip in between them.
+	err := s.db.Tx(ctx, func(tx *sql.Tx) error {
+		userID, pub, err := activeDevice(ctx, tx, deviceID)
+		if err != nil {
+			return err
+		}
+		if !boxcrypto.VerifyEd25519(pub, boxcrypto.AuthMessage(deviceID, challenge), sig) {
+			return ErrUnauthorized
+		}
 		if _, err := tx.ExecContext(ctx,
 			"INSERT INTO sessions (token_hash, user_id, device_id, expires_at) VALUES (?, ?, ?, ?)",
 			tokenHash(token), userID, deviceID, expires.UnixMilli()); err != nil {
 			return err
 		}
-		_, err := tx.ExecContext(ctx, "UPDATE devices SET last_seen = ? WHERE id = ?", now.UnixMilli(), deviceID)
+		_, err = tx.ExecContext(ctx, "UPDATE devices SET last_seen = ? WHERE id = ?", now.UnixMilli(), deviceID)
 		return err
 	})
 	if err != nil {
@@ -130,11 +131,16 @@ func (s *Service) Authenticate(ctx context.Context, token string) (Session, erro
 	return sess, err
 }
 
+// querier is a *sql.DB or *sql.Tx.
+type querier interface {
+	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
+}
+
 // activeDevice returns an unrevoked device's user and public key.
-func (s *Service) activeDevice(ctx context.Context, deviceID string) (string, []byte, error) {
+func activeDevice(ctx context.Context, q querier, deviceID string) (string, []byte, error) {
 	var userID string
 	var pub []byte
-	err := s.db.DB().QueryRowContext(ctx,
+	err := q.QueryRowContext(ctx,
 		"SELECT user_id, sign_public_key FROM devices WHERE id = ? AND revoked_at IS NULL",
 		deviceID).Scan(&userID, &pub)
 	if errors.Is(err, sql.ErrNoRows) {

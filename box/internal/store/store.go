@@ -48,6 +48,9 @@ func Open(ctx context.Context, path string) (*Store, error) {
 		return nil, fmt.Errorf("open db: %w", err)
 	}
 	// One connection: a single writer is simple and enough for one home.
+	// Every transaction is therefore serialized. Read-then-write checks (for
+	// example "setup only while no user exists") rely on this; if the pool is
+	// ever widened, switch those transactions to BEGIN IMMEDIATE first.
 	db.SetMaxOpenConns(1)
 	s := &Store{db: db}
 	if err := s.migrate(ctx); err != nil {

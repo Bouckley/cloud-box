@@ -18,7 +18,7 @@ dev: ## Run boxd (simulated hardware, https://localhost:8443) and the web app (V
 	DATA_DIR="$(DATA_DIR)" "$(CURDIR)/scripts/dev.sh"
 
 web: ## Build the web app into box/web/dist (embedded by boxd)
-	pnpm --filter @cloudbox/web build
+	pnpm --filter @cloudbox/web --fail-if-no-match build
 
 test: ## Go tests (with -race, with and without the sim tag), TypeScript tests and the contract test
 	go -C box test -race -count=1 ./...

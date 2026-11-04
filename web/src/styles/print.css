@@ -1,0 +1,50 @@
+/*
+ * Printing the recovery key: one sheet with what it is, the 24 words, when it
+ * was made and where it is kept. Everything else is removed (display: none,
+ * so no blank second page).
+ */
+@media print {
+  @page {
+    margin: 18mm;
+  }
+  body {
+    background: none;
+  }
+  .solo {
+    display: block;
+    min-height: 0;
+    padding: 0;
+  }
+  .solo__panel {
+    max-width: none;
+  }
+  .solo__panel > :not(.recovery-print) {
+    display: none;
+  }
+  .recovery-print {
+    padding: 0;
+    gap: 6mm;
+    background: none;
+    color: var(--color-ink);
+  }
+  .recovery-print .print-only {
+    display: block;
+    font-size: 11pt;
+  }
+  .recovery-print .print-title {
+    font-size: 18pt;
+    font-weight: 700;
+  }
+  .recovery-print .word-card__title,
+  .recovery-print .word-card__keep {
+    display: none;
+  }
+  .recovery-print .word-card {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 5mm 8mm;
+    font-size: 13pt;
+  }
+  .recovery-print .word {
+    font-size: 15pt;
+  }
+}

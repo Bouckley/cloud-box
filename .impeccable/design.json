@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-03T00:00:00Z",
+  "generatedAt": "2026-11-03T12:00:00Z",
   "title": "Design System: Cloud Box",
   "extensions": {
     "colorMeta": {
@@ -19,11 +19,31 @@
           "oklch(96.5% 0.004 105)"
         ]
       },
-      "surface": { "role": "neutral", "displayName": "White", "canonical": "#ffffff" },
-      "surface-sunk": { "role": "neutral", "displayName": "Sunk Paper", "canonical": "#f2f2ef" },
-      "line": { "role": "neutral", "displayName": "Hairline", "canonical": "#e4e4e0" },
-      "line-strong": { "role": "neutral", "displayName": "Firm Line", "canonical": "#d5d6d2" },
-      "track": { "role": "neutral", "displayName": "Meter Track", "canonical": "#e2e2de" },
+      "surface": {
+        "role": "neutral",
+        "displayName": "White",
+        "canonical": "#ffffff"
+      },
+      "surface-sunk": {
+        "role": "neutral",
+        "displayName": "Sunk Paper",
+        "canonical": "#f2f2ef"
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "#e4e4e0"
+      },
+      "line-strong": {
+        "role": "neutral",
+        "displayName": "Firm Line",
+        "canonical": "#d5d6d2"
+      },
+      "track": {
+        "role": "neutral",
+        "displayName": "Meter Track",
+        "canonical": "#e2e2de"
+      },
       "ink": {
         "role": "neutral",
         "displayName": "Ink",
@@ -39,8 +59,16 @@
           "oklch(95% 0.003 260)"
         ]
       },
-      "ink-2": { "role": "neutral", "displayName": "Ink Soft", "canonical": "#5c6066" },
-      "ink-3": { "role": "neutral", "displayName": "Ink Meta (reserved)", "canonical": "#4a4e54" },
+      "ink-2": {
+        "role": "neutral",
+        "displayName": "Ink Soft",
+        "canonical": "#5c6066"
+      },
+      "ink-3": {
+        "role": "neutral",
+        "displayName": "Ink Meta (reserved)",
+        "canonical": "#4a4e54"
+      },
       "safe": {
         "role": "primary",
         "displayName": "Safe Green",
@@ -61,9 +89,21 @@
         "displayName": "Deep Safe Green",
         "canonical": "#1f5a41"
       },
-      "safe-tint": { "role": "primary", "displayName": "Safe Mist", "canonical": "#e6f1eb" },
-      "safe-ink": { "role": "primary", "displayName": "Safe Ink", "canonical": "#1f4a38" },
-      "safe-ink-2": { "role": "primary", "displayName": "Safe Ink Soft", "canonical": "#3f5f51" },
+      "safe-tint": {
+        "role": "primary",
+        "displayName": "Safe Mist",
+        "canonical": "#e6f1eb"
+      },
+      "safe-ink": {
+        "role": "primary",
+        "displayName": "Safe Ink",
+        "canonical": "#1f4a38"
+      },
+      "safe-ink-2": {
+        "role": "primary",
+        "displayName": "Safe Ink Soft",
+        "canonical": "#3f5f51"
+      },
       "attention": {
         "role": "secondary",
         "displayName": "Attention Amber",
@@ -84,7 +124,11 @@
         "displayName": "Amber Wash",
         "canonical": "#fbf0d9"
       },
-      "attention-ink": { "role": "secondary", "displayName": "Amber Ink", "canonical": "#3b2800" },
+      "attention-ink": {
+        "role": "secondary",
+        "displayName": "Amber Ink",
+        "canonical": "#3b2800"
+      },
       "attention-ink-2": {
         "role": "secondary",
         "displayName": "Amber Ink Soft",
@@ -115,12 +159,16 @@
         "displayName": "Delete Wash (reserved)",
         "canonical": "#fbe9e7"
       },
-      "focus": { "role": "neutral", "displayName": "Focus Green", "canonical": "#1f5a41" }
+      "focus": {
+        "role": "neutral",
+        "displayName": "Focus Green",
+        "canonical": "#1f5a41"
+      }
     },
     "typographyMeta": {
       "headline": {
         "displayName": "Headline",
-        "purpose": "The single h1 each screen owns; solo pages."
+        "purpose": "The single h1 each screen owns; min(30px, 12vw) on solo pages."
       },
       "title": {
         "displayName": "Title",
@@ -137,6 +185,10 @@
       "label-xs": {
         "displayName": "Tab Label",
         "purpose": "Bottom tab labels, capped at min(13px, 5vw), never wrapping."
+      },
+      "code": {
+        "displayName": "Code",
+        "purpose": "IBM Plex Mono 600, the pairing code only, so I/l/1 and 0/O can't be confused. A scoped exception to the single-typeface rule."
       }
     },
     "shadows": [
@@ -149,6 +201,11 @@
         "name": "attention-border",
         "value": "inset 0 0 0 2px var(--color-attention)",
         "purpose": "The attention banner card's amber border."
+      },
+      {
+        "name": "notice-border",
+        "value": "inset 0 0 0 1px var(--color-line-strong)",
+        "purpose": "The notice strip's hairline border."
       },
       {
         "name": "shadow-raised",
@@ -178,12 +235,31 @@
         "name": "sidebar",
         "value": "720.02px",
         "purpose": "Above: sticky 264px sidebar. At or below 720px: four fixed bottom tabs, 72px tall plus safe-area inset."
+      },
+      {
+        "name": "word-card-stack",
+        "value": "@container (max-width: 17rem)",
+        "purpose": "Recovery key card: when one column is this narrow, each number moves above its word."
+      },
+      {
+        "name": "print",
+        "value": "@media print",
+        "purpose": "Prints the recovery key card alone on one sheet (18mm margins, 3 columns); everything else display: none."
       }
     ],
     "sizes": [
-      { "name": "target-min", "value": "48px" },
-      { "name": "sidebar-width", "value": "264px" },
-      { "name": "tabbar-height", "value": "72px" }
+      {
+        "name": "target-min",
+        "value": "48px"
+      },
+      {
+        "name": "sidebar-width",
+        "value": "264px"
+      },
+      {
+        "name": "tabbar-height",
+        "value": "72px"
+      }
     ]
   },
   "components": [
@@ -266,11 +342,59 @@
       "description": "Sidebar card under the nav: used of size, with a pill meter. Hidden when status is unknown or unreachable.",
       "html": "<div class=\"ds-storage\"><span class=\"ds-storage-label\">412 GB of 1 TB used</span><div class=\"ds-meter\" role=\"img\" aria-label=\"41 percent of storage used\"><div class=\"ds-meter-fill\"></div></div></div>",
       "css": ".ds-storage { display: flex; flex-direction: column; gap: 8px; width: 232px; padding: 16px; border-radius: 14px; background: #fff; font-family: var(--font-sans, Inter, system-ui, sans-serif); color: #16181b; } .ds-storage-label { font-size: 15px; font-weight: 600; } .ds-meter { height: 8px; border-radius: 999px; background: #e2e2de; overflow: hidden; } .ds-meter-fill { width: 41%; height: 100%; background: #2e7d5b; }"
+    },
+    {
+      "name": "Field with Hint and Error",
+      "kind": "input",
+      "refersTo": "field-error",
+      "description": "Label, hint, input, error. Hint and error tied by aria-describedby; the error stays until the field changes. Error colour is an open question (see DESIGN.md Colors).",
+      "html": "<div class=\"ds-ff\"><label for=\"ds-ff-1\">New password</label><p class=\"ds-ff-hint\" id=\"ds-ff-1h\">At least 10 characters. A few words you will remember works well.</p><input id=\"ds-ff-1\" class=\"ds-ff-input\" type=\"password\" aria-invalid=\"true\" aria-describedby=\"ds-ff-1h ds-ff-1e\" value=\"short\"><p class=\"ds-ff-error\" id=\"ds-ff-1e\" role=\"alert\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 3l10 18H2z\"/><path d=\"M12 10v5\"/><path d=\"M12 18h.01\"/></svg><span>Use at least 10 characters.</span></p></div>",
+      "css": ".ds-ff { display: flex; flex-direction: column; gap: 8px; width: 340px; font-family: var(--font-sans, Inter, system-ui, sans-serif); color: var(--color-ink, #16181b); } .ds-ff label { font-size: 15px; font-weight: 600; } .ds-ff-hint { margin: 0; font-size: 15px; color: var(--color-ink-2, #5c6066); } .ds-ff-input { width: 100%; box-sizing: border-box; min-height: 48px; padding: 0 16px; border: 1px solid var(--color-line-strong, #d5d6d2); border-radius: 14px; background: #fff; font: inherit; font-size: 17px; } .ds-ff-input[aria-invalid='true'] { border-color: var(--color-danger, #b3261e); } .ds-ff-input:focus-visible { outline: none; box-shadow: 0 0 0 2px #fff, 0 0 0 5px #1f5a41; border-color: #1f5a41; } .ds-ff-error { display: flex; align-items: flex-start; gap: 8px; margin: 0; font-size: 15px; font-weight: 600; color: var(--color-danger, #b3261e); } .ds-ff-error svg { flex: none; margin-top: 1px; }"
+    },
+    {
+      "name": "Notice",
+      "kind": "card",
+      "refersTo": "notice",
+      "description": "Ink on white with a hairline border and a warning icon; the warning variant is semibold. Never amber.",
+      "html": "<p class=\"ds-notice ds-notice-warning\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 3l10 18H2z\"/><path d=\"M12 10v5\"/><path d=\"M12 18h.01\"/></svg><span>This signs out every phone and computer connected to your box. You'll need to add them again.</span></p>",
+      "css": ".ds-notice { display: flex; align-items: flex-start; gap: 12px; width: 380px; margin: 0; padding: 16px; border-radius: 14px; background: var(--color-surface, #fff); box-shadow: inset 0 0 0 1px var(--color-line-strong, #d5d6d2); color: var(--color-ink, #16181b); font-family: var(--font-sans, Inter, system-ui, sans-serif); font-size: 17px; line-height: 1.5; } .ds-notice svg { flex: none; margin-top: 2px; } .ds-notice-warning { font-weight: 600; }"
+    },
+    {
+      "name": "Entry Action Row",
+      "kind": "custom",
+      "refersTo": "step-label",
+      "description": "Primary first, then Back, then the quiet step line at the row's end. Never an eyebrow above the h1.",
+      "html": "<div class=\"ds-actions\"><button class=\"ds-a-primary\">Continue</button><button class=\"ds-a-secondary\">Back</button><p class=\"ds-step\">Step 2 of 5</p></div>",
+      "css": ".ds-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; width: 480px; font-family: var(--font-sans, Inter, system-ui, sans-serif); } .ds-a-primary, .ds-a-secondary { min-height: 48px; padding: 0 20px; border-radius: 999px; font: inherit; font-size: 15px; cursor: pointer; } .ds-a-primary { border: 1px solid #2e7d5b; background: var(--color-safe, #2e7d5b); color: #fff; font-weight: 700; } .ds-a-primary:hover { background: var(--color-safe-strong, #1f5a41); } .ds-a-secondary { border: 1px solid var(--color-line-strong, #d5d6d2); background: #fff; color: #16181b; font-weight: 600; } .ds-a-secondary:hover { background: var(--color-surface-sunk, #f2f2ef); } .ds-a-primary:focus-visible, .ds-a-secondary:focus-visible { outline: none; box-shadow: 0 0 0 2px #fff, 0 0 0 5px #1f5a41; } .ds-step { margin: 0 0 0 auto; font-size: 15px; color: var(--color-ink-2, #5c6066); font-variant-numeric: tabular-nums; }"
+    },
+    {
+      "name": "Recovery Key Card",
+      "kind": "card",
+      "refersTo": "recovery-card",
+      "description": "Signature. The one white card in setup: 24 numbered words, 3 columns on desktop, 2 on phones, 1 at 200% text; a word never splits. Prints alone.",
+      "html": "<section class=\"ds-rk\"><h2 class=\"ds-rk-title\">Write these words down, in order</h2><ol class=\"ds-rk-words\"><li><span class=\"ds-rk-num\">1</span><span class=\"ds-rk-word\">harbor</span></li><li><span class=\"ds-rk-num\">2</span><span class=\"ds-rk-word\">maple</span></li><li><span class=\"ds-rk-num\">3</span><span class=\"ds-rk-word\">quiet</span></li><li><span class=\"ds-rk-num\">4</span><span class=\"ds-rk-word\">lantern</span></li><li><span class=\"ds-rk-num\">5</span><span class=\"ds-rk-word\">orbit</span></li><li><span class=\"ds-rk-num\">6</span><span class=\"ds-rk-word\">velvet</span></li><li><span class=\"ds-rk-num\">7</span><span class=\"ds-rk-word\">cactus</span></li><li><span class=\"ds-rk-num\">8</span><span class=\"ds-rk-word\">ember</span></li><li><span class=\"ds-rk-num\">9</span><span class=\"ds-rk-word\">glide</span></li><li><span class=\"ds-rk-num\">10</span><span class=\"ds-rk-word\">pocket</span></li><li><span class=\"ds-rk-num\">11</span><span class=\"ds-rk-word\">tundra</span></li><li><span class=\"ds-rk-num\">12</span><span class=\"ds-rk-word\">willow</span></li></ol><p class=\"ds-rk-keep\">Keep them on paper somewhere safe at home. Don't save them in a photo or an email.</p></section>",
+      "css": ".ds-rk { display: flex; flex-direction: column; gap: 16px; width: 480px; padding: 24px; border-radius: 18px; background: var(--color-surface, #fff); color: var(--color-ink, #16181b); font-family: var(--font-sans, Inter, system-ui, sans-serif); container-type: inline-size; } .ds-rk-title { margin: 0; font-size: 19px; font-weight: 700; line-height: 1.15; } .ds-rk-words { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 8em), 1fr)); gap: 12px 20px; margin: 0; padding: 0; list-style: none; } .ds-rk-words li { display: flex; align-items: baseline; gap: 8px; min-width: 0; } .ds-rk-num { min-width: 1.6em; font-size: 15px; color: var(--color-ink-2, #5c6066); font-variant-numeric: tabular-nums; text-align: end; } .ds-rk-word { font-size: 19px; font-weight: 600; white-space: nowrap; } .ds-rk-keep { margin: 0; font-size: 15px; color: var(--color-ink-2, #5c6066); } @container (max-width: 17rem) { .ds-rk-words li { flex-direction: column; gap: 0; } .ds-rk-num { min-width: 0; text-align: start; } }"
+    },
+    {
+      "name": "Device List",
+      "kind": "card",
+      "refersTo": "device-badge",
+      "description": "Box section card: one row per device, hairline-divided, with a 'This browser' pill badge and a Last seen line.",
+      "html": "<section class=\"ds-dev\"><h2>Devices</h2><ul class=\"ds-dev-list\"><li><span class=\"ds-dev-name\">Chrome on Linux</span><span class=\"ds-dev-this\">This browser</span><span class=\"ds-dev-seen\">Last seen just now</span></li><li><span class=\"ds-dev-name\">Safari on iPhone</span><span class=\"ds-dev-seen\">Last seen 2 days ago</span></li></ul></section>",
+      "css": ".ds-dev { display: flex; flex-direction: column; gap: 16px; width: 360px; padding: 24px; border-radius: 18px; background: #fff; color: #16181b; font-family: var(--font-sans, Inter, system-ui, sans-serif); } .ds-dev h2 { margin: 0; font-size: 19px; line-height: 1.15; } .ds-dev-list { display: flex; flex-direction: column; margin: 0; padding: 0; list-style: none; } .ds-dev-list li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; padding: 12px 0; border-top: 1px solid var(--color-line, #e4e4e0); } .ds-dev-list li:first-child { border-top: 0; padding-top: 0; } .ds-dev-name { font-size: 17px; font-weight: 600; overflow-wrap: anywhere; } .ds-dev-this { padding: 0 8px; border-radius: 999px; background: var(--color-surface-sunk, #f2f2ef); font-size: 13px; font-weight: 600; } .ds-dev-seen { flex-basis: 100%; font-size: 15px; color: var(--color-ink-2, #5c6066); }"
+    },
+    {
+      "name": "Pairing Code",
+      "kind": "custom",
+      "refersTo": "pair-code",
+      "description": "Sunk panel with the single-use code in IBM Plex Mono, groups of four that never split, and when it expires.",
+      "html": "<div class=\"ds-pair\"><p class=\"ds-pair-label\" id=\"ds-pair-l\">Pairing code</p><output class=\"ds-pair-code\" aria-labelledby=\"ds-pair-l\"><span>K7QM </span><span>R2XW </span><span>9HTB </span><span>4NCP</span></output><p class=\"ds-pair-valid\">Valid until 14:30. It works once.</p></div>",
+      "css": ".ds-pair { display: flex; flex-direction: column; gap: 8px; width: 320px; padding: 16px; border-radius: 14px; background: var(--color-surface-sunk, #f2f2ef); color: var(--color-ink, #16181b); font-family: var(--font-sans, Inter, system-ui, sans-serif); } .ds-pair p { margin: 0; } .ds-pair-label { font-size: 15px; font-weight: 600; } .ds-pair-code { display: flex; flex-wrap: wrap; gap: 4px 12px; font-family: var(--font-code, 'IBM Plex Mono', ui-monospace, monospace); font-size: 22px; font-weight: 600; } .ds-pair-code span { white-space: nowrap; } .ds-pair-valid { font-size: 15px; color: var(--color-ink-2, #5c6066); }"
     }
   ],
   "narrative": {
     "northStar": "The Calm Appliance Panel",
-    "overview": "The frame exists to answer one question first and truthfully: are my photos safe? Everything else is quiet: a warm off-white ground, white rounded cards, deep ink text, line icons, and a single green that is spent only on safety and the primary action. Status is never buried in settings; it leads every main screen as the safety banner.\n\nDensity is low and targets are large, built for less confident, older users as much as for households leaving paid clouds. Surfaces are flat; meaning is carried by colour family, material change and words, never by decoration. Motion is short and quiet and disappears under reduced motion.",
+    "overview": "The frame exists to answer one question first and truthfully: are my photos safe? Everything else is quiet: a warm off-white ground, white rounded cards, deep ink text, line icons, and a single green that is spent only on safety and the primary action. Status is never buried in settings; it leads every main screen as the safety banner.\n\nDensity is low and targets are large, built for less confident, older users as much as for households leaving paid clouds. Surfaces are flat; meaning is carried by colour family, material change and words, never by decoration. Motion is short and quiet and disappears under reduced motion.\n\nBefore a browser is unlocked (setup, unlock, forgot password, connect, reset) the same world speaks as an unhurried conversation: one centred column, the product mark, one h1, one sentence of why, one question, one green button. There is no banner and no nav, and nothing is timed.",
     "keyCharacteristics": [
       "One green, one amber, one red, each with a single meaning.",
       "The safety banner changes material with the box's truth.",
@@ -303,6 +427,11 @@
         "name": "The Flat Panel Rule",
         "body": "Surfaces separate by tone, not by shadow. Introduce shadow-raised only for a surface that genuinely floats (a sheet or menu), not for cards.",
         "section": "elevation"
+      },
+      {
+        "name": "The One Face Rule",
+        "body": "Inter sets every word. One deliberate, scoped exception (owner, M2 Task 12): the pairing code is set in IBM Plex Mono so I, l and 1, and 0 and O, can't be confused when a person reads it off one screen and types it into another. The mono face is for codes a person must copy character by character; it is never a label, heading or decorative voice. The code's input field stays in Inter, with tabular figures and 0.04em tracking.",
+        "section": "typography"
       }
     ],
     "dos": [
@@ -311,7 +440,10 @@
       "Do keep every interactive target at least 48px (--target-min) and keep the focus ring visible.",
       "Do set dynamic values (meter widths, positions) through the CSSOM (el.style.setProperty); the CSP is style-src 'self'.",
       "Do keep line icons at 2px stroke with rounded joins, aria-hidden beside a visible word.",
-      "Do honour prefers-reduced-motion: durations drop to 0."
+      "Do honour prefers-reduced-motion: durations drop to 0.",
+      "Do give each entry page one h1, one question and one primary button, with the step line (\"Step n of 5\") at the end of the action row.",
+      "Do tie every hint and error to its field, and keep errors until the field changes.",
+      "Do set codes a person must copy character by character in --font-code; everything else in Inter."
     ],
     "donts": [
       "Don't use green for anything but \"safe\" or the primary action.",
@@ -319,7 +451,11 @@
       "Don't use red for anything but permanent deletion, or amber for anything but paused, almost full or unreachable.",
       "Don't use inline style attributes or injected <style>; the CSP blocks them.",
       "Don't show the Box attention dot for copying or checking.",
-      "Don't let tab labels wrap or shrink body text below 17px."
+      "Don't let tab labels wrap or shrink body text below 17px.",
+      "Don't put the step count, or any other small label, above an h1 as an eyebrow.",
+      "Don't use the mono face for labels, headings, numbers in general or decoration.",
+      "Don't split a recovery word or a pairing code group across lines.",
+      "Don't add time limits, countdowns or auto-dismissing errors to entry pages."
     ]
   }
 }

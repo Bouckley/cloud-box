@@ -512,8 +512,17 @@ a.banner:hover {
   flex-direction: column;
   gap: var(--space-5);
 }
+.solo__panel h1[tabindex='-1']:focus {
+  /* Focus moves here between steps for screen readers; no ring on a heading. */
+  box-shadow: none;
+}
+.solo__panel > * {
+  min-width: 0;
+}
 .solo__panel h1 {
-  font-size: var(--text-2xl);
+  /* Grows with text size, capped by the screen so one long word
+     ("password?") still fits at 200% on a 320 px screen. */
+  font-size: min(var(--text-2xl), 12vw);
   letter-spacing: var(--tracking-display);
 }
 
@@ -583,4 +592,290 @@ a.banner:hover {
 }
 .input:focus-visible {
   border-color: var(--color-focus);
+}
+
+/* ---------- Entry pages: setup, unlock, forgot, connect, reset ---------- */
+
+.solo__brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: var(--weight-bold);
+}
+.solo__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+.solo__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-block-start: var(--space-2);
+}
+.solo__step {
+  margin-inline-start: auto;
+  color: var(--color-ink-2);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+.solo__link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--target-min);
+  font-weight: var(--weight-semibold);
+}
+.solo__waiting {
+  color: var(--color-ink-2);
+}
+@media (max-width: 720px) {
+  .solo__actions .button--primary {
+    flex: 1 1 100%;
+  }
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.form-field .input {
+  /* Inputs keep a browser-default width in a flex column; fill it instead,
+     so 200% text at 320 px never scrolls sideways. */
+  width: 100%;
+  min-width: 0;
+}
+.form-field > label {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+.form-field__hint {
+  color: var(--color-ink-2);
+  font-size: var(--text-sm);
+}
+.form-field .input[aria-invalid='true'] {
+  border-color: var(--color-danger);
+}
+.form-error {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  color: var(--color-danger);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+.form-error svg {
+  flex: none;
+  margin-block-start: 1px;
+}
+.input--area {
+  min-height: 9rem;
+  padding: var(--space-3) var(--space-4);
+  line-height: var(--leading-body);
+  resize: vertical;
+}
+.input--code {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+}
+
+.notice {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: inset 0 0 0 1px var(--color-line-strong);
+}
+.notice svg {
+  flex: none;
+  margin-block-start: 2px;
+}
+.notice--warning {
+  font-weight: var(--weight-semibold);
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--target-min);
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+}
+.check input {
+  width: 1.5rem;
+  height: 1.5rem;
+  margin: 0;
+  accent-color: var(--color-safe);
+}
+
+/* The recovery key: the one white card in setup, a list you could print. */
+.recovery-print {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-6);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  container-type: inline-size;
+}
+.print-only {
+  display: none;
+}
+.word-card__title {
+  font-size: var(--text-lg);
+}
+.word-card {
+  display: grid;
+  /* 3 columns on desktop, 2 on phones, 1 when 200% text needs the width:
+     a word is never split. */
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 8em), 1fr));
+  gap: var(--space-3) var(--space-5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.word-card li {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.word-num {
+  min-width: 1.6em;
+  color: var(--color-ink-2);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+  text-align: end;
+}
+.word {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  white-space: nowrap;
+}
+.word-card__keep {
+  color: var(--color-ink-2);
+  font-size: var(--text-sm);
+}
+/* One narrow column (phones at 200% text): the number goes above its word,
+   so the longest word has the card's full width and never passes its edge. */
+@container (max-width: 17rem) {
+  .word-card li {
+    flex-direction: column;
+    gap: 0;
+  }
+  .word-num {
+    min-width: 0;
+    text-align: start;
+  }
+}
+@media (max-width: 720px) {
+  /* Tighter on phones so "I've written it down" stays above the fold. */
+  .word-card {
+    gap: var(--space-2) var(--space-4);
+  }
+  .recovery-print {
+    gap: var(--space-3);
+    padding: var(--space-4);
+  }
+}
+
+/* ---------- Photos (empty) and Box (devices, add a device) ---------- */
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  max-width: 40ch;
+  margin-block-start: var(--space-10);
+  color: var(--color-ink-2);
+}
+.empty svg {
+  color: var(--color-ink-2);
+}
+.empty h2 {
+  color: var(--color-ink);
+  font-size: var(--text-xl);
+}
+
+.box-sections {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+  align-items: start;
+  margin-block-start: var(--space-5);
+}
+.box-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.box-section h2 {
+  font-size: var(--text-lg);
+}
+.devices {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.device {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-3);
+  padding-block: var(--space-3);
+  border-block-start: 1px solid var(--color-line);
+}
+.device:first-child {
+  border-block-start: 0;
+  padding-block-start: 0;
+}
+.device__name {
+  font-weight: var(--weight-semibold);
+  overflow-wrap: anywhere;
+}
+.device__this {
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-sunk);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+}
+.device__seen {
+  flex-basis: 100%;
+  color: var(--color-ink-2);
+  font-size: var(--text-sm);
+}
+.pair {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-sunk);
+}
+.pair__label {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+.pair-code {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  font-family: var(--font-code);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-semibold);
+}
+.pair-code span {
+  white-space: nowrap;
+}
+.pair__valid {
+  color: var(--color-ink-2);
+  font-size: var(--text-sm);
 }

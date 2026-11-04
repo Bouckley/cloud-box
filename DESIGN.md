@@ -52,6 +52,11 @@ typography:
     fontSize: "0.8125rem"
     fontWeight: 600
     lineHeight: 1.2
+  code:
+    fontFamily: "'IBM Plex Mono', ui-monospace, monospace"
+    fontSize: "1.375rem"
+    fontWeight: 600
+    lineHeight: 1.5
 rounded:
   sm: "10px"
   md: "14px"
@@ -147,6 +152,35 @@ components:
     textColor: "{colors.attention-ink-2}"
     rounded: "{rounded.lg}"
     padding: "16px"
+  field-hint:
+    textColor: "{colors.ink-2}"
+  field-error:
+    textColor: "{colors.danger}"
+    typography: "{typography.label}"
+  notice:
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.md}"
+    padding: "16px"
+  step-label:
+    textColor: "{colors.ink-2}"
+  recovery-card:
+    backgroundColor: "{colors.surface}"
+    rounded: "{rounded.lg}"
+    padding: "24px"
+  device-badge:
+    backgroundColor: "{colors.surface-sunk}"
+    textColor: "{colors.ink}"
+    typography: "{typography.label-xs}"
+    rounded: "{rounded.pill}"
+    padding: "0 8px"
+  pair-panel:
+    backgroundColor: "{colors.surface-sunk}"
+    rounded: "{rounded.md}"
+    padding: "16px"
+  pair-code:
+    textColor: "{colors.ink}"
+    typography: "{typography.code}"
 ---
 
 # Design System: Cloud Box
@@ -160,6 +194,8 @@ Source of truth: `web/src/styles/tokens.css` (values) and `web/src/styles/base.c
 The frame exists to answer one question first and truthfully: are my photos safe? Everything else is quiet: a warm off-white ground, white rounded cards, deep ink text, line icons, and a single green that is spent only on safety and the primary action. Status is never buried in settings; it leads every main screen as the safety banner.
 
 Density is low and targets are large, built for less confident, older users as much as for households leaving paid clouds. Surfaces are flat; meaning is carried by colour family, material change and words, never by decoration. Motion is short and quiet and disappears under reduced motion.
+
+Before a browser is unlocked (setup, unlock, forgot password, connect, reset) the same world speaks as an unhurried conversation: one centred column, the product mark, one `h1`, one sentence of why, one question, one green button. There is no banner and no nav, and nothing is timed.
 
 **Key Characteristics:**
 - One green, one amber, one red, each with a single meaning.
@@ -179,15 +215,15 @@ A warm neutral ground with three semantic hues, each reserved for one meaning.
 - **Attention Amber** (`attention`) on **Amber Wash** (`attention-tint`), text in **Amber Ink** (`attention-ink`, `attention-ink-2`): only for "backup copy paused", "almost full" and "can't reach your box". Used as the attention card's 2px border and the Box tab's dot. `attention-strong` is reserved, not yet used.
 
 ### Tertiary
-- **Delete Red** (`danger`): only for permanent deletion (danger button). `danger-tint` is reserved, not yet used.
+- **Delete Red** (`danger`): permanent deletion (danger button). `danger-tint` is reserved, not yet used. **Open question (M2 Task 12):** the shipped entry pages also set field error text and the invalid input's border in `danger`, including the "Can't reach your box" message. That is a second meaning for red and conflicts with The One Meaning Per Hue Rule below; it awaits the owner's decision. Until then, don't extend red to any other new use.
 
 ### Neutral
 - **Warm Paper** (`ground`): page background and sidebar.
-- **White** (`surface`): cards, banner strips in copying and checking states, bottom tab bar, inputs, secondary buttons.
-- **Sunk Paper** (`surface-sunk`): hover fill for buttons and sidebar items; code output.
-- **Hairline** (`line`), **Firm Line** (`line-strong`): tab bar top border; button and input borders.
+- **White** (`surface`): cards (Box sections, the recovery key card), notices, banner strips in copying and checking states, bottom tab bar, inputs, secondary buttons.
+- **Sunk Paper** (`surface-sunk`): hover fill for buttons and sidebar items; the "This browser" badge; the pairing code panel; code output.
+- **Hairline** (`line`), **Firm Line** (`line-strong`): tab bar top border and dividers between device rows; button, input and notice borders.
 - **Meter Track** (`track`): unfilled storage meter.
-- **Ink** (`ink`): primary text. **Ink Soft** (`ink-2`, 5.9:1 on ground): secondary text, inactive tabs, checking banner. `ink-3` is reserved for table and meta text.
+- **Ink** (`ink`): primary text. **Ink Soft** (`ink-2`, 5.9:1 on ground): secondary text, ledes, field hints, the "Step n of 5" line, recovery word numbers, "Last seen" and "Valid until" lines, the empty state, inactive tabs, checking banner. `ink-3` is reserved for table and meta text.
 - **Focus Green** (`focus`): the focus ring colour.
 
 ### Named Rules
@@ -199,38 +235,46 @@ A warm neutral ground with three semantic hues, each reserved for one meaning.
 
 ## Typography
 
-**Body Font:** Inter Variable, self-hosted via `@fontsource-variable/inter` (fallback system-ui, -apple-system, Segoe UI, sans-serif). One family throughout; no display face.
+**Body Font:** Inter Variable, self-hosted via `@fontsource-variable/inter` (fallback system-ui, -apple-system, Segoe UI, sans-serif). One family for everything people read as language; no display face.
+**Label/Mono Font:** IBM Plex Mono 600, self-hosted via `@fontsource/ibm-plex-mono` (latin-600 only; fallback ui-monospace, monospace), token `--font-code`. Used for the pairing code and nothing else.
 
 **Character:** Plain, legible and warm; hierarchy comes from weight and size, not from a second family. Numbers are tabular everywhere so counts and sizes don't jitter.
 
 ### Hierarchy
-- **Headline** (700, 30px, 1.15, -0.01em): the single `h1` each screen owns; solo pages (setup, unlock, errors).
+- **Headline** (700, 30px, 1.15, -0.01em): the single `h1` each screen owns. On solo pages it is `min(30px, 12vw)`, so one long word ("password?") still fits at 200% text on a 320px screen.
 - **Title** (700, 19px, 1.3): product name in the sidebar, the attention banner's title, section headings.
 - **Body** (400, 17px, 1.5): all running text and inputs; sidebar nav items; banner title in safe and copying states (bold). Ledes cap at 62ch.
 - **Label** (600, 15px): buttons (primary is 700), storage card label, banner detail line, field labels.
-- **Label XS** (600, 13px, 1.2): bottom tab labels, capped at `min(13px, 5vw)` so four one-word labels never wrap; active tab is 700.
+- **Label XS** (600, 13px, 1.2): bottom tab labels, capped at `min(13px, 5vw)` so four one-word labels never wrap; active tab is 700. Also the "This browser" badge.
+- **Recovery word** (600, 19px): each of the 24 words, never wrapped; its number sits beside it at 15px `ink-2` tabular figures, right-aligned.
+- **Code** (IBM Plex Mono 600, 22px): the pairing code, shown in groups of four that each stay on one line.
+- 15px (`text-sm`) carries field labels (600), hints and error text, the step line, and secondary lines in lists; 22px (`text-xl`) is the empty state's `h2`.
 
 ### Named Rules
 **The 17 Rule.** Body text is 17px and is never set smaller for density. Text must scale to 200% with no sideways scroll at 320px.
+
+**The One Face Rule.** Inter sets every word. One deliberate, scoped exception (owner, M2 Task 12): the pairing code is set in IBM Plex Mono so I, l and 1, and 0 and O, can't be confused when a person reads it off one screen and types it into another. The mono face is for codes a person must copy character by character; it is never a label, heading or decorative voice. The code's input field stays in Inter, with tabular figures and 0.04em tracking.
 
 ## Layout
 
 One breakpoint at 720px. Above it, a sticky left sidebar (264px) on the ground holds the product mark, the four nav items as rounded rows, and the storage card; the main column fills the rest (padding 20px 24px 32px). At or below 720px, the sidebar's mark and storage card hide and the nav becomes four fixed bottom tabs (72px plus safe-area inset), icon over label; main pads 16px 12px and leaves room for the tab bar. Inline padding on small screens is in px so 200% text keeps room for words.
 
-The safety banner is always the first thing in `<main>`, full width. Each screen's header row puts the `h1` left and its primary action right, wrapping when narrow. Main stacks sections with a 20px gap. Spacing is a 4px-based scale. Single-task pages (setup, unlock, connect, errors) center one panel up to 34rem wide.
+The safety banner is always the first thing in `<main>`, full width. Each screen's header row puts the `h1` left and its primary action right, wrapping when narrow. Main stacks sections with a 20px gap. Spacing is a 4px-based scale. Single-task pages (setup, unlock, forgot, connect, reset, errors) center one panel up to 34rem wide on the ground (padding 24px 16px), stacking with a 20px gap: product mark (24px box icon and bold "Cloud Box"), `h1`, lede, then the form. Forms stack fields 20px apart. The action row ends every form: primary button first, then Back or a text link, then (in setup only) "Step n of 5" pushed to the row's far end in quiet 15px `ink-2`. At or below 720px the primary button takes the full row width.
+
+On Box, sections sit in an auto-fit grid of cards at least 22rem wide (16px gap), so they pair on wide screens and stack on narrow ones. An empty screen (Photos with no photos) places a 40px line icon, a 22px heading and one sentence, left-aligned and capped at 40ch, 40px below the header.
 
 Widths 320 to 2560px are supported.
 
 ## Elevation & Depth
 
-Flat. Depth is tonal: white surfaces on a warm ground, tints for state, hairline borders where a surface meets the ground edge (tab bar). Box-shadow is used only for the focus ring and the attention card's inset 2px amber border. A soft `shadow-raised` token is defined (sidecar) but no shipped surface uses it yet.
+Flat. Depth is tonal: white surfaces on a warm ground, tints for state, hairline borders where a surface meets the ground edge (tab bar). Box-shadow is used only for the focus ring, the attention card's inset 2px amber border and the notice's inset 1px `line-strong` border. A soft `shadow-raised` token is defined (sidecar) but no shipped surface uses it yet.
 
 ### Named Rules
 **The Flat Panel Rule.** Surfaces separate by tone, not by shadow. Introduce `shadow-raised` only for a surface that genuinely floats (a sheet or menu), not for cards.
 
 ## Shapes
 
-Soft, friendly rounding in three steps: 10px for small chips and the default focus outline, 14px for the banner strip, sidebar cards, sidebar nav rows and inputs, 18px for content cards and the attention card. Buttons, the skip link, meter, tab icon pill and attention dot are full pills. Borders are 1px; the attention card's 2px amber border is the heaviest stroke. Icons are line icons on a 24-unit grid, 2px stroke, rounded caps and joins.
+Soft, friendly rounding in three steps: 10px for small chips and the default focus outline, 14px for the banner strip, sidebar cards, sidebar nav rows, inputs, notices and the pairing code panel, 18px for content cards, the recovery key card and the attention card. Buttons, the skip link, meter, tab icon pill, attention dot and the "This browser" badge are full pills. Borders are 1px; the attention card's 2px amber border is the heaviest stroke. Icons are line icons on a 24-unit grid, 2px stroke, rounded caps and joins.
 
 ## Components
 
@@ -246,8 +290,38 @@ Soft, friendly rounding in three steps: 10px for small chips and the default foc
 - **Storage card (sidebar):** white, 14px radius, 16px padding; label `{used} of {size} used` above an 8px pill meter (track `track`, fill `safe`). Hidden when status is unknown or unreachable. The fill width is set through the CSSOM.
 
 ### Inputs / Fields
-- **Style:** white, 1px `line-strong` border, 14px radius, 48px tall, 17px text; label above in 15px semibold.
+- **Style:** white, 1px `line-strong` border, 14px radius, 48px tall, 17px text; label above in 15px semibold. In a form the input fills the column width.
 - **Focus:** border turns `focus` plus the focus ring.
+- **Order:** label, then hint (15px `ink-2`), then the input, then any error. Hint and error are tied to the input with `aria-describedby`.
+- **Error:** a warning icon (20px) beside 15px semibold text, `role="alert"`, under its field; the input gets `aria-invalid` and its border changes colour (currently `danger`; see the open question under Colors). Errors stay until the field changes; never timed, never auto-dismissed, never repeating what was typed.
+- **Text area:** the same field, at least 144px tall, 12px 16px padding, resizes vertically. Used for the 24 recovery words.
+- **Code input:** the same field with tabular figures and 0.04em tracking; it stays in Inter.
+- **Typing secrets:** password, code and word fields switch off autocorrect, capitalisation and spellcheck.
+
+### Checkbox
+A 24px native box (green through `accent-color`) beside a 17px semibold label; the whole row is the 48px target. Used once, for "I understand" before a reset.
+
+### Notice
+A white strip with an inset 1px `line-strong` border, 14px radius, 16px padding: a 20px warning icon beside the words. The warning variant sets the words semibold. It stays ink on white, never amber, because it is not one of amber's three meanings (for example, "This signs out every phone and computer").
+
+### Entry Pages
+- **Panel:** the solo column above; on a step change, focus moves to the new `h1` (no ring is drawn on the heading).
+- **Busy:** the primary button is disabled and says what is happening ("Connecting…", "Resetting…"); the panel sets `aria-busy`. Never a spinner alone.
+- **Waiting:** setup's "Waiting for the press…" line is plain `ink-2` text in a polite status region; no countdown.
+- **Text links in the action row:** 48px tall, semibold (for example "Lost all your devices? Use your recovery key").
+
+### Recovery Key Card (signature)
+The one white card in setup: 18px radius, 24px padding (16px and tighter gaps at or below 720px, so "I've written it down" stays above the fold). A 19px heading, the 24 words as a numbered ordered list, and a 15px `ink-2` keep-it-safe note. The list fills columns of at least 8em: 3 on desktop, 2 on phones, 1 when 200% text needs the width. A word is never split. When the card itself is 17rem wide or less (a container query), each number moves above its word so the longest word gets the full width.
+- **Print:** printing shows only this card, on one sheet with 18mm margins: "Cloud Box recovery key" (18pt bold), the 24 words in 3 columns (13pt numbers, 15pt words), a "Made on {date}. Kept at: ____" line and a line saying anyone holding the sheet can open the photos. The on-screen heading and keep note are hidden in print; the print-only lines are hidden on screen. Everything else is `display: none`, so there is no blank second page.
+
+### Empty State
+A 40px line icon and the text in `ink-2`, a 22px `ink` heading ("No photos yet") and one sentence saying what happens next. The screen's primary action stays in the header row, not inside the empty state.
+
+### Device List
+Inside a Box section card (19px heading). One row per device: semibold name (breaks anywhere rather than overflowing), an optional "This browser" badge (13px semibold pill on `surface-sunk`), and a 15px `ink-2` "Last seen …" line on its own line. Rows have 12px block padding and are divided by a 1px `line` hairline; the first row has none.
+
+### Pairing Code
+A `surface-sunk` panel (14px radius, 16px padding) inside the Add a device card: a 15px semibold "Pairing code" label, the code in IBM Plex Mono 600 at 22px as groups of four that wrap between groups but never inside one, and a 15px `ink-2` "Valid until {time}. It works once." line. Once a code exists the button becomes secondary ("Make a new code").
 
 ### Navigation
 - **Sidebar (above 720px):** rows 48px tall, 22px icon then 17px label, 14px radius. Hover `surface-sunk`; active (`aria-current`) `safe-tint` fill with `safe-strong` bold text.
@@ -276,6 +350,9 @@ A shield-marked strip that changes material with the box's truth. Icon (22px; 28
 - **Do** set dynamic values (meter widths, positions) through the CSSOM (`el.style.setProperty`); the CSP is `style-src 'self'`.
 - **Do** keep line icons at 2px stroke with rounded joins, aria-hidden beside a visible word.
 - **Do** honour `prefers-reduced-motion`: durations drop to 0.
+- **Do** give each entry page one `h1`, one question and one primary button, with the step line ("Step n of 5") at the end of the action row.
+- **Do** tie every hint and error to its field, and keep errors until the field changes.
+- **Do** set codes a person must copy character by character in `--font-code`; everything else in Inter.
 
 ### Don't:
 - **Don't** use green for anything but "safe" or the primary action.
@@ -284,3 +361,7 @@ A shield-marked strip that changes material with the box's truth. Icon (22px; 28
 - **Don't** use inline `style` attributes or injected `<style>`; the CSP blocks them.
 - **Don't** show the Box attention dot for copying or checking.
 - **Don't** let tab labels wrap or shrink body text below 17px.
+- **Don't** put the step count, or any other small label, above an `h1` as an eyebrow.
+- **Don't** use the mono face for labels, headings, numbers in general or decoration.
+- **Don't** split a recovery word or a pairing code group across lines.
+- **Don't** add time limits, countdowns or auto-dismissing errors to entry pages.

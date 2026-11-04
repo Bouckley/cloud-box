@@ -26,9 +26,9 @@ import {
   type KeyPair,
   type RecoveryKey,
 } from '@cloudbox/crypto';
-import { DeviceKeys } from './device.ts';
+import { DeviceKeys, type DeviceRecord } from './device.ts';
 import { Library } from './library.ts';
-import { ClientError } from './errors.ts';
+import { BoxError, ClientError } from './errors.ts';
 import type { Platform } from './platform.ts';
 import {
   authedFetch,
@@ -74,8 +74,15 @@ export type Unlocked = {
 
 export type PreparedSetup = {
   recoveryWords: string[];
-  /** Sends setup, logs in and returns the unlocked account. */
-  commit(): Promise<Unlocked>;
+  /** A new password before sending: the same keys and words, re-wrapped. */
+  setPassword(password: string): Promise<void>;
+  /**
+   * Sends setup with this browser's name (encrypted), logs in and returns the
+   * unlocked account. The name is chosen here, after the words exist, so
+   * naming the browser never changes the words. Can be tried again after a
+   * refusal or a failure, until it succeeds once.
+   */
+  commit(deviceName: string): Promise<Unlocked>;
 };
 
 export type LoginResult = 'ok' | 'not_paired' | 'revoked';
@@ -150,26 +157,35 @@ export class Box {
     }
   }
 
-  /** Generates every key and the recovery words; nothing is sent until commit(). */
-  async prepareSetup(i: {
-    password: string;
-    deviceName: string;
-    kdf?: KdfParams;
-  }): Promise<PreparedSetup> {
+  /**
+   * Generates every key and the recovery words; nothing is sent until
+   * commit(). The words never change afterwards: setPassword() re-wraps the
+   * same master key, and a commit can be tried again until it finishes.
+   */
+  async prepareSetup(i: { password: string; kdf?: KdfParams }): Promise<PreparedSetup> {
     await ready();
     const kdf = i.kdf ?? DEFAULT_KDF;
     checkKdf(kdf);
     const userId = newId();
     const master = randomKey();
-    const salt = newSalt();
-    const kek = await this.#platform.deriveKek(i.password, salt, kdf);
     const rk = newRecoveryKey();
     const identity = generateBoxKeyPair();
     const dedupe = randomKey();
-    const user = {
+    const byPassword = async (password: string) => {
+      const salt = newSalt();
+      const kek = await this.#platform.deriveKek(password, salt, kdf);
+      try {
+        return {
+          kdf: { salt: b64(salt), ...kdf },
+          masterKeyByPassword: b64(wrapKey(kek, master, ad.masterKeyByPassword(userId))),
+        };
+      } finally {
+        kek.fill(0);
+      }
+    };
+    let user = {
       id: userId,
-      kdf: { salt: b64(salt), ...kdf },
-      masterKeyByPassword: b64(wrapKey(kek, master, ad.masterKeyByPassword(userId))),
+      ...(await byPassword(i.password)),
       masterKeyByRecovery: b64(
         wrapKey(recoveryWrapKey(rk), master, ad.masterKeyByRecovery(userId)),
       ),
@@ -178,31 +194,65 @@ export class Box {
       identityKeyEnc: b64(wrapKey(master, identity.privateKey, ad.identityKey(userId))),
       dedupeKeyEnc: b64(wrapKey(master, dedupe, ad.dedupeKey(userId))),
     };
-    kek.fill(0);
-    let committed = false;
+
+    // One device key for every attempt, so an attempt the box accepted but
+    // whose answer was lost can be finished by logging in with it.
+    let rec: DeviceRecord | null = null;
+    let accepted = false;
+    let busy = false;
+    let done = false;
+
+    const send = async (deviceName: string, device: DeviceRecord) => {
+      const res = await this.#public.POST('/v1/setup', {
+        body: {
+          user,
+          device: {
+            id: device.deviceId,
+            nameEnc: b64(encryptMetadata(master, deviceName, ad.deviceName(device.deviceId))),
+            signPublicKey: b64(device.publicKey),
+          },
+        },
+      });
+      try {
+        must(res);
+      } catch (e) {
+        if (!(e instanceof BoxError && e.code === 'already_set_up')) throw e;
+        // Set up already: by an earlier attempt of ours only if the box
+        // knows this device key.
+        await this.#device.save(device);
+        this.#token = null;
+        if ((await this.login()) !== 'ok') {
+          await this.#device.clear();
+          throw e;
+        }
+      }
+    };
+
     return {
       recoveryWords: rk.words,
-      commit: async () => {
-        if (committed) throw new Error('setup was already sent');
-        committed = true;
-        const rec = await this.#device.generate();
-        const res = await this.#public.POST('/v1/setup', {
-          body: {
-            user,
-            device: {
-              id: rec.deviceId,
-              nameEnc: b64(encryptMetadata(master, i.deviceName, ad.deviceName(rec.deviceId))),
-              signPublicKey: b64(rec.publicKey),
-            },
-          },
-        });
-        must(res);
-        await this.#device.save(rec);
-        this.#token = null;
-        await this.#requireLogin();
-        const unlocked = this.#unlocked(userId, rec.deviceId, { master, identity, dedupe }, kdf);
-        await unlocked.library.ensureRoots();
-        return unlocked;
+      setPassword: async (password: string) => {
+        if (accepted || busy) throw new Error('setup was already sent');
+        user = { ...user, ...(await byPassword(password)) };
+      },
+      commit: async (deviceName: string) => {
+        if (done || busy) throw new Error('setup was already sent');
+        busy = true;
+        try {
+          rec ??= await this.#device.generate();
+          if (!accepted) {
+            await send(deviceName, rec);
+            accepted = true;
+          }
+          await this.#device.save(rec);
+          this.#token = null;
+          await this.#requireLogin();
+          const unlocked = this.#unlocked(userId, rec.deviceId, { master, identity, dedupe }, kdf);
+          await unlocked.library.ensureRoots();
+          done = true;
+          return unlocked;
+        } finally {
+          busy = false;
+        }
       },
     };
   }

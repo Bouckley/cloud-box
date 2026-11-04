@@ -51,11 +51,10 @@ async function setUp(p = platform()): Promise<{ p: Platform; me: Unlocked; words
   await box.pressButton();
   const prepared = await Box.connect(box.baseUrl, p).prepareSetup({
     password: PASSWORD,
-    deviceName: 'Laptop',
     kdf: FAST_KDF,
   });
   expect(prepared.recoveryWords).toHaveLength(24);
-  const me = await prepared.commit();
+  const me = await prepared.commit('Laptop');
   return { p, me, words: prepared.recoveryWords };
 }
 
@@ -96,6 +95,118 @@ describe('accounts on a real box', () => {
     const unlocked = await again.unlock(PASSWORD);
     expect(unlocked.userId).toBe(me.userId);
     expect(unlocked.deviceId).toBe(me.deviceId);
+  });
+
+  it('setup can be prepared before the browser is named, and commits only once', async () => {
+    await box.pressButton();
+    const prepared = await Box.connect(box.baseUrl, platform()).prepareSetup({
+      password: PASSWORD,
+      kdf: FAST_KDF,
+    });
+    const words = [...prepared.recoveryWords];
+    // Choosing a name later changes nothing already prepared.
+    expect(prepared.recoveryWords).toEqual(words);
+    const me = await prepared.commit('Firefox on Linux');
+    expect((await me.devices())[0]?.name).toBe('Firefox on Linux');
+    await expect(prepared.commit('Again')).rejects.toThrow();
+  });
+
+  it('a setup the box refused can be sent again, with the same words, after a press', async () => {
+    // Setup closes 10 minutes after a press: writing 24 words down can take longer.
+    const prepared = await Box.connect(box.baseUrl, platform()).prepareSetup({
+      password: PASSWORD,
+      kdf: FAST_KDF,
+    });
+    const words = [...prepared.recoveryWords];
+    const refused = await prepared.commit('Laptop').then(
+      () => null,
+      (e: unknown) => e,
+    );
+    expect(refused).toMatchObject({ name: 'BoxError', code: 'press_button' });
+
+    await box.pressButton();
+    const me = await prepared.commit('Laptop');
+    expect(prepared.recoveryWords).toEqual(words);
+    expect((await me.devices())[0]?.name).toBe('Laptop');
+    await expect(prepared.commit('Again')).rejects.toThrow('setup was already sent');
+  });
+
+  it('the box accepted setup but its answer was lost: trying again finishes it', async () => {
+    await box.pressButton();
+    let dropped = false;
+    const p = nodePlatform(box.fetch);
+    p.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const req = new Request(input, init);
+      const res = await box.fetch(req);
+      if (!dropped && new URL(req.url).pathname === '/v1/setup') {
+        dropped = true;
+        throw new TypeError('network connection lost');
+      }
+      return res;
+    }) as typeof fetch;
+    const prepared = await Box.connect(box.baseUrl, p).prepareSetup({
+      password: PASSWORD,
+      kdf: FAST_KDF,
+    });
+    const lost = await prepared.commit('Laptop').then(
+      () => null,
+      (e: unknown) => e,
+    );
+    expect(lost).toMatchObject({ code: 'box_unreachable' });
+    const me = await prepared.commit('Laptop');
+    const devices = await me.devices();
+    expect(devices).toHaveLength(1);
+    expect(devices[0]).toMatchObject({ id: me.deviceId, name: 'Laptop', isThis: true });
+  });
+
+  it('a failure after the box accepted setup: trying again finishes it', async () => {
+    await box.pressButton();
+    const holder: { fn: Hook | null } = { fn: null };
+    const p = hooked(holder);
+    const prepared = await Box.connect(box.baseUrl, p).prepareSetup({
+      password: PASSWORD,
+      kdf: FAST_KDF,
+    });
+    once(holder, '/v1/auth/challenge', async () => {
+      throw new TypeError('network connection lost');
+    });
+    await expect(prepared.commit('Laptop')).rejects.toMatchObject({ code: 'box_unreachable' });
+    const me = await prepared.commit('Laptop');
+    expect(await me.devices()).toHaveLength(1);
+  });
+
+  it('a new password before sending keeps the same words', async () => {
+    await box.pressButton();
+    const p = platform();
+    const prepared = await Box.connect(box.baseUrl, p).prepareSetup({
+      password: 'the first password',
+      kdf: FAST_KDF,
+    });
+    const words = [...prepared.recoveryWords];
+    await prepared.setPassword(PASSWORD);
+    expect(prepared.recoveryWords).toEqual(words);
+    const me = await prepared.commit('Laptop');
+    me.lock();
+    const wrong = await clientError(Box.connect(box.baseUrl, p).unlock('the first password'));
+    expect(wrong.code).toBe('wrong_password');
+    const again = await Box.connect(box.baseUrl, p).unlock(PASSWORD);
+    expect(again.userId).toBe(me.userId);
+    again.lock();
+    const p2 = platform();
+    const viaWords = await Box.connect(box.baseUrl, p2)
+      .resetWithRecovery(words.join(' '), 'after the reset', 'Phone')
+      .then((u) => u.userId);
+    expect(viaWords).toBe(me.userId);
+  });
+
+  it('setup is sent once, even when asked twice at the same moment', async () => {
+    await box.pressButton();
+    const prepared = await Box.connect(box.baseUrl, platform()).prepareSetup({
+      password: PASSWORD,
+      kdf: FAST_KDF,
+    });
+    const [a, b] = await Promise.allSettled([prepared.commit('One'), prepared.commit('Two')]);
+    expect([a.status, b.status].sort()).toEqual(['fulfilled', 'rejected']);
   });
 
   it('wrong password', async () => {

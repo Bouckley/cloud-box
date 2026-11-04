@@ -1,7 +1,11 @@
 import { lazy, Suspense, useMemo, type ReactNode } from 'react';
 import { createBrowserRouter, Navigate, Outlet, useLocation, type RouteObject } from 'react-router';
 import { devPreview } from '../dev/preview.ts';
-import * as entry from '../screens/entry.tsx';
+import { ConnectScreen, ResetScreen } from '../screens/Connect.tsx';
+import { ForgotScreen } from '../screens/Forgot.tsx';
+import { LoadingScreen } from '../screens/Solo.tsx';
+import { SetupScreen } from '../screens/setup/Setup.tsx';
+import { UnlockScreen } from '../screens/Unlock.tsx';
 import * as screens from '../screens/main.tsx';
 import { ErrorView } from './ErrorView.tsx';
 import { useEntry, useLibrary, useStatus, useUnlocked, type Entry } from './session.tsx';
@@ -17,7 +21,7 @@ function Gate() {
 
 function EntryState({ entry: e, children }: { entry: Entry; children(path: string): ReactNode }) {
   const { recheck } = useEntry();
-  if (e.kind === 'loading') return <entry.LoadingScreen />;
+  if (e.kind === 'loading') return <LoadingScreen />;
   if (e.kind === 'unreachable') {
     return (
       <ErrorView
@@ -31,11 +35,20 @@ function EntryState({ entry: e, children }: { entry: Entry; children(path: strin
 }
 
 /** An entry page shows only when it is where this browser should be. */
-function EntryRoute({ want, children }: { want: Entry['kind'] | 'forgot'; children: ReactNode }) {
+function EntryRoute({
+  want,
+  children,
+}: {
+  want: Entry['kind'] | 'forgot' | 'reset';
+  children: ReactNode;
+}) {
   const { unlocked } = useUnlocked();
   const { entry: e } = useEntry();
   if (unlocked) return <Navigate to="/photos" replace />;
-  const fits = e.kind === want || (want === 'forgot' && e.kind === 'unlock');
+  const fits =
+    e.kind === want ||
+    (want === 'forgot' && e.kind === 'unlock') ||
+    (want === 'reset' && e.kind === 'connect');
   return (
     <EntryState entry={e}>
       {(path) => (fits ? children : <Navigate to={path} replace />)}
@@ -47,7 +60,7 @@ function ConnectRoute() {
   const { entry: e } = useEntry();
   return (
     <EntryRoute want="connect">
-      <entry.ConnectScreen revoked={e.kind === 'connect' && e.revoked} />
+      <ConnectScreen revoked={e.kind === 'connect' && e.revoked} />
     </EntryRoute>
   );
 }
@@ -99,7 +112,7 @@ export function routes(): RouteObject[] {
       path: '/setup',
       element: (
         <EntryRoute want="setup">
-          <entry.SetupScreen />
+          <SetupScreen />
         </EntryRoute>
       ),
     },
@@ -107,16 +120,24 @@ export function routes(): RouteObject[] {
       path: '/unlock',
       element: (
         <EntryRoute want="unlock">
-          <entry.UnlockScreen />
+          <UnlockScreen />
         </EntryRoute>
       ),
     },
     { path: '/connect', element: <ConnectRoute /> },
     {
+      path: '/reset',
+      element: (
+        <EntryRoute want="reset">
+          <ResetScreen />
+        </EntryRoute>
+      ),
+    },
+    {
       path: '/forgot',
       element: (
         <EntryRoute want="forgot">
-          <entry.ForgotScreen />
+          <ForgotScreen />
         </EntryRoute>
       ),
     },

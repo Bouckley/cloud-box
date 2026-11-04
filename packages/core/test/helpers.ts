@@ -25,10 +25,9 @@ export async function hookedOwner(
   await box.pressButton();
   const prepared = await Box.connect(box.baseUrl, p).prepareSetup({
     password: PASSWORD,
-    deviceName: 'Laptop',
     kdf: FAST_KDF,
   });
-  return { p, me: await prepared.commit() };
+  return { p, me: await prepared.commit('Laptop') };
 }
 
 export async function setUpOwner(
@@ -38,10 +37,9 @@ export async function setUpOwner(
   await box.pressButton();
   const prepared = await Box.connect(box.baseUrl, p).prepareSetup({
     password: PASSWORD,
-    deviceName: 'Laptop',
     kdf: FAST_KDF,
   });
-  const me = await prepared.commit();
+  const me = await prepared.commit('Laptop');
   return { p, me, words: prepared.recoveryWords };
 }
 

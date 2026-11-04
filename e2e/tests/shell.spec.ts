@@ -1,6 +1,6 @@
 import { expect, test } from '../fixtures.ts';
 import { expectAccessible } from '../helpers/axe.ts';
-import { cspViolations, watchCsp } from '../helpers/flows.ts';
+import { cspViolations, setUpThroughUi, watchCsp } from '../helpers/flows.ts';
 import { expectNoSidewaysScroll, expectTabLabelsFit } from '../helpers/layout.ts';
 
 test('fresh box shows setup', async ({ page }) => {
@@ -45,9 +45,9 @@ test.describe('at 200% text', () => {
     await expectNoSidewaysScroll(page);
   });
 
-  // The shell is reachable only once unlocked; Task 12 brings the unlock flow.
-  test.fixme('the tab labels fit and do not overlap', async ({ page }) => {
-    await page.goto('/photos');
+  test('the tab labels fit and do not overlap', async ({ page, box }) => {
+    test.setTimeout(90_000);
+    await setUpThroughUi(page, box, { name: 'Small screen' });
     await page.addStyleTag({ content: 'html { font-size: 200% !important; }' });
     await expectNoSidewaysScroll(page);
     await expectTabLabelsFit(page);

@@ -44,6 +44,7 @@
 
   /* Type: Inter, self-hosted. Body 17 px (doc 12). */
   --font-sans: 'Inter Variable', Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-code: 'IBM Plex Mono', ui-monospace, monospace; /* pairing code only */
   --text-xs: 0.8125rem; /* 13 */
   --text-sm: 0.9375rem; /* 15 */
   --text-body: 1.0625rem; /* 17 */

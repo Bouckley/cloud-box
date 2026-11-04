@@ -90,11 +90,18 @@ test('albums: make Garden, add two photos, favourite one, delete it keeping them
   await expect(page.getByRole('heading', { level: 1, name: 'Videos' })).toBeVisible();
   await expect(page.getByText('0 videos')).toBeVisible();
 
-  // A Garden photo going to a new album: the move is shown first, Cancel goes back.
-  await nav(page, 'Photos').click();
-  await page.getByRole('button', { name: 'Select' }).click();
+  // From inside Garden, select a photo and move it to a new album: the move is
+  // shown first, Cancel goes back.
+  await nav(page, 'Albums').click();
+  await page.getByRole('link', { name: /^Garden/ }).click();
+  await page.getByRole('button', { name: 'Select', exact: true }).click();
+  await expect(page.getByRole('region', { name: 'Selection' })).toContainText('Choose photos');
   await page.getByRole('checkbox').nth(0).check();
-  await page.locator('.select-bar').getByRole('button', { name: 'Add to album' }).click();
+  // Inside an album the photos move, so the button says so.
+  await expect(
+    page.locator('.select-bar').getByRole('button', { name: 'Add to album' }),
+  ).toHaveCount(0);
+  await page.locator('.select-bar').getByRole('button', { name: 'Move to album' }).click();
   const pick = page.getByRole('dialog', { name: 'Add to album' });
   await expect(pick.getByRole('radio', { name: 'New album' })).toBeChecked();
   await pick.getByRole('textbox', { name: 'Album name' }).fill('Trips');
@@ -110,7 +117,11 @@ test('albums: make Garden, add two photos, favourite one, delete it keeping them
   await pick.getByRole('button', { name: 'Add' }).click();
   await confirm.getByRole('button', { name: 'Move photo' }).click();
   await expect(confirm).toBeHidden({ timeout: 30_000 });
-  await expect(page.getByRole('status').filter({ hasText: 'Added to Trips' })).toBeVisible();
+  await expect(page.getByRole('status').filter({ hasText: 'Moved to Trips' })).toBeVisible();
+  // It left Garden, and Select mode ended.
+  await expect(tiles(page)).toHaveCount(1);
+  await expect(page.getByRole('region', { name: 'Selection' })).toHaveCount(0);
+  await expectAccessible(page);
   await nav(page, 'Albums').click();
   await expect(page.getByRole('link', { name: /^Garden/ })).toContainText('1 photo');
   await expect(page.getByRole('link', { name: /^Trips/ })).toContainText('1 photo');

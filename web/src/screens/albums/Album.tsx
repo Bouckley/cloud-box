@@ -13,6 +13,7 @@ import {
 import { useLibrary, useStatus } from '../../app/session.tsx';
 import { useTitle } from '../../app/title.ts';
 import { GroupBy, useFocusId, useGrouping } from '../photos/GroupBy.tsx';
+import { useSelecting } from '../photos/Selecting.tsx';
 import { usePhotos } from '../photos/Photos.tsx';
 import { TileScope } from '../photos/Tile.tsx';
 import { Timeline } from '../photos/Timeline.tsx';
@@ -38,6 +39,11 @@ function ScopedTimeline({
   const { items, ready } = usePhotos(scope);
   const grouping = useGrouping();
   const focusId = useFocusId();
+  const select = useSelecting(
+    items,
+    ready && items.length > 0,
+    scope.kind === 'album' ? 'move' : 'add',
+  );
   return (
     <>
       <Link to="/albums" className="back-link">
@@ -55,9 +61,11 @@ function ScopedTimeline({
         </div>
         <div className="photos-header__tools">
           {ready && items.length > 0 && <GroupBy />}
+          {select.button}
           {actions}
         </div>
       </header>
+      {select.bar}
       {!ready ? (
         <p className="waiting" aria-live="polite">
           Opening your photos…
@@ -70,7 +78,7 @@ function ScopedTimeline({
         </div>
       ) : (
         <TileScope.Provider value={scope}>
-          <Timeline items={items} grouping={grouping} focusId={focusId} />
+          <Timeline items={items} grouping={grouping} focusId={focusId} {...select.timeline} />
         </TileScope.Provider>
       )}
     </>

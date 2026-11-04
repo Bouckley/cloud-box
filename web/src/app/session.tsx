@@ -39,7 +39,8 @@ type SessionValue = {
   setUnlocked(u: Unlocked | null): void;
   banner: BannerInput;
   status: Status | null;
-  refreshStatus(): void;
+  /** Asks the box for its status now; `sync: false` skips the library sync. */
+  refreshStatus(o?: { sync?: boolean }): void;
 };
 
 const SessionContext = createContext<SessionValue | null>(null);
@@ -129,31 +130,51 @@ function useStatusPoll(unlocked: Unlocked | null) {
   // unlock an old answer is never shown: the banner says "checking" instead.
   const [polled, setPolled] = useState<Polled | null>(null);
   const inFlight = useRef(false);
+  // A refresh asked for during a poll runs straight after it, never dropped.
+  const again = useRef<{ sync: boolean } | null>(null);
 
-  const refresh = useCallback(() => {
-    if (!unlocked || inFlight.current) return;
-    inFlight.current = true;
-    unlocked
-      .status()
-      .then((s) => setPolled({ for: unlocked, banner: { kind: 'status', status: s }, status: s }))
-      .catch((e: unknown) => {
-        // Only a box we cannot reach changes the banner; other errors keep
-        // the last truthful state rather than guessing.
-        if (e instanceof ClientError && e.code === 'box_unreachable') {
-          setPolled({ for: unlocked, banner: { kind: 'unreachable' }, status: null });
+  const refresh = useCallback(
+    (o: { sync?: boolean } = {}) => {
+      const run = (sync: boolean) => {
+        if (!unlocked) return;
+        if (inFlight.current) {
+          again.current = { sync: sync || (again.current?.sync ?? false) };
+          return;
         }
-      })
-      .finally(() => {
-        inFlight.current = false;
-      });
-  }, [unlocked]);
+        inFlight.current = true;
+        unlocked
+          .status()
+          .then((s) => {
+            setPolled({ for: unlocked, banner: { kind: 'status', status: s }, status: s });
+            // Items change state on the box (verified, copied to the backup) and
+            // other devices add photos: an incremental sync picks both up.
+            if (sync) unlocked.library.sync().catch(() => {});
+          })
+          .catch((e: unknown) => {
+            // Only a box we cannot reach changes the banner; other errors keep
+            // the last truthful state rather than guessing.
+            if (e instanceof ClientError && e.code === 'box_unreachable') {
+              setPolled({ for: unlocked, banner: { kind: 'unreachable' }, status: null });
+            }
+          })
+          .finally(() => {
+            inFlight.current = false;
+            const next = again.current;
+            again.current = null;
+            if (next) run(next.sync);
+          });
+      };
+      run(o.sync ?? true);
+    },
+    [unlocked],
+  );
 
   useEffect(() => {
     if (!unlocked) return;
     refresh();
     let timer: ReturnType<typeof setInterval> | null = null;
     const start = () => {
-      if (timer === null) timer = setInterval(refresh, STATUS_POLL_MS);
+      if (timer === null) timer = setInterval(() => refresh(), STATUS_POLL_MS);
     };
     const stop = () => {
       if (timer !== null) clearInterval(timer);

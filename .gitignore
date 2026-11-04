@@ -29,6 +29,8 @@ node_modules/
 .impeccable/mocks/
 .impeccable/build/
 .impeccable/config.local.json
+.impeccable/questions/
+.impeccable/hook.cache.json
 
 # Playwright (never commit traces, reports or the test boxd)
 e2e/.cache/

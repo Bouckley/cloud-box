@@ -879,3 +879,476 @@ a.banner:hover {
   color: var(--color-ink-2);
   font-size: var(--text-sm);
 }
+
+/* ---------- Photos: header tools, timeline rows, tiles ---------- */
+
+.photos-header__tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+.segmented {
+  display: inline-flex;
+  flex-wrap: wrap;
+  max-width: 100%;
+  /* A pill on one line; a rounded box if 200% text makes it wrap. */
+  border-radius: calc(var(--target-min) / 2);
+  background: var(--color-track);
+}
+.segmented__option {
+  min-height: var(--target-min);
+  padding: 0 var(--space-5);
+  border: 3px solid transparent;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--color-ink-3);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+}
+.segmented__option[aria-pressed='true'] {
+  border-color: var(--color-track);
+  background: var(--color-surface);
+  color: var(--color-ink);
+}
+.button[aria-pressed='true'],
+.button[aria-expanded='true'] {
+  border-color: var(--color-ink);
+}
+
+/* Select mode: a quiet bar that stays in view while you pick. */
+.select-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-5);
+  /* A pill on one line; a rounded box if large text makes it wrap. */
+  border-radius: calc(var(--target-min) / 2 + var(--space-2));
+  background: var(--color-surface);
+  font-weight: var(--weight-semibold);
+}
+/* Wide screens: the bar stays in view while you pick, and focused tiles
+   scroll clear of it. Phones keep it in the flow so it never covers them. */
+@media (min-width: 721px) {
+  .select-bar {
+    position: sticky;
+    z-index: 2;
+    top: var(--space-3);
+    box-shadow: var(--shadow-raised);
+  }
+  html:has(.select-bar) {
+    scroll-padding-top: 6rem;
+  }
+}
+
+.timeline {
+  /* The rows are placed by the virtualiser. */
+  position: relative;
+}
+.timeline__inner {
+  position: relative;
+  width: 100%;
+}
+.timeline__row {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  padding-block-end: var(--space-8);
+}
+
+.strip {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.strip__title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: var(--space-3);
+}
+.strip__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: var(--space-3);
+  row-gap: var(--space-1);
+  min-height: var(--target-min);
+}
+.strip__head h2 {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+}
+.strip__count {
+  color: var(--color-ink-2);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 720px) {
+  /* The count goes under the day, so Previous and Next fit beside it. */
+  .strip__title {
+    flex-direction: column;
+    row-gap: 0;
+  }
+}
+.strip__pager {
+  display: flex;
+  flex-wrap: wrap;
+  /* Beside the heading when they fit together, else on the next line as one
+     row; only at the largest text sizes do the two buttons stack. */
+  flex: 0 0 auto;
+  max-width: 100%;
+  gap: var(--space-2);
+  margin-inline-start: auto;
+}
+.strip__btn {
+  padding: 0 var(--space-4);
+}
+.strip__scroll {
+  /* Room for the focus ring, which overflow would otherwise clip. */
+  margin: -6px 0 -6px -6px;
+  padding: 6px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-line-strong) transparent;
+}
+.strip__list {
+  position: relative;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.strip__item {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: var(--tile);
+  height: var(--tile);
+}
+
+.tile {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: var(--radius-xs);
+  background: var(--color-surface-sunk);
+  color: var(--color-ink-2);
+}
+.tile:focus-visible,
+.tile--select:focus-within {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.tile__img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  -webkit-user-drag: none;
+}
+.tile__file {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  height: 100%;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.04em;
+}
+.tile__video {
+  position: absolute;
+  bottom: var(--space-2);
+  left: var(--space-2);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px var(--space-2) 2px 6px;
+  border-radius: var(--radius-pill);
+  background: rgb(22 24 27 / 72%);
+  color: #fff;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+.tile--select {
+  cursor: pointer;
+}
+.tile__input {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.tile__check {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: rgb(22 24 27 / 30%);
+  color: #fff;
+}
+.tile--checked .tile__img {
+  transform: scale(0.88);
+  border-radius: var(--radius-xs);
+}
+.tile--checked {
+  background: var(--color-line);
+}
+.tile--checked .tile__check {
+  border-color: var(--color-ink);
+  background: var(--color-ink);
+}
+.tile__img {
+  transition: transform var(--duration-base) var(--ease-out);
+}
+
+/* ---------- Upload panel ---------- */
+
+.upload-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+.upload-panel__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.upload-panel__head h2 {
+  font-size: var(--text-lg);
+  font-variant-numeric: tabular-nums;
+}
+.upload-panel__file {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.upload-panel__name {
+  overflow-wrap: anywhere;
+  color: var(--color-ink-3);
+  font-size: var(--text-sm);
+}
+.upload-panel__bar {
+  width: 100%;
+  height: 8px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--color-track);
+  appearance: none;
+}
+.upload-panel__bar::-webkit-progress-bar {
+  border-radius: var(--radius-pill);
+  background: var(--color-track);
+}
+.upload-panel__bar::-webkit-progress-value {
+  border-radius: var(--radius-pill);
+  background: var(--color-ink-3);
+}
+.upload-panel__bar::-moz-progress-bar {
+  border-radius: var(--radius-pill);
+  background: var(--color-ink-3);
+}
+.upload-panel__ok,
+.upload-row__note {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-ink-2);
+  font-size: var(--text-sm);
+}
+.upload-panel__list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.upload-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: var(--space-4);
+  row-gap: var(--space-1);
+  min-height: var(--target-min);
+  padding-block: var(--space-2);
+  border-top: 1px solid var(--color-line);
+}
+.upload-row__name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-weight: var(--weight-semibold);
+}
+.upload-row .button {
+  margin-inline-start: auto;
+}
+
+/* ---------- Viewer ---------- */
+
+.viewer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: 'bar' 'stage' 'tools' 'details';
+  gap: var(--space-4);
+}
+/* Wider: tools beside the title, the photo below. On phones the photo comes
+   first and the tools follow it, in reading and focus order. */
+@media (min-width: 721px) {
+  .viewer__stage {
+    min-height: min(60dvh, 32rem);
+  }
+  .viewer {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: 'bar tools' 'stage stage' 'details details';
+    align-items: center;
+  }
+}
+@media (min-width: 1100px) {
+  .viewer--details {
+    grid-template-columns: minmax(0, 1fr) auto 20rem;
+    grid-template-areas: 'bar tools tools' 'stage stage details';
+  }
+  .viewer--details .viewer__details {
+    align-self: start;
+  }
+}
+.viewer__bar {
+  grid-area: bar;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3) var(--space-4);
+}
+.viewer__title {
+  flex: 1 1 14rem;
+  font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-display);
+}
+.viewer__title:focus {
+  outline: none;
+}
+.viewer__tools {
+  grid-area: tools;
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.viewer__fav[aria-pressed='true'] svg {
+  fill: currentColor;
+}
+.viewer__stage {
+  display: grid;
+  place-items: center;
+  grid-area: stage;
+  min-height: 12rem;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+}
+.viewer__stage > * {
+  grid-area: 1 / 1;
+}
+.viewer__media {
+  display: block;
+  max-width: 100%;
+  /* Viewport units only: large text must not shrink the photo. */
+  max-height: max(60dvh, calc(100dvh - 240px));
+  border-radius: var(--radius-xs);
+  object-fit: contain;
+}
+.viewer__media--soft {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: blur(14px);
+  transform: scale(1.06);
+}
+.viewer__note {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  max-width: 32ch;
+  padding: var(--space-6);
+  color: var(--color-ink-2);
+  text-align: center;
+}
+.viewer__details {
+  grid-area: details;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+.viewer__details h2 {
+  font-size: var(--text-lg);
+}
+.viewer__details dl {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-1) var(--space-4);
+  margin: 0;
+}
+.viewer__details dt {
+  color: var(--color-ink-2);
+  font-size: var(--text-sm);
+}
+.viewer__details dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.viewer__safe,
+.viewer__pending {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  font-weight: var(--weight-semibold);
+}
+.viewer__safe {
+  color: var(--color-safe-ink);
+}
+.viewer__pending {
+  color: var(--color-ink-3);
+}
+.viewer__safe svg,
+.viewer__pending svg {
+  flex: none;
+  margin-top: 2px;
+}
+
+.viewer__error {
+  flex-basis: 100%;
+  justify-content: flex-end;
+}
+@media (max-width: 720px) {
+  .viewer__tools,
+  .viewer__error {
+    justify-content: flex-start;
+  }
+}

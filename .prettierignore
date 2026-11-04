@@ -5,3 +5,7 @@ testdata/
 .claude/
 .superpowers/
 box/
+.impeccable/questions/
+.impeccable/mocks/
+.impeccable/review/
+.impeccable/hook.cache.json

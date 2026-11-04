@@ -58,6 +58,7 @@ typography:
     fontWeight: 600
     lineHeight: 1.5
 rounded:
+  xs: "6px"
   sm: "10px"
   md: "14px"
   lg: "18px"
@@ -181,6 +182,40 @@ components:
   pair-code:
     textColor: "{colors.ink}"
     typography: "{typography.code}"
+  segmented:
+    backgroundColor: "{colors.track}"
+    textColor: "{colors.ink-3}"
+    typography: "{typography.label}"
+    rounded: "{rounded.pill}"
+    padding: "0 20px"
+    height: "48px"
+  segmented-active:
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.ink}"
+  select-bar:
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.ink}"
+    padding: "8px 8px 8px 20px"
+  tile:
+    backgroundColor: "{colors.surface-sunk}"
+    textColor: "{colors.ink-2}"
+    rounded: "{rounded.xs}"
+  tile-checked:
+    backgroundColor: "{colors.line}"
+  upload-panel:
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.lg}"
+    padding: "20px"
+  viewer-details:
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.lg}"
+    padding: "20px"
+  viewer-safe-line:
+    textColor: "{colors.safe-ink}"
+  viewer-pending-line:
+    textColor: "{colors.ink-3}"
 ---
 
 # Design System: Cloud Box
@@ -209,7 +244,7 @@ Before a browser is unlocked (setup, unlock, forgot password, connect, reset) th
 A warm neutral ground with three semantic hues, each reserved for one meaning.
 
 ### Primary
-- **Safe Green** (`safe`): the only accent. Its fill means "safe" or marks the primary action (primary buttons, form `accent-color`). Its family supports it: **Deep Safe Green** (`safe-strong`) for primary hover, active nav text, links and caret; **Safe Mist** (`safe-tint`) for the safe banner, active nav pill and text selection; **Safe Ink** / **Safe Ink Soft** (`safe-ink`, `safe-ink-2`) for text on the tint.
+- **Safe Green** (`safe`): the only accent. Its fill means "safe" or marks the primary action (primary buttons, form `accent-color`). Its family supports it: **Deep Safe Green** (`safe-strong`) for primary hover, active nav text, links and caret; **Safe Mist** (`safe-tint`) for the safe banner, active nav pill and text selection; **Safe Ink** / **Safe Ink Soft** (`safe-ink`, `safe-ink-2`) for text on the tint, and `safe-ink` for the viewer's "Safe" line on white.
 
 ### Secondary
 - **Attention Amber** (`attention`) on **Amber Wash** (`attention-tint`), text in **Amber Ink** (`attention-ink`, `attention-ink-2`): only for "backup copy paused", "almost full" and "can't reach your box". Used as the attention card's 2px border and the Box tab's dot. `attention-strong` is reserved, not yet used.
@@ -219,15 +254,15 @@ A warm neutral ground with three semantic hues, each reserved for one meaning.
 
 ### Neutral
 - **Warm Paper** (`ground`): page background and sidebar.
-- **White** (`surface`): cards (Box sections, the recovery key card), notices, banner strips in copying and checking states, bottom tab bar, inputs, secondary buttons.
-- **Sunk Paper** (`surface-sunk`): hover fill for buttons and sidebar items; the "This browser" badge; the pairing code panel; code output.
-- **Hairline** (`line`), **Firm Line** (`line-strong`): tab bar top border and dividers between device rows; button, input and notice borders.
-- **Meter Track** (`track`): unfilled storage meter.
-- **Ink** (`ink`): primary text. **Ink Soft** (`ink-2`, 5.9:1 on ground): secondary text, ledes, field hints, the "Step n of 5" line, recovery word numbers, "Last seen" and "Valid until" lines, the empty state, inactive tabs, checking banner. `ink-3` is reserved for table and meta text.
+- **White** (`surface`): cards (Box sections, the recovery key card), notices, banner strips in copying and checking states, bottom tab bar, inputs, secondary buttons. On Photos: the upload panel, the select bar, the viewer's details card and the chosen segment of the segmented control.
+- **Sunk Paper** (`surface-sunk`): hover fill for buttons and sidebar items; the "This browser" badge; the pairing code panel; code output; a photo tile while its thumbnail decrypts, and the file tile (no picture). No spinner.
+- **Hairline** (`line`), **Firm Line** (`line-strong`): tab bar top border and dividers between device rows and upload rows; button, input and notice borders. `line` is also the backing a checked tile's photo shrinks onto; `line-strong` is the thin strip scrollbar.
+- **Meter Track** (`track`): unfilled storage meter and upload progress bar; the ground of the segmented control.
+- **Ink** (`ink`): primary text. **Ink Soft** (`ink-2`, 5.9:1 on ground): secondary text, ledes, field hints, the "Step n of 5" line, recovery word numbers, "Last seen" and "Valid until" lines, the empty state, inactive tabs, checking banner. **Ink Meta** (`ink-3`): table and meta text. On Photos: inactive segmented options, the uploading file's name, the upload progress fill and the viewer's "Backup copy pending" line.
 - **Focus Green** (`focus`): the focus ring colour.
 
 ### Named Rules
-**The One Green Rule.** Green means "safe" or "this is the primary action". Never use it decoratively, for categories or for brand flourish. One approved exception (owner, 2026-11-03): the storage meter fill is green, because the space it measures holds the photos the box is keeping safe. Green stays off every other meter, chart and category.
+**The One Green Rule.** Green means "safe" or "this is the primary action". Never use it decoratively, for categories or for brand flourish. One approved exception (owner, 2026-11-03): the storage meter fill is green, because the space it measures holds the photos the box is keeping safe. Green stays off every other meter, chart and category. Progress is not safety: the upload progress fill is `ink-3`, never green, because a file on its way is not safe yet.
 
 **The One Meaning Per Hue Rule.** Amber is attention (paused, almost full, unreachable) and nothing else. Red is permanent deletion and nothing else; moving to Trash is not red.
 
@@ -248,6 +283,7 @@ A warm neutral ground with three semantic hues, each reserved for one meaning.
 - **Label XS** (600, 13px, 1.2): bottom tab labels, capped at `min(13px, 5vw)` so four one-word labels never wrap; active tab is 700. Also the "This browser" badge.
 - **Recovery word** (600, 19px): each of the 24 words, never wrapped; its number sits beside it at 15px `ink-2` tabular figures, right-aligned.
 - **Code** (IBM Plex Mono 600, 22px): the pairing code, shown in groups of four that each stay on one line.
+- **Photos:** a strip heading (day, month or year) is 19px semibold (600, not bold), with its count in 15px `ink-2` tabular figures beside it (under it at or below 720px). The upload panel heading is 19px with tabular figures. The viewer title is 22px bold with -0.01em tracking. Segmented options are 15px semibold. A file tile's type ("HEIC") and a video's duration are 13px semibold, the type tracked 0.04em, the duration tabular.
 - 15px (`text-sm`) carries field labels (600), hints and error text, the step line, and secondary lines in lists; 22px (`text-xl`) is the empty state's `h2`.
 
 ### Named Rules
@@ -263,18 +299,29 @@ The safety banner is always the first thing in `<main>`, full width. Each screen
 
 On Box, sections sit in an auto-fit grid of cards at least 22rem wide (16px gap), so they pair on wide screens and stack on narrow ones. An empty screen (Photos with no photos) places a 40px line icon, a 22px heading and one sentence, left-aligned and capped at 40ch, 40px below the header.
 
+Photos runs the header row as `h1` left and tools right: the Days / Months / Years segmented control, Select, then the green Upload photos, 12px apart and wrapping. The upload panel and, in select mode, the select bar sit between the header and the timeline.
+
+The timeline is one row per group, newest first: a heading row (at least 48px tall) with the group's name and count on the left and Previous / Next on the right, then one sideways strip of square photo tiles. Tile sides are 190 / 128 / 88px (Days / Months / Years) above 720px and 140 / 104 / 72px at or below it, always 6px apart; groups are 32px apart. Previous / Next sit beside the heading when they fit, else wrap to their own row; they appear only when the strip actually scrolls. The page and each strip are both virtualised, so tile positions and sizes are set through the CSSOM.
+
+The select bar stays in view (sticky, 12px from the top) only above 720px, with the page's scroll padding set so a focused tile scrolls clear of it. At or below 720px it stays in the flow so it never covers tiles.
+
+The viewer is a grid. At or below 720px the order is bar (Close and the title), the photo, then the tools, then details: photo first on phones, in reading and focus order. Above 720px the tools sit beside the title and the photo spans the width below (at least `min(60dvh, 32rem)` tall). From 1100px with Details open, details become a 20rem column beside the photo. The photo's height is capped in viewport units only (`max(60dvh, 100dvh - 240px)`), so large text never shrinks it.
+
 Widths 320 to 2560px are supported.
+
+### Named Rules
+**The One Row Per Group Rule.** Photos are read as a stack of days (or months, or years), one sideways strip each, with the count beside every heading; never an endless undifferentiated grid. Each strip is one tab stop: ←, →, Home and End move within it, and the tile holding the tab stop is always rendered.
 
 ## Elevation & Depth
 
-Flat. Depth is tonal: white surfaces on a warm ground, tints for state, hairline borders where a surface meets the ground edge (tab bar). Box-shadow is used only for the focus ring, the attention card's inset 2px amber border and the notice's inset 1px `line-strong` border. A soft `shadow-raised` token is defined (sidecar) but no shipped surface uses it yet.
+Flat. Depth is tonal: white surfaces on a warm ground, tints for state, hairline borders where a surface meets the ground edge (tab bar). Box-shadow is used only for the focus ring, the attention card's inset 2px amber border and the notice's inset 1px `line-strong` border. The soft `shadow-raised` token (sidecar) has one shipped use: the Photos select bar, which floats over the timeline while you pick above 720px. Tiles, the upload panel, the viewer stage and the details card stay flat.
 
 ### Named Rules
 **The Flat Panel Rule.** Surfaces separate by tone, not by shadow. Introduce `shadow-raised` only for a surface that genuinely floats (a sheet or menu), not for cards.
 
 ## Shapes
 
-Soft, friendly rounding in three steps: 10px for small chips and the default focus outline, 14px for the banner strip, sidebar cards, sidebar nav rows, inputs, notices and the pairing code panel, 18px for content cards, the recovery key card and the attention card. Buttons, the skip link, meter, tab icon pill, attention dot and the "This browser" badge are full pills. Borders are 1px; the attention card's 2px amber border is the heaviest stroke. Icons are line icons on a 24-unit grid, 2px stroke, rounded caps and joins.
+Soft, friendly rounding in four steps: 6px (`rounded.xs`) for photos only (timeline tiles, a checked tile's shrunk photo, the viewer photo), so pictures read as pictures and not as cards; 10px for small chips and the default focus outline, 14px for the banner strip, sidebar cards, sidebar nav rows, inputs, notices and the pairing code panel, 18px for content cards, the recovery key card, the attention card, the upload panel, the viewer stage and the details card. Buttons, the skip link, meter, upload progress bar, tab icon pill, attention dot, video chip and the "This browser" badge are full pills. The segmented control and the select bar are pills on one line that become rounded boxes (24px and 32px radius) when large text wraps them; a tile's select check is a circle. Borders are 1px; the attention card's 2px amber border is the heaviest stroke. Icons are line icons on a 24-unit grid, 2px stroke, rounded caps and joins.
 
 ## Components
 
@@ -284,6 +331,11 @@ Soft, friendly rounding in three steps: 10px for small chips and the default foc
 - **Secondary:** white with a `line-strong` border, ink label; hover fills `surface-sunk`.
 - **Danger:** red fill, white label; permanent deletion only.
 - **Disabled:** 55% opacity, not-allowed cursor.
+- **Pressed / expanded:** a secondary button that toggles (Select, Favourite, Details) shows its state with an `ink` border via `aria-pressed` or `aria-expanded`; Favourite also fills its heart.
+- **Icons:** always beside a word (Previous and Next keep their words on every width); 18px in buttons, 20px chevrons on strip pagers.
+
+### Segmented Control
+A `track` pill holding 48px options (15px semibold, `ink-3`, 20px side padding). The chosen option (`aria-pressed`) becomes a white pill with `ink` text, inset by a 3px `track` border. A labelled group ("Group photos by"); used for Days / Months / Years.
 
 ### Cards / Containers
 - **Content card:** white, 18px radius, 24px padding, no border, no shadow.
@@ -323,6 +375,23 @@ Inside a Box section card (19px heading). One row per device: semibold name (bre
 ### Pairing Code
 A `surface-sunk` panel (14px radius, 16px padding) inside the Add a device card: a 15px semibold "Pairing code" label, the code in IBM Plex Mono 600 at 22px as groups of four that wrap between groups but never inside one, and a 15px `ink-2` "Valid until {time}. It works once." line. Once a code exists the button becomes secondary ("Make a new code").
 
+### Photo Timeline (signature)
+- **Strip:** a section labelled by its heading: name and count, Previous / Next, then the sideways row. The row has 6px of padding (offset by negative margin) so tile focus rings are never clipped, a thin `line-strong` scrollbar, and contained sideways overscroll.
+- **Pager:** secondary buttons with 16px side padding, a 20px chevron and the visible word; their names add the group ("Previous, 3 November"). They page by whole tiles (the tiles that fit, less one for context), disable at each end, and scroll smoothly (instantly under reduced motion).
+- **Tile:** a square photo, `object-fit: cover`, 6px radius, on `surface-sunk` until its thumbnail decrypts; no frame, no shadow, no backup badge. A tile is a link to the viewer named by its date and kind; focus draws the standard ring. With no picture it is a file tile: a 28px file icon over the type in capitals.
+- **Video chip:** bottom-left, a dark translucent pill with white 13px semibold text: a 16px play mark and the duration.
+- **Select mode:** each tile becomes a checkbox covering the whole tile. A 28px circle with a 2px white ring sits top-right; checked, it fills `ink` with a white check, and the photo shrinks to 88% onto a `line` backing (220ms `ease-out`, none under reduced motion).
+- **Select bar:** a white pill holding the count ("Choose photos", "1 selected", "{n} selected", polite) and Cancel. Sticky, with `shadow-raised`, only above 720px; flat in the page flow on phones.
+
+### Upload Panel
+A white card (18px radius, 20px padding, 12px gap) that stays until closed. A 19px heading ("Uploading {i} of {n}", polite) with Close; the current file's name (15px `ink-3`, breaks anywhere) labels an 8px pill `<progress>`: `track` behind, `ink-3` fill, never green. When done, a check icon and an `ink-2` line. Duplicates and failures follow as rows (at least 48px, 1px `line` top border): semibold name, a 15px `ink-2` note (a warning icon and `role="alert"` for failures), and the row's action (Restore, Try again) pushed to the end, named with the file.
+
+### Photo Viewer
+- **Bar:** Close (secondary, icon and word) then the 22px title (the date), which takes focus on open with no ring.
+- **Stage:** 18px radius, at least 12rem tall, the photo or video centred inside at 6px radius. While the original loads, the thumbnail shows blurred (14px) and slightly enlarged. If it can't be shown, a centred `ink-2` note (40px file icon, at most 32ch) says to download it; videos over 2 GiB are Download only.
+- **Tools:** Previous, Next, Favourite, Details, Download ("Downloading…" while busy), right-aligned beside the title above 720px and left-aligned on phones. ← and → walk the whole timeline. A failed download shows a field-style error under the tools.
+- **Details:** a white card (18px radius, 20px padding): 19px "Details" heading, a name / size list (15px `ink-2` terms), then one status line with a 20px shield icon, semibold. "Safe: on your box and the backup copy" (`safe-ink`, shield-check) shows only when the item is replicated and the box's status is known with the backup copy running; otherwise "On your box. Backup copy pending." (`ink-3`, shield-clock).
+
 ### Navigation
 - **Sidebar (above 720px):** rows 48px tall, 22px icon then 17px label, 14px radius. Hover `surface-sunk`; active (`aria-current`) `safe-tint` fill with `safe-strong` bold text.
 - **Bottom tabs (720px and below):** white bar with a hairline top border; four equal cells, 24px icon over a 13px label. Inactive `ink-2`; active `safe-strong` bold with a `safe-tint` pill behind the icon. Focus is an inset 3px `focus` ring.
@@ -353,6 +422,9 @@ A shield-marked strip that changes material with the box's truth. Icon (22px; 28
 - **Do** give each entry page one `h1`, one question and one primary button, with the step line ("Step n of 5") at the end of the action row.
 - **Do** tie every hint and error to its field, and keep errors until the field changes.
 - **Do** set codes a person must copy character by character in `--font-code`; everything else in Inter.
+- **Do** keep photos at 6px radius (`rounded.xs`) and cards at 14 or 18px; a photo is not a card.
+- **Do** keep visible words on Previous and Next, and name each pager button with its group.
+- **Do** make each photo strip one tab stop with ←, →, Home and End inside it.
 
 ### Don't:
 - **Don't** use green for anything but "safe" or the primary action.
@@ -365,3 +437,6 @@ A shield-marked strip that changes material with the box's truth. Icon (22px; 28
 - **Don't** use the mono face for labels, headings, numbers in general or decoration.
 - **Don't** split a recovery word or a pairing code group across lines.
 - **Don't** add time limits, countdowns or auto-dismissing errors to entry pages.
+- **Don't** fill progress bars green; progress is `ink-3` on `track`.
+- **Don't** say "Safe" for an item unless it is replicated and the backup copy is running; tiles carry no backup badges.
+- **Don't** make the select bar sticky at or below 720px, where it would cover tiles.

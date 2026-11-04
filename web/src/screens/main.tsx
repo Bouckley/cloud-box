@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react';
-import { PhotosIcon } from '../app/icons.tsx';
 import { useTitle } from '../app/title.ts';
 import { AddDevice } from './box/AddDevice.tsx';
 import { Devices } from './box/Devices.tsx';
@@ -27,24 +26,7 @@ function Screen({
   );
 }
 
-// Task 13 wires Upload photos and the timeline; this is the empty library.
-export const PhotosScreen = () => (
-  <Screen
-    title="Photos"
-    action={
-      <button type="button" className="button button--primary">
-        Upload photos
-      </button>
-    }
-  >
-    <div className="empty">
-      <PhotosIcon size={40} />
-      <h2>No photos yet</h2>
-      <p>Photos you upload are locked on this computer before they go to your box.</p>
-    </div>
-  </Screen>
-);
-export const PhotoViewerScreen = () => <Screen title="Photo" />;
+export { PhotosScreen, PhotoViewerScreen } from './photos/Photos.tsx';
 export const AlbumsScreen = () => <Screen title="Albums" />;
 export const AlbumScreen = () => <Screen title="Album" />;
 export const FavouritesScreen = () => <Screen title="Favourites" />;

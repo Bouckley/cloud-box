@@ -10,6 +10,8 @@ import * as screens from '../screens/main.tsx';
 import { ErrorView } from './ErrorView.tsx';
 import { useEntry, useLibrary, useStatus, useUnlocked, type Entry } from './session.tsx';
 import { Shell } from './Shell.tsx';
+import { ThumbsProvider } from './thumbs.ts';
+import { UploadsProvider } from './uploads.ts';
 
 /** Sends a fresh load to setup, connect or unlock, by `info()` and `login()`. */
 function Gate() {
@@ -68,8 +70,8 @@ function ConnectRoute() {
 /** The shell, wired to the session. Main screens need an unlocked account. */
 function AppShell({ requireUnlocked }: { requireUnlocked: boolean }) {
   const { unlocked } = useUnlocked();
-  const { banner, status } = useStatus();
-  const { snapshot } = useLibrary();
+  const { banner, status, refresh } = useStatus();
+  const { library, snapshot } = useLibrary();
   const photoCount = useMemo(() => {
     let n = 0;
     for (const item of snapshot.items.values()) {
@@ -86,7 +88,13 @@ function AppShell({ requireUnlocked }: { requireUnlocked: boolean }) {
   const storage = main
     ? { usedBytes: main.sizeBytes - main.freeBytes, sizeBytes: main.sizeBytes }
     : null;
-  return <Shell banner={banner} storage={storage} photoCount={unlocked ? photoCount : null} />;
+  return (
+    <ThumbsProvider library={library}>
+      <UploadsProvider library={library} onUploaded={() => refresh({ sync: false })}>
+        <Shell banner={banner} storage={storage} photoCount={unlocked ? photoCount : null} />
+      </UploadsProvider>
+    </ThumbsProvider>
+  );
 }
 
 const SimPage = import.meta.env.DEV

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-03T12:00:00Z",
+  "generatedAt": "2026-11-03T18:00:00Z",
   "title": "Design System: Cloud Box",
   "extensions": {
     "colorMeta": {
@@ -210,7 +210,7 @@
       {
         "name": "shadow-raised",
         "value": "0 1px 2px rgb(22 24 27 / 6%), 0 4px 12px rgb(22 24 27 / 5%)",
-        "purpose": "Reserved for genuinely floating surfaces (sheets, menus); unused in the M2 shell."
+        "purpose": "Genuinely floating surfaces only. One shipped use: the Photos select bar, sticky over the timeline above 720px."
       }
     ],
     "motion": [
@@ -227,14 +227,24 @@
       {
         "name": "duration-base",
         "value": "220ms",
-        "purpose": "Safety banner material change; 0ms under reduced motion."
+        "purpose": "Safety banner material change; a checked tile's photo shrinking to 88%; 0ms under reduced motion."
+      },
+      {
+        "name": "strip-paging",
+        "value": "scroll-behavior: smooth (auto under reduced motion)",
+        "purpose": "Previous/Next page a photo strip by whole tiles."
       }
     ],
     "breakpoints": [
       {
         "name": "sidebar",
         "value": "720.02px",
-        "purpose": "Above: sticky 264px sidebar. At or below 720px: four fixed bottom tabs, 72px tall plus safe-area inset."
+        "purpose": "Above: sticky 264px sidebar. At or below 720px: four fixed bottom tabs, 72px tall plus safe-area inset. Photos: tile sides 190/128/88px above, 140/104/72px at or below; select bar sticky only above; viewer puts the photo first at or below."
+      },
+      {
+        "name": "viewer-details",
+        "value": "1100px",
+        "purpose": "Viewer with Details open: details become a 20rem column beside the photo."
       },
       {
         "name": "word-card-stack",
@@ -259,6 +269,26 @@
       {
         "name": "tabbar-height",
         "value": "72px"
+      },
+      {
+        "name": "tile-days",
+        "value": "190px / 140px at or below 720px"
+      },
+      {
+        "name": "tile-months",
+        "value": "128px / 104px at or below 720px"
+      },
+      {
+        "name": "tile-years",
+        "value": "88px / 72px at or below 720px"
+      },
+      {
+        "name": "tile-gap",
+        "value": "6px"
+      },
+      {
+        "name": "viewer-details-width",
+        "value": "20rem"
       }
     ]
   },
@@ -390,6 +420,38 @@
       "description": "Sunk panel with the single-use code in IBM Plex Mono, groups of four that never split, and when it expires.",
       "html": "<div class=\"ds-pair\"><p class=\"ds-pair-label\" id=\"ds-pair-l\">Pairing code</p><output class=\"ds-pair-code\" aria-labelledby=\"ds-pair-l\"><span>K7QM </span><span>R2XW </span><span>9HTB </span><span>4NCP</span></output><p class=\"ds-pair-valid\">Valid until 14:30. It works once.</p></div>",
       "css": ".ds-pair { display: flex; flex-direction: column; gap: 8px; width: 320px; padding: 16px; border-radius: 14px; background: var(--color-surface-sunk, #f2f2ef); color: var(--color-ink, #16181b); font-family: var(--font-sans, Inter, system-ui, sans-serif); } .ds-pair p { margin: 0; } .ds-pair-label { font-size: 15px; font-weight: 600; } .ds-pair-code { display: flex; flex-wrap: wrap; gap: 4px 12px; font-family: var(--font-code, 'IBM Plex Mono', ui-monospace, monospace); font-size: 22px; font-weight: 600; } .ds-pair-code span { white-space: nowrap; } .ds-pair-valid { font-size: 15px; color: var(--color-ink-2, #5c6066); }"
+    },
+    {
+      "name": "Segmented Control",
+      "kind": "chip",
+      "refersTo": "segmented",
+      "description": "Days / Months / Years: a track pill of 48px options; the chosen one is a white pill with ink text.",
+      "html": "<div class=\"ds-seg\" role=\"group\" aria-label=\"Group photos by\"><button type=\"button\" class=\"ds-seg-opt\" aria-pressed=\"true\">Days</button><button type=\"button\" class=\"ds-seg-opt\" aria-pressed=\"false\">Months</button><button type=\"button\" class=\"ds-seg-opt\" aria-pressed=\"false\">Years</button></div>",
+      "css": ".ds-seg { display: inline-flex; flex-wrap: wrap; border-radius: 24px; background: var(--color-track, #e2e2de); font-family: var(--font-sans, Inter, system-ui, sans-serif); } .ds-seg-opt { min-height: 48px; padding: 0 20px; border: 3px solid transparent; border-radius: 999px; background: transparent; color: var(--color-ink-3, #4a4e54); font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; } .ds-seg-opt[aria-pressed='true'] { border-color: var(--color-track, #e2e2de); background: var(--color-surface, #fff); color: var(--color-ink, #16181b); } .ds-seg-opt:focus-visible { outline: none; box-shadow: 0 0 0 2px #fff, 0 0 0 5px var(--color-focus, #1f5a41); }"
+    },
+    {
+      "name": "Photo Strip",
+      "kind": "custom",
+      "refersTo": "tile",
+      "description": "One group of the timeline: 19px semibold heading and count, Previous/Next with words, a sideways row of 6px-radius square tiles 6px apart.",
+      "html": "<section class=\"ds-strip\" aria-labelledby=\"ds-strip-h\"><div class=\"ds-strip-head\"><div><h2 id=\"ds-strip-h\">3 November</h2><p class=\"ds-strip-count\">24 photos</p></div><div class=\"ds-strip-pager\"><button type=\"button\" class=\"ds-strip-btn\" disabled aria-label=\"Previous, 3 November\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"m15 18-6-6 6-6\"/></svg><span>Previous</span></button><button type=\"button\" class=\"ds-strip-btn\" aria-label=\"Next, 3 November\"><span>Next</span><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"m9 18 6-6-6-6\"/></svg></button></div></div><ul class=\"ds-strip-list\"><li><a class=\"ds-tile\" href=\"#\" aria-label=\"Photo, 3 November 14:05\"></a></li><li><a class=\"ds-tile\" href=\"#\" tabindex=\"-1\" aria-label=\"Photo, 3 November 13:40\"></a></li><li><span class=\"ds-tile ds-tile-file\"><span>HEIC</span></span></li></ul></section>",
+      "css": ".ds-strip { display: flex; flex-direction: column; gap: 12px; font-family: var(--font-sans, Inter, system-ui, sans-serif); color: var(--color-ink, #16181b); } .ds-strip-head { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; min-height: 48px; } .ds-strip-head h2 { margin: 0; font-size: 19px; font-weight: 600; } .ds-strip-count { margin: 0; font-size: 15px; color: var(--color-ink-2, #5c6066); font-variant-numeric: tabular-nums; } .ds-strip-pager { display: flex; gap: 8px; margin-inline-start: auto; } .ds-strip-btn { display: inline-flex; align-items: center; gap: 8px; min-height: 48px; padding: 0 16px; border: 1px solid var(--color-line-strong, #d5d6d2); border-radius: 999px; background: var(--color-surface, #fff); color: inherit; font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; } .ds-strip-btn:hover { background: var(--color-surface-sunk, #f2f2ef); } .ds-strip-btn:disabled { opacity: .55; cursor: not-allowed; } .ds-strip-btn:focus-visible, .ds-tile:focus-visible { outline: none; box-shadow: 0 0 0 2px #fff, 0 0 0 5px var(--color-focus, #1f5a41); } .ds-strip-list { display: flex; gap: 6px; margin: 0; padding: 6px; list-style: none; overflow-x: auto; } .ds-tile { display: block; width: 190px; height: 190px; border-radius: 6px; background: var(--color-surface-sunk, #f2f2ef); color: var(--color-ink-2, #5c6066); } .ds-tile-file { display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; letter-spacing: .04em; }"
+    },
+    {
+      "name": "Upload Panel",
+      "kind": "card",
+      "refersTo": "upload-panel",
+      "description": "White card that stays until closed: Uploading i of n, the file name labelling an ink-3 progress bar (never green), then duplicate and failure rows with their action.",
+      "html": "<section class=\"ds-up\" aria-labelledby=\"ds-up-h\"><div class=\"ds-up-head\"><h2 id=\"ds-up-h\" aria-live=\"polite\">Uploading 3 of 12</h2><button type=\"button\" class=\"ds-up-btn\">Close</button></div><label for=\"ds-up-bar\" class=\"ds-up-name\">IMG_2041.HEIC</label><progress id=\"ds-up-bar\" class=\"ds-up-bar\" max=\"100\" value=\"40\"></progress><ul class=\"ds-up-list\"><li class=\"ds-up-row\"><span class=\"ds-up-rname\">IMG_1990.JPG</span><span class=\"ds-up-note\">Couldn't upload</span><button type=\"button\" class=\"ds-up-btn\" aria-label=\"Try again IMG_1990.JPG\">Try again</button></li></ul></section>",
+      "css": ".ds-up { display: flex; flex-direction: column; gap: 12px; width: 420px; padding: 20px; border-radius: 18px; background: var(--color-surface, #fff); color: var(--color-ink, #16181b); font-family: var(--font-sans, Inter, system-ui, sans-serif); } .ds-up-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; } .ds-up-head h2 { margin: 0; font-size: 19px; font-variant-numeric: tabular-nums; } .ds-up-name { font-size: 15px; color: var(--color-ink-3, #4a4e54); overflow-wrap: anywhere; } .ds-up-bar { width: 100%; height: 8px; border: 0; border-radius: 999px; background: var(--color-track, #e2e2de); appearance: none; } .ds-up-bar::-webkit-progress-bar { border-radius: 999px; background: var(--color-track, #e2e2de); } .ds-up-bar::-webkit-progress-value { border-radius: 999px; background: var(--color-ink-3, #4a4e54); } .ds-up-bar::-moz-progress-bar { border-radius: 999px; background: var(--color-ink-3, #4a4e54); } .ds-up-list { margin: 0; padding: 0; list-style: none; } .ds-up-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; min-height: 48px; padding-block: 8px; border-top: 1px solid var(--color-line, #e4e4e0); } .ds-up-rname { font-weight: 600; overflow-wrap: anywhere; } .ds-up-note { font-size: 15px; color: var(--color-ink-2, #5c6066); } .ds-up-row .ds-up-btn { margin-inline-start: auto; } .ds-up-btn { min-height: 48px; padding: 0 20px; border: 1px solid var(--color-line-strong, #d5d6d2); border-radius: 999px; background: var(--color-surface, #fff); color: inherit; font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; } .ds-up-btn:hover { background: var(--color-surface-sunk, #f2f2ef); } .ds-up-btn:focus-visible { outline: none; box-shadow: 0 0 0 2px #fff, 0 0 0 5px var(--color-focus, #1f5a41); }"
+    },
+    {
+      "name": "Viewer Details",
+      "kind": "card",
+      "refersTo": "viewer-details",
+      "description": "Name and size, then one truthful status line: Safe (safe-ink, shield-check) only when replicated and the backup copy is running, else pending (ink-3, shield-clock).",
+      "html": "<section class=\"ds-vd\" aria-labelledby=\"ds-vd-h\"><h2 id=\"ds-vd-h\">Details</h2><dl><dt>Name</dt><dd>IMG_2041.HEIC</dd><dt>Size</dt><dd>2.4 MB</dd></dl><p class=\"ds-vd-pending\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 3 5 6v5c0 4.5 3 8.5 7 10 4-1.5 7-5.5 7-10V6z\"/><path d=\"M12 9v3l2 1.5\"/></svg>On your box. Backup copy pending.</p></section>",
+      "css": ".ds-vd { display: flex; flex-direction: column; gap: 12px; width: 320px; padding: 20px; border-radius: 18px; background: var(--color-surface, #fff); color: var(--color-ink, #16181b); font-family: var(--font-sans, Inter, system-ui, sans-serif); } .ds-vd h2 { margin: 0; font-size: 19px; } .ds-vd dl { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 16px; margin: 0; } .ds-vd dt { font-size: 15px; color: var(--color-ink-2, #5c6066); } .ds-vd dd { margin: 0; overflow-wrap: anywhere; } .ds-vd-pending, .ds-vd-safe { display: flex; align-items: flex-start; gap: 8px; margin: 0; font-weight: 600; } .ds-vd-pending { color: var(--color-ink-3, #4a4e54); } .ds-vd-safe { color: var(--color-safe-ink, #1f4a38); } .ds-vd svg { flex: none; margin-top: 2px; }"
     }
   ],
   "narrative": {
@@ -405,7 +467,7 @@
     "rules": [
       {
         "name": "The One Green Rule",
-        "body": "Green means \"safe\" or \"this is the primary action\". Never use it decoratively, for categories or for brand flourish.",
+        "body": "Green means \"safe\" or \"this is the primary action\". Never use it decoratively, for categories or for brand flourish. One approved exception (owner, 2026-11-03): the storage meter fill is green, because the space it measures holds the photos the box is keeping safe. Green stays off every other meter, chart and category. Progress is not safety: the upload progress fill is `ink-3`, never green, because a file on its way is not safe yet.",
         "section": "colors"
       },
       {
@@ -432,6 +494,11 @@
         "name": "The One Face Rule",
         "body": "Inter sets every word. One deliberate, scoped exception (owner, M2 Task 12): the pairing code is set in IBM Plex Mono so I, l and 1, and 0 and O, can't be confused when a person reads it off one screen and types it into another. The mono face is for codes a person must copy character by character; it is never a label, heading or decorative voice. The code's input field stays in Inter, with tabular figures and 0.04em tracking.",
         "section": "typography"
+      },
+      {
+        "name": "The One Row Per Group Rule",
+        "body": "Photos are read as a stack of days (or months, or years), one sideways strip each, with the count beside every heading; never an endless undifferentiated grid. Each strip is one tab stop: ←, →, Home and End move within it, and the tile holding the tab stop is always rendered.",
+        "section": "layout"
       }
     ],
     "dos": [
@@ -443,7 +510,10 @@
       "Do honour prefers-reduced-motion: durations drop to 0.",
       "Do give each entry page one h1, one question and one primary button, with the step line (\"Step n of 5\") at the end of the action row.",
       "Do tie every hint and error to its field, and keep errors until the field changes.",
-      "Do set codes a person must copy character by character in --font-code; everything else in Inter."
+      "Do set codes a person must copy character by character in --font-code; everything else in Inter.",
+      "Do keep photos at 6px radius (rounded.xs) and cards at 14 or 18px; a photo is not a card.",
+      "Do keep visible words on Previous and Next, and name each pager button with its group.",
+      "Do make each photo strip one tab stop with ←, →, Home and End inside it."
     ],
     "donts": [
       "Don't use green for anything but \"safe\" or the primary action.",
@@ -455,7 +525,10 @@
       "Don't put the step count, or any other small label, above an h1 as an eyebrow.",
       "Don't use the mono face for labels, headings, numbers in general or decoration.",
       "Don't split a recovery word or a pairing code group across lines.",
-      "Don't add time limits, countdowns or auto-dismissing errors to entry pages."
+      "Don't add time limits, countdowns or auto-dismissing errors to entry pages.",
+      "Don't fill progress bars green; progress is ink-3 on track.",
+      "Don't say \"Safe\" for an item unless it is replicated and the backup copy is running; tiles carry no backup badges.",
+      "Don't make the select bar sticky at or below 720px, where it would cover tiles."
     ]
   }
 }

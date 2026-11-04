@@ -18,7 +18,8 @@ deletion only and green for safe or the one primary action.
 - **Clicking a name (owner, revised 2026-11-04 after trying it).** Folders
   open. Photos and PDFs open inside Cloud Box (`/files/open/{id}`), decrypted
   in this browser. Photos show their preview. PDFs are drawn by pdf.js
-  (`pdfjs-dist` 6.4.299, pinned exactly; loaded only when a PDF is opened) in
+  (`pdfjs-dist` 6.4.299, pinned exactly, its *legacy* build; loaded only when
+  a PDF is opened) in
   Cloud Box's own frame: a toolbar (Previous page / Page n of N / Next page,
   Zoom out / size / Zoom in, Fit width) over the pages on a sunken ground.
   Only pages near the screen are drawn; each page's words are given to
@@ -27,7 +28,12 @@ deletion only and green for safe or the one primary action.
   pdf.js's fonts, character maps, colour profiles and image decoders are
   served from `/pdfjs/` (about 3 MB in the box binary); its scripting sandbox
   is not shipped, so scripts in PDFs never run. Files over the in-memory
-  limit, and PDFs pdf.js can't read, say so and offer Download. Any other file
+  limit, and PDFs pdf.js can't read, say so and offer Download. The modern
+  build calls built-ins only the newest browsers have
+  (`Map.prototype.getOrInsertComputed`); in Firefox 141 every page drew blank.
+  The legacy build carries its own copies, for about 36 KB more (gzipped).
+  `e2e/tests/pdf-older-browser.spec.ts` takes those built-ins away and checks
+  the words are still drawn. Any other file
   opens a details sheet (size, date, folder, a full-width Download, then
   Move to… and Delete as a list, × to close); nothing downloads by itself.
   A first version opened a new tab and downloaded other files on click; the

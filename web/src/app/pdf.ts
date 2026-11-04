@@ -25,9 +25,12 @@ export type PdfDoc = {
 const ASSETS = '/pdfjs/';
 
 export async function openPdf(bytes: Uint8Array): Promise<PdfDoc> {
+  // The legacy build: the modern one calls built-ins only the newest browsers
+  // have (Map.prototype.getOrInsertComputed), so in Firefox 141 every page
+  // came out blank. The legacy build brings its own copies of them.
   const [pdfjs, worker] = await Promise.all([
-    import('pdfjs-dist'),
-    import('pdfjs-dist/build/pdf.worker.min.mjs?url'),
+    import('pdfjs-dist/legacy/build/pdf.mjs'),
+    import('pdfjs-dist/legacy/build/pdf.worker.min.mjs?url'),
   ]);
   pdfjs.GlobalWorkerOptions.workerSrc = worker.default;
   const task = pdfjs.getDocument({

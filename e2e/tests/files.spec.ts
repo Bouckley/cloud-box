@@ -7,39 +7,12 @@ import { expect, test } from '../fixtures.ts';
 import { expectAccessible } from '../helpers/axe.ts';
 import { cspViolations, setUpThroughUi, watchCsp } from '../helpers/flows.ts';
 import { expectNoSidewaysScroll } from '../helpers/layout.ts';
+import { pdfWith } from '../helpers/pdf.ts';
 
 test.setTimeout(150_000);
 
 const nav = (page: Page, name: string) => page.getByRole('link', { name }).first();
 const sha256 = (b: Buffer) => createHash('sha256').update(b).digest('hex');
-
-/** A small, valid PDF with one line of Helvetica on each page. */
-function pdfWith(lines: string[]): string {
-  const objs: string[] = [];
-  const kids = lines.map((_, i) => `${3 + i * 2} 0 R`).join(' ');
-  objs.push('<</Type/Catalog/Pages 2 0 R>>');
-  objs.push(`<</Type/Pages/Kids[${kids}]/Count ${lines.length}>>`);
-  const font = 3 + lines.length * 2;
-  lines.forEach((line, i) => {
-    const stream = `BT /F1 28 Tf 60 700 Td (${line}) Tj ET`;
-    objs.push(
-      `<</Type/Page/Parent 2 0 R/MediaBox[0 0 595 842]/Contents ${4 + i * 2} 0 R/Resources<</Font<</F1 ${font} 0 R>>>>>>`,
-    );
-    objs.push(`<</Length ${stream.length}>>stream\n${stream}\nendstream`);
-  });
-  objs.push('<</Type/Font/Subtype/Type1/BaseFont/Helvetica>>');
-  let out = '%PDF-1.4\n';
-  const at: number[] = [];
-  objs.forEach((o, i) => {
-    at.push(out.length);
-    out += `${i + 1} 0 obj${o}endobj\n`;
-  });
-  const xref = out.length;
-  out += `xref\n0 ${objs.length + 1}\n0000000000 65535 f \n`;
-  out += at.map((n) => `${String(n).padStart(10, '0')} 00000 n \n`).join('');
-  out += `trailer<</Size ${objs.length + 1}/Root 1 0 R>>\nstartxref\n${xref}\n%%EOF\n`;
-  return out;
-}
 
 // Journey 16: a folder, a 9 MiB upload into it, download it back byte for
 // byte, find it by name, move it to Files, then delete it to Trash.
@@ -205,7 +178,8 @@ test('files: make Taxes, upload there, download, search, move and delete', async
     .poll(() =>
       first.locator('canvas').evaluate((c: HTMLCanvasElement) => {
         const d = c.getContext('2d')!.getImageData(0, 0, c.width, c.height).data;
-        for (let i = 0; i < d.length; i += 4) if (d[i]! < 100) return true;
+        // Drawn ink, not the transparent black of a canvas nothing was drawn on.
+        for (let i = 0; i < d.length; i += 4) if (d[i + 3]! > 200 && d[i]! < 100) return true;
         return false;
       }),
     )

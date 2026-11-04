@@ -237,3 +237,18 @@ export const FolderPlusIcon = (p: IconProps) => (
     <path d="M12 10.5v5M9.5 13h5" />
   </Icon>
 );
+
+export const MinusIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M5 12h14" />
+  </Icon>
+);
+
+/** Two arrows pushing out to the sides of a page. */
+export const FitWidthIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M4 5v14M20 5v14" />
+    <path d="M8 12h8" />
+    <path d="m10.5 9.5-2.5 2.5 2.5 2.5M13.5 9.5l2.5 2.5-2.5 2.5" />
+  </Icon>
+);

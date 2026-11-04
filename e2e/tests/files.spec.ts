@@ -13,6 +13,34 @@ test.setTimeout(150_000);
 const nav = (page: Page, name: string) => page.getByRole('link', { name }).first();
 const sha256 = (b: Buffer) => createHash('sha256').update(b).digest('hex');
 
+/** A small, valid PDF with one line of Helvetica on each page. */
+function pdfWith(lines: string[]): string {
+  const objs: string[] = [];
+  const kids = lines.map((_, i) => `${3 + i * 2} 0 R`).join(' ');
+  objs.push('<</Type/Catalog/Pages 2 0 R>>');
+  objs.push(`<</Type/Pages/Kids[${kids}]/Count ${lines.length}>>`);
+  const font = 3 + lines.length * 2;
+  lines.forEach((line, i) => {
+    const stream = `BT /F1 28 Tf 60 700 Td (${line}) Tj ET`;
+    objs.push(
+      `<</Type/Page/Parent 2 0 R/MediaBox[0 0 595 842]/Contents ${4 + i * 2} 0 R/Resources<</Font<</F1 ${font} 0 R>>>>>>`,
+    );
+    objs.push(`<</Length ${stream.length}>>stream\n${stream}\nendstream`);
+  });
+  objs.push('<</Type/Font/Subtype/Type1/BaseFont/Helvetica>>');
+  let out = '%PDF-1.4\n';
+  const at: number[] = [];
+  objs.forEach((o, i) => {
+    at.push(out.length);
+    out += `${i + 1} 0 obj${o}endobj\n`;
+  });
+  const xref = out.length;
+  out += `xref\n0 ${objs.length + 1}\n0000000000 65535 f \n`;
+  out += at.map((n) => `${String(n).padStart(10, '0')} 00000 n \n`).join('');
+  out += `trailer<</Size ${objs.length + 1}/Root 1 0 R>>\nstartxref\n${xref}\n%%EOF\n`;
+  return out;
+}
+
 // Journey 16: a folder, a 9 MiB upload into it, download it back byte for
 // byte, find it by name, move it to Files, then delete it to Trash.
 test('files: make Taxes, upload there, download, search, move and delete', async ({
@@ -138,8 +166,7 @@ test('files: make Taxes, upload there, download, search, move and delete', async
   await expect(page.getByRole('row', { name: /Taxes/ })).toBeVisible();
 
   // Clicking a photo's name shows it inside Cloud Box, decrypted here, and
-  // Close goes back to its folder. (PDFs show the same way, in the browser's
-  // own reader; headless Chromium has none, so a person checks that one.)
+  // Close goes back to its folder.
   const photo = join(dir, 'Passport scan.jpg');
   await writeFile(
     photo,
@@ -162,6 +189,37 @@ test('files: make Taxes, upload there, download, search, move and delete', async
   await expect(page.getByRole('heading', { level: 1, name: 'Files' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Passport scan.jpg', exact: true })).toBeFocused();
   expect(downloads).toBe(1);
+
+  // A PDF opens in Cloud Box's own frame, drawn here by pdf.js.
+  const will = join(dir, 'Will.pdf');
+  await writeFile(will, pdfWith(['Last will, page one', 'Page two: witnesses']));
+  await page.getByRole('button', { name: 'Upload to Files' }).click();
+  await page.getByRole('dialog', { name: 'Upload' }).getByLabel('Choose files').setInputFiles(will);
+  await page.getByRole('button', { name: 'Will.pdf', exact: true }).click();
+  const bar = page.getByRole('toolbar', { name: 'Pages and zoom' });
+  await expect(bar).toContainText('Page 1 of 2');
+  const first = page.getByRole('group', { name: 'Page 1 of 2' });
+  await expect(first).toContainText('Last will, page one');
+  // The page is painted: some of its canvas is dark (the words).
+  await expect
+    .poll(() =>
+      first.locator('canvas').evaluate((c: HTMLCanvasElement) => {
+        const d = c.getContext('2d')!.getImageData(0, 0, c.width, c.height).data;
+        for (let i = 0; i < d.length; i += 4) if (d[i]! < 100) return true;
+        return false;
+      }),
+    )
+    .toBe(true);
+  const zoom = bar.getByText(/^\d+%$/);
+  const before = await zoom.textContent();
+  await bar.getByRole('button', { name: 'Zoom in' }).click();
+  await expect(zoom).not.toHaveText(before ?? '');
+  await bar.getByRole('button', { name: 'Next page' }).click();
+  await expect(bar).toContainText('Page 2 of 2');
+  await expect(bar.getByRole('button', { name: 'Next page' })).toBeDisabled();
+  await expectAccessible(page);
+  await page.getByRole('button', { name: 'Close' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Files' })).toBeVisible();
 
   // Phone width: list rows, nothing off the side.
   await page.setViewportSize({ width: 390, height: 844 });

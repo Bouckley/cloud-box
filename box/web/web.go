@@ -17,12 +17,12 @@ import (
 var embedded embed.FS
 
 // CSP allows only the box's own scripts, styles, fonts and connections, plus
-// blob: images, media and workers for decrypted photos, blob: frames for
-// decrypted PDFs (the browser's own reader, inside the app), and WebAssembly
-// for libsodium. No inline scripts or styles, and nobody may frame the app.
+// blob: images, media and workers for decrypted photos and pdf.js, and
+// WebAssembly for libsodium and pdf.js's image decoders. No inline scripts or
+// styles, no frames, and nobody may frame the app.
 const CSP = "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; " +
 	"img-src 'self' blob:; media-src 'self' blob:; worker-src 'self' blob:; connect-src 'self'; " +
-	"font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; frame-src blob:"
+	"font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
 
 const notBuiltPage = `<!doctype html><html lang="en"><meta charset="utf-8"><title>Cloud Box</title>` +
 	`<p>Web app not built. Run make web.</p></html>`

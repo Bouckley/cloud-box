@@ -2,7 +2,14 @@ import type { ItemView } from '@cloudbox/core';
 import { useRef, useState } from 'react';
 import { Dialog } from '../../app/Dialog.tsx';
 import { bytesText } from '../../app/format.ts';
-import { DownloadIcon, FileIcon, FilesIcon, TrashIcon } from '../../app/icons.tsx';
+import {
+  ChevronIcon,
+  CloseIcon,
+  DownloadIcon,
+  FileIcon,
+  FilesIcon,
+  TrashIcon,
+} from '../../app/icons.tsx';
 import { FieldError } from '../forms.tsx';
 
 export type FileDetailsProps = {
@@ -75,23 +82,40 @@ export function FileDetails({
         <dd>In {where}</dd>
       </dl>
       {failed && <FieldError>The download didn&apos;t finish. Try again.</FieldError>}
-      <div className="dialog__actions file-details__actions">
-        <button type="button" className="button" onClick={onMove}>
-          <FilesIcon size={18} />
-          Move to…
-        </button>
-        <button type="button" className="button" onClick={onDelete}>
-          <TrashIcon size={18} />
-          Delete
-        </button>
-        <button ref={close} type="button" className="button" onClick={onClose}>
-          Close
-        </button>
-        <button type="button" className="button button--primary" onClick={download} disabled={busy}>
-          <DownloadIcon size={18} />
-          {busy ? 'Downloading…' : 'Download'}
-        </button>
-      </div>
+      <button
+        type="button"
+        className="button button--primary file-details__download"
+        onClick={download}
+        disabled={busy}
+      >
+        <DownloadIcon size={18} />
+        {busy ? 'Downloading…' : 'Download'}
+      </button>
+      <ul className="action-list" aria-label="More for this file">
+        <li>
+          <button type="button" className="action-list__row" onClick={onMove}>
+            <FilesIcon size={20} />
+            <span>Move to…</span>
+            <ChevronIcon size={18} />
+          </button>
+        </li>
+        <li>
+          <button type="button" className="action-list__row" onClick={onDelete}>
+            <TrashIcon size={20} />
+            <span>Delete</span>
+            <ChevronIcon size={18} />
+          </button>
+        </li>
+      </ul>
+      <button
+        ref={close}
+        type="button"
+        className="icon-button file-details__close"
+        aria-label="Close"
+        onClick={onClose}
+      >
+        <CloseIcon size={22} />
+      </button>
     </Dialog>
   );
 }

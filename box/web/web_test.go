@@ -10,7 +10,7 @@ import (
 
 const wantCSP = "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; " +
 	"img-src 'self' blob:; media-src 'self' blob:; worker-src 'self' blob:; connect-src 'self'; " +
-	"font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; frame-src blob:"
+	"font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
 
 func built() fstest.MapFS {
 	return fstest.MapFS{

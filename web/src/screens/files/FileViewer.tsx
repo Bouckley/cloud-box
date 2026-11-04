@@ -3,6 +3,8 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { MAX_IN_MEMORY } from '../../app/download.ts';
 import { opensInTab } from '../../app/files.ts';
 import { bytesText } from '../../app/format.ts';
+import { openPdf as realOpenPdf, type PdfDoc } from '../../app/pdf.ts';
+import { PdfView } from './PdfView.tsx';
 import {
   CloseIcon,
   DownloadIcon,
@@ -25,11 +27,14 @@ export type FileViewerProps = {
   onDelete(): void;
   /** A polite status line, e.g. "Moved to Taxes". */
   said?: string | undefined;
+  /** Reads a decrypted PDF into pages (pdf.js; replaced in tests). */
+  openPdf?: ((bytes: Uint8Array) => Promise<PdfDoc>) | undefined;
 };
 
 type Shown =
   | { kind: 'loading' }
-  | { kind: 'image' | 'pdf'; url: string }
+  | { kind: 'image'; url: string }
+  | { kind: 'pdf'; doc: PdfDoc }
   | { kind: 'too-big' }
   | { kind: 'cant-show' };
 
@@ -38,8 +43,6 @@ function plan(item: ItemView): Shown | { role: 'original' | 'preview'; kind: 'im
   const mime = item.meta?.mime ?? '';
   if (!opensInTab(mime)) return { kind: 'cant-show' };
   const kind = mime === 'application/pdf' ? 'pdf' : 'image';
-  // Android Chrome has no PDF reader: a frame would stay blank.
-  if (kind === 'pdf' && navigator.pdfViewerEnabled === false) return { kind: 'cant-show' };
   if (kind === 'image' && item.blobs.preview && item.meta?.previewMime)
     return { role: 'preview', kind };
   const size = item.blobs.original?.size ?? 0;
@@ -48,7 +51,11 @@ function plan(item: ItemView): Shown | { role: 'original' | 'preview'; kind: 'im
   return { role: 'original', kind };
 }
 
-function useShown(item: ItemView, load: FileViewerProps['load']): Shown {
+function useShown(
+  item: ItemView,
+  load: FileViewerProps['load'],
+  openPdf: NonNullable<FileViewerProps['openPdf']>,
+): Shown {
   const planned = plan(item);
   const role = 'role' in planned ? planned.role : null;
   const kind = 'role' in planned ? planned.kind : null;
@@ -57,11 +64,18 @@ function useShown(item: ItemView, load: FileViewerProps['load']): Shown {
     if (!role || !kind) return;
     const ac = new AbortController();
     let url: string | null = null;
+    let doc: PdfDoc | null = null;
     load(item, role, ac.signal)
-      .then((blob) => {
-        if (ac.signal.aborted) return;
+      .then(async (blob): Promise<Shown> => {
+        if (kind === 'pdf') {
+          doc = await openPdf(new Uint8Array(await blob.arrayBuffer()));
+          return { kind: 'pdf', doc };
+        }
         url = URL.createObjectURL(blob);
-        setLoaded({ id: item.id, shown: { kind, url } });
+        return { kind: 'image', url };
+      })
+      .then((shown) => {
+        if (!ac.signal.aborted) setLoaded({ id: item.id, shown });
       })
       .catch(() => {
         if (!ac.signal.aborted) setLoaded({ id: item.id, shown: { kind: 'cant-show' } });
@@ -69,22 +83,23 @@ function useShown(item: ItemView, load: FileViewerProps['load']): Shown {
     return () => {
       ac.abort();
       if (url) URL.revokeObjectURL(url);
+      doc?.destroy();
     };
     // A new item, not a new snapshot of the same one.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [item.id, role, kind, load]);
+  }, [item.id, role, kind, load, openPdf]);
   if (!role) return planned as Shown;
   return loaded?.id === item.id ? loaded.shown : { kind: 'loading' };
 }
 
 /**
  * A photo or PDF from Files, shown inside Cloud Box: decrypted in this
- * browser, never sent anywhere. PDFs use the browser's own reader in a frame.
+ * browser, never sent anywhere. PDFs are drawn by pdf.js in our own frame.
  */
 export function FileViewer(p: FileViewerProps) {
   const { item } = p;
   const name = item.meta?.name ?? "File that can't be read";
-  const shown = useShown(item, p.load);
+  const shown = useShown(item, p.load, p.openPdf ?? realOpenPdf);
   const heading = useRef<HTMLHeadingElement>(null);
   const [downloading, setDownloading] = useState(false);
   const [downloadFailed, setDownloadFailed] = useState(false);
@@ -134,9 +149,7 @@ export function FileViewer(p: FileViewerProps) {
 
       <div className="viewer__stage file-viewer__stage">
         {shown.kind === 'image' && <img className="viewer__media" src={shown.url} alt={name} />}
-        {shown.kind === 'pdf' && (
-          <iframe className="file-viewer__pdf" src={shown.url} title={name} />
-        )}
+        {shown.kind === 'pdf' && <PdfView doc={shown.doc} name={name} />}
         {shown.kind === 'loading' && (
           <p className="waiting" aria-live="polite">
             Opening {name}…

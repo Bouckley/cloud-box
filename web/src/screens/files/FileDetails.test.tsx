@@ -1,5 +1,5 @@
 import type { ItemView } from '@cloudbox/core';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { photo } from '../../test/photos.ts';
 import { FileDetails } from './FileDetails.tsx';
@@ -35,6 +35,27 @@ describe('FileDetails', () => {
     expect(screen.getByRole('button', { name: 'Close' })).toHaveFocus();
     fireEvent.click(screen.getByRole('button', { name: 'Download' }));
     expect(p.onDownload).toHaveBeenCalled();
+  });
+
+  it('one big Download, then Move to… and Delete as a list; Close is the × at the top', () => {
+    render(
+      <FileDetails
+        item={deb}
+        where="Files"
+        onDownload={vi.fn(() => Promise.resolve())}
+        onMove={vi.fn()}
+        onDelete={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+    const list = screen.getByRole('list', { name: 'More for this file' });
+    expect(
+      within(list)
+        .getAllByRole('button')
+        .map((b) => b.textContent),
+    ).toEqual(['Move to…', 'Delete']);
+    expect(screen.getByRole('button', { name: 'Download' })).toHaveClass('button--primary');
+    expect(screen.getByRole('button', { name: 'Close' })).toHaveClass('icon-button');
   });
 
   it('Move to… and Delete hand over to their own dialogs', () => {

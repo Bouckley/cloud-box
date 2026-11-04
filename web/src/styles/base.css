@@ -2456,7 +2456,7 @@ a.banner:hover {
   box-shadow: var(--focus-ring);
 }
 
-/* A file shown inside the app: the photo, or the browser's own PDF reader. */
+/* A file shown inside the app: the photo, or a PDF in our own frame. */
 .file-viewer__title {
   display: flex;
   flex: 1 1 14rem;
@@ -2472,15 +2472,6 @@ a.banner:hover {
   color: var(--color-ink-2);
   font-size: var(--text-sm);
   overflow-wrap: anywhere;
-}
-.file-viewer__pdf {
-  display: block;
-  width: 100%;
-  /* Viewport units only: large text must not shrink the page. */
-  height: max(60dvh, calc(100dvh - 240px));
-  border: 0;
-  border-radius: var(--radius-lg);
-  background: var(--color-surface);
 }
 
 /* A file the browser can't show: what it is, then what you can do. */
@@ -2508,4 +2499,136 @@ a.banner:hover {
   margin: 0;
   overflow-wrap: anywhere;
   font-variant-numeric: tabular-nums;
+}
+
+/* A PDF in Cloud Box's own frame: one white toolbar, then the pages on a
+   sunken ground, each a white sheet with a soft shadow. */
+.file-viewer__stage:has(.pdf) {
+  place-items: stretch;
+}
+.pdf {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+.pdf__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-line);
+}
+.pdf__group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+.pdf__count,
+.pdf__zoom {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.pdf__zoom {
+  min-width: 3.5em;
+  text-align: center;
+}
+.pdf__fit {
+  margin-left: auto;
+}
+.icon-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+.icon-button:disabled:hover {
+  background: none;
+}
+.icon-button:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.pdf__frame {
+  /* Viewport units only: large text must not shrink the page. */
+  height: max(60dvh, calc(100dvh - 300px));
+  overflow: auto;
+  padding: var(--space-4) 24px;
+  background: var(--color-track);
+}
+.pdf__frame:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 3px var(--color-focus);
+}
+/* Block flow with auto margins: a zoomed page wider than the frame scrolls
+   from its left edge instead of being cut off. */
+.pdf__page {
+  position: relative;
+  margin: 0 auto var(--space-4);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-raised);
+}
+.pdf__page canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* The details sheet: × at the top right, one big Download, then a list. */
+.file-details {
+  position: relative;
+}
+.file-details .dialog__title {
+  padding-right: var(--target-min);
+}
+.file-details__close {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-3);
+}
+.file-details__download {
+  width: 100%;
+}
+.action-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.action-list li + li {
+  border-top: 1px solid var(--color-line);
+}
+.action-list__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: var(--target-min);
+  padding: var(--space-2) var(--space-2);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--color-ink);
+  font: inherit;
+  font-weight: var(--weight-semibold);
+  text-align: left;
+  cursor: pointer;
+}
+.action-list__row span {
+  flex: 1 1 auto;
+}
+.action-list__row svg {
+  flex: none;
+  color: var(--color-ink-2);
+}
+.action-list__row:hover {
+  background: var(--color-surface-sunk);
+}
+.action-list__row:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 3px var(--color-focus);
 }

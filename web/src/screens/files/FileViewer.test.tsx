@@ -42,14 +42,36 @@ beforeEach(() => {
 });
 
 describe('FileViewer', () => {
-  it('shows a PDF inside the app, named by the file, with where it lives', async () => {
-    const p = show(pdf);
+  it('shows a PDF in Cloud Box’s own frame, named by the file, with where it lives', async () => {
+    const doc = {
+      pages: 2,
+      page: vi.fn(() =>
+        Promise.resolve({
+          width: 595,
+          height: 842,
+          render: vi.fn(() => Promise.resolve()),
+          text: () => Promise.resolve(''),
+        }),
+      ),
+      destroy: vi.fn(),
+    };
+    const openPdf = vi.fn(() => Promise.resolve(doc));
+    const p = show(pdf, { openPdf });
     expect(screen.getByRole('heading', { level: 1, name: 'Return 2025.pdf' })).toBeInTheDocument();
     expect(screen.getByText('In Files › Taxes · 1.4 MB')).toBeInTheDocument();
-    const frame = await screen.findByTitle('Return 2025.pdf');
-    expect(frame.tagName).toBe('IFRAME');
-    expect(frame).toHaveAttribute('src', 'blob:shown');
+    expect(await screen.findByRole('toolbar', { name: 'Pages and zoom' })).toHaveTextContent(
+      'Page 1 of 2',
+    );
     expect(p.load).toHaveBeenCalledWith(pdf, 'original', expect.any(AbortSignal));
+    expect(openPdf).toHaveBeenCalledWith(expect.any(Uint8Array));
+    expect(document.querySelector('iframe')).toBeNull();
+  });
+
+  it('a PDF that won’t open says so and offers Download', async () => {
+    show(pdf, { openPdf: vi.fn(() => Promise.reject(new Error('bad'))) });
+    expect(
+      await screen.findByText("This can't be shown here. Download it to open it."),
+    ).toBeInTheDocument();
   });
 
   it('shows a photo from its smaller preview', async () => {
@@ -68,20 +90,6 @@ describe('FileViewer', () => {
       screen.getByText('This file is too big to show here. Download it to open it.'),
     ).toBeInTheDocument();
     expect(p.load).not.toHaveBeenCalled();
-  });
-
-  it('a browser with no PDF reader (Android) offers Download instead of a blank frame', () => {
-    Object.defineProperty(navigator, 'pdfViewerEnabled', { value: false, configurable: true });
-    try {
-      const p = show(pdf);
-      expect(
-        screen.getByText("This can't be shown here. Download it to open it."),
-      ).toBeInTheDocument();
-      expect(screen.queryByTitle('Return 2025.pdf')).toBeNull();
-      expect(p.load).not.toHaveBeenCalled();
-    } finally {
-      Object.defineProperty(navigator, 'pdfViewerEnabled', { value: true, configurable: true });
-    }
   });
 
   it('Close, Esc, Download, Move to… and Delete do what they say', () => {

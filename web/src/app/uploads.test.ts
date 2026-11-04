@@ -105,4 +105,22 @@ describe('UploadQueue', () => {
     q.markRestored('T');
     expect(q.snapshot().duplicates).toEqual([{ name: 'a.jpg', itemId: 'T', trashed: false }]);
   });
+  it('sends each file to the folder it was added for; retries keep it', async () => {
+    const to: (string | undefined)[] = [];
+    let fail = true;
+    const q = new UploadQueue(async (_f, _p, collectionId) => {
+      to.push(collectionId);
+      if (fail) {
+        fail = false;
+        throw new Error('x');
+      }
+      return { kind: 'uploaded', itemId: 'A' };
+    });
+    q.add([file('a.pdf', 1)], 'taxes');
+    await vi.waitFor(() => expect(q.snapshot().failed).toHaveLength(1));
+    q.retry(q.snapshot().failed[0]!.id);
+    q.add([file('b.jpg', 1)]);
+    await vi.waitFor(() => expect(q.busy).toBe(false));
+    expect(to).toEqual(['taxes', 'taxes', undefined]);
+  });
 });

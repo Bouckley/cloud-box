@@ -5,6 +5,8 @@ import { Field, FieldError } from '../forms.tsx';
 export const NAME_NEEDED = 'Give the album a name.';
 
 export type NewAlbumDialogProps = {
+  /** What is being named; the words follow it. */
+  noun?: 'album' | 'folder' | undefined;
   /** Set to rename an album: the dialog starts with this name. */
   current?: string | undefined;
   /** Creates or renames; the dialog closes when it resolves. */
@@ -13,7 +15,7 @@ export type NewAlbumDialogProps = {
 };
 
 /** Names a new album, or renames one. Focus starts in the name field. */
-export function NewAlbumDialog({ current, onSave, onClose }: NewAlbumDialogProps) {
+export function NewAlbumDialog({ noun = 'album', current, onSave, onClose }: NewAlbumDialogProps) {
   const renaming = current !== undefined;
   const field = useRef<HTMLInputElement>(null);
   const [name, setName] = useState(current ?? '');
@@ -25,7 +27,7 @@ export function NewAlbumDialog({ current, onSave, onClose }: NewAlbumDialogProps
     e.preventDefault();
     const trimmed = name.trim();
     if (!trimmed) {
-      setProblem(NAME_NEEDED);
+      setProblem(`Give the ${noun} a name.`);
       field.current?.focus();
       return;
     }
@@ -42,7 +44,7 @@ export function NewAlbumDialog({ current, onSave, onClose }: NewAlbumDialogProps
 
   return (
     <Dialog
-      title={renaming ? 'Rename album' : 'New album'}
+      title={renaming ? `Rename ${noun}` : `New ${noun}`}
       initialFocus={field}
       onClose={onClose}
       busy={busy}
@@ -65,8 +67,8 @@ export function NewAlbumDialog({ current, onSave, onClose }: NewAlbumDialogProps
         {failed && (
           <FieldError>
             {renaming
-              ? "Couldn't rename the album. Try again."
-              : "Couldn't create the album. Try again."}
+              ? `Couldn't rename the ${noun}. Try again.`
+              : `Couldn't create the ${noun}. Try again.`}
           </FieldError>
         )}
         <div className="dialog__actions">

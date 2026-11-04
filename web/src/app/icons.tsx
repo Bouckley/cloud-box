@@ -215,3 +215,25 @@ export const PencilIcon = (p: IconProps) => (
     <path d="M13.5 6.5l4 4" />
   </Icon>
 );
+
+export const MoreIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <circle cx="5" cy="12" r="1.25" fill="currentColor" />
+    <circle cx="12" cy="12" r="1.25" fill="currentColor" />
+    <circle cx="19" cy="12" r="1.25" fill="currentColor" />
+  </Icon>
+);
+
+export const SearchIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <circle cx="11" cy="11" r="6.5" />
+    <path d="m16 16 4 4" />
+  </Icon>
+);
+
+export const FolderPlusIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+    <path d="M12 10.5v5M9.5 13h5" />
+  </Icon>
+);

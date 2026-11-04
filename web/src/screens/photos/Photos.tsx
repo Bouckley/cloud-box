@@ -33,7 +33,8 @@ export function usePhotos(scope: Scope = { kind: 'all' }): { items: ItemView[]; 
   return { items, ready: snapshot.syncedAt !== null };
 }
 
-function Uploads() {
+/** The upload panel, while anything is uploading or has just finished. */
+export function Uploads() {
   const { queue, state } = useUploads();
   const { library } = useLibrary();
   if (!queue || state.total === 0) return null;

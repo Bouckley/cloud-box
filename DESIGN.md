@@ -302,6 +302,64 @@ components:
     textColor: "{colors.ink-2}"
     rounded: "{rounded.md}"
     size: "52px"
+  crumb-link:
+    textColor: "{colors.ink-2}"
+    height: "48px"
+  crumb-link-hover:
+    textColor: "{colors.ink}"
+  search-field:
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.ink}"
+    typography: "{typography.body}"
+    rounded: "{rounded.pill}"
+    padding: "0 16px 0 44px"
+    height: "48px"
+  icon-button:
+    textColor: "{colors.ink-2}"
+    rounded: "{rounded.pill}"
+    size: "48px"
+  icon-button-hover:
+    backgroundColor: "{colors.surface-sunk}"
+    textColor: "{colors.ink}"
+  file-card:
+    backgroundColor: "{colors.surface}"
+    rounded: "{rounded.lg}"
+  file-table-head:
+    textColor: "{colors.ink-2}"
+    typography: "{typography.label}"
+    padding: "12px 16px"
+  file-row-meta:
+    textColor: "{colors.ink-3}"
+    typography: "{typography.body}"
+  file-chip:
+    backgroundColor: "{colors.surface-sunk}"
+    textColor: "{colors.ink-3}"
+    rounded: "{rounded.sm}"
+    size: "40px"
+  file-chip-folder:
+    textColor: "{colors.ink}"
+  file-chip-photo:
+    rounded: "{rounded.xs}"
+    size: "40px"
+  row-menu:
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.md}"
+    padding: "4px 0"
+  row-menu-item:
+    textColor: "{colors.ink}"
+    typography: "{typography.label}"
+    padding: "0 16px"
+    height: "48px"
+  row-menu-item-hover:
+    backgroundColor: "{colors.surface-sunk}"
+  row-menu-item-disabled:
+    textColor: "{colors.ink-2}"
+  upload-to:
+    backgroundColor: "{colors.surface-sunk}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.md}"
+    padding: "12px 16px"
 ---
 
 # Design System: Cloud Box
@@ -340,17 +398,17 @@ A warm neutral ground with three semantic hues, each reserved for one meaning.
 
 ### Neutral
 - **Warm Paper** (`ground`): page background and sidebar; inside a white dialog, the move confirm's grey Leaving box. Also the backing behind the scrubber's year marks and the ring round its grip, so a mark under the handle never peeks out.
-- **White** (`surface`): cards (Box sections, the recovery key card, the Trash list), notices, banner strips in copying and checking states, bottom tab bar, inputs, secondary and quiet-danger buttons, dialogs, the Albums "More" link rows. On Photos: the upload panel, the select bar, the viewer's details card, the chosen segment of the segmented control and the scrubber's date pill.
-- **Sunk Paper** (`surface-sunk`): hover fill for buttons, sidebar items and More links; the "This browser" badge; the pairing code panel; code output; the delete sheet's option panel; a photo tile or Trash thumbnail while its thumbnail decrypts, and the file tile (no picture); the hover fill of a radio choice row; the backing of the small album covers in the picker and the move confirm. No spinner.
-- **Hairline** (`line`), **Firm Line** (`line-strong`): tab bar top border and dividers between device rows, upload rows and Trash rows; button, input and notice borders. `line` is also the backing a checked tile's photo shrinks onto; `line-strong` is the thin page scrollbar.
+- **White** (`surface`): cards (Box sections, the recovery key card, the Trash list), notices, banner strips in copying and checking states, bottom tab bar, inputs, secondary and quiet-danger buttons, dialogs, the Albums "More" link rows. On Photos: the upload panel, the select bar, the viewer's details card, the chosen segment of the segmented control and the scrubber's date pill. On Files: the file card, the search field and the row menu.
+- **Sunk Paper** (`surface-sunk`): hover fill for buttons, sidebar items and More links; the "This browser" badge; the pairing code panel; code output; the delete sheet's option panel; a photo tile or Trash thumbnail while its thumbnail decrypts, and the file tile (no picture); the hover fill of a radio choice row; the backing of the small album covers in the picker and the move confirm. On Files: every type chip (folders included), the upload sheet's "Saving to" strip, and the hover fill of an icon button and a row menu item. No spinner.
+- **Hairline** (`line`), **Firm Line** (`line-strong`): tab bar top border and dividers between device rows, upload rows, Trash rows and file rows, and above a row menu's last item; button, input and notice borders. `line` is also the backing a checked tile's photo shrinks onto; `line-strong` is the thin page scrollbar.
 - **Meter Track** (`track`): unfilled storage meter and upload progress bar; the ground of the segmented control; the scrubber's 2px rail; the plain cover of an empty album on the Albums shelf (it must show on the ground, which `surface-sunk` doesn't), and the move confirm's "+k" cover.
-- **Ink** (`ink`): primary text. Also the fill of the Move to Trash and Delete album buttons, the scrubber's grip, a checked tile's select check, and the hover select circle; the border and radio (`accent-color`) of a chosen radio choice row. **Ink Soft** (`ink-2`, 5.9:1 on ground): secondary text, ledes, field hints, the "Step n of 5" line, recovery word numbers, "Last seen" and "Valid until" lines, a Trash row's "{n} days left", the empty state, inactive tabs, checking banner, scrubber year marks, the More link's chevron. On Albums: an album's count, the back link, the empty album cover's icon, the Leaving label and the names of the albums being left. **Ink Meta** (`ink-3`): table and meta text. On Photos: inactive segmented options, the uploading file's name, the upload progress fill and the viewer's "Backup copy pending" line. Also the Move to Trash button's hover fill.
+- **Ink** (`ink`): primary text. Also the fill of the Move to Trash and Delete album buttons, the scrubber's grip, a checked tile's select check, and the hover select circle; the border and radio (`accent-color`) of a chosen radio choice row. **Ink Soft** (`ink-2`, 5.9:1 on ground): secondary text, ledes, field hints, the "Step n of 5" line, recovery word numbers, "Last seen" and "Valid until" lines, a Trash row's "{n} days left", the empty state, inactive tabs, checking banner, scrubber year marks, the More link's chevron. On Albums: an album's count, the back link, the empty album cover's icon, the Leaving label and the names of the albums being left. On Files: the earlier breadcrumb links and their › separators, column heads, the "Modified · Size" line and "In {folder}" under a name, the search magnifier and placeholder, an icon button at rest, and a disabled menu item with its reason line. **Ink Meta** (`ink-3`): table and meta text. On Photos: inactive segmented options, the uploading file's name, the upload progress fill and the viewer's "Backup copy pending" line. On Files: the Modified and Size cells, and a type chip's label. Also the Move to Trash button's hover fill.
 - **Focus Green** (`focus`): the focus ring colour.
 
 ### Named Rules
 **The One Green Rule.** Green means "safe" or "this is the primary action". Never use it decoratively, for categories or for brand flourish. One approved exception (owner, 2026-11-03): the storage meter fill is green, because the space it measures holds the photos the box is keeping safe. Green stays off every other meter, chart and category. Progress is not safety: the upload progress fill is `ink-3`, never green, because a file on its way is not safe yet. Second approved exception (owner, 2026-11-04): the album move confirm's arrow and Moving to row are green, because they show where the primary green Move button sends the photos. Green stays off other destinations, selections and highlights.
 
-**The One Meaning Per Hue Rule.** Amber is attention (paused, almost full, unreachable) and nothing else. Red is permanent deletion and nothing else; moving to Trash is not red.
+**The One Meaning Per Hue Rule.** Amber is attention (paused, almost full, unreachable) and nothing else. Red is permanent deletion and nothing else; moving to Trash is not red. No hue marks a category: file type chips are neutral (`surface-sunk` with an `ink-3` label), not a red PDF or a blue DOC (M2 Task 16 ruling, 2026-11-04, over the canvas's tinted chips); the type is told by its letters.
 
 **The Reversible Is Ink Rule.** (Owner, 2026-11-04.) Move to Trash can be undone for 30 days, so its button is dark ink (`button--ink`), never red. Red appears only where something can't be undone: red words on a quiet white button where the choice is offered (Delete forever on a row, Empty Trash), and a red fill only on the final confirm. A red fill never appears outside that second question.
 
@@ -375,6 +433,7 @@ A warm neutral ground with three semantic hues, each reserved for one meaning.
 - **Dialogs:** the title is 22px bold with -0.01em tracking, like the viewer title; it breaks anywhere so a long file name never overflows.
 - **Trash rows:** the name is 17px semibold (breaks anywhere); "{n} days left" is 15px `ink-2` tabular.
 - **Albums:** section headings ("My albums", "More") are 19px bold. An album card's name is 17px semibold and wraps between words (never mid-word); its count is 15px `ink-2` tabular. On an album, Favourites or Videos, the `h1` is the 30px headline (breaks anywhere) with its count ("{n} photos", "{n} videos") beside it in 17px `ink-2` tabular, baseline-aligned. The back link is 17px semibold `ink-2`. A radio choice row's label is 17px semibold over a 15px `ink-2` detail. In the move confirm, "Leaving" and "Moving to" are 15px semibold in sentence case (`ink-2`, `safe-strong`); names are 17px semibold (`ink-2` when leaving, bold `ink` for the destination) over 15px counts.
+- **Files:** the breadcrumb's last crumb is the screen's 30px headline (the `h1`, breaks anywhere), like every other screen; earlier crumbs and their › separators are 22px (`text-xl`) `ink-2`, the crumbs semibold and underlined. Column heads are 15px semibold `ink-2` in sentence case ("Name", "Modified", "Size"), never capitals (M2 Task 16 ruling). A name is 17px semibold `ink` (breaks anywhere); Modified and Size are 17px `ink-3` tabular figures. A type chip's label is the extension in capitals, 13px bold `ink-3`, tracked 0.02em, and −0.03em for four letters (DOCX, HEIC) so they still fit. Row menu items and the Sort select are 15px semibold.
 - 15px (`text-sm`) carries field labels (600), hints and error text, the step line, and secondary lines in lists; 22px (`text-xl`) is the empty state's `h2`.
 
 ### Named Rules
@@ -404,6 +463,8 @@ Trash uses the standard header (`Trash` `h1`, Empty Trash right, only when Trash
 
 An album, Favourites and Videos put a back link ("‹ Albums", 48px tall, pulled up 8px and 16px into the gaps around it) above the Photos-style header: the title with its count left, then the tools (Days / Months / Years when there are photos, and on an album Rename and Delete album), wrapping. The timeline below is the Photos timeline.
 
+Files uses the same header row, with the breadcrumb as the heading on the left (crumbs wrap at 8px gaps, baseline-aligned) and the green Upload to {folder} on the right. Below it, one tools row 8px apart and wrapping: the search field grows (from 16rem, never under `min(100%, 12rem)`), then New folder and Sort keep their size. The rows sit in one white card. Above 720px the card holds a table: Name takes the slack, Modified and Size don't wrap, Size is right-aligned, and a 48px column ends each row for its ⋯ button. Cells pad 4px 16px (heads 12px 16px); a name row is at least 56px; a `line` hairline separates rows. At or below 720px the head and the Modified and Size columns go and the same rows stack as a list: chip, the name with "{Modified} · {Size}" under it, ⋯ at the end, inline padding 12px. The card is a container: under 22rem (200% text on a phone) the chips hide and the ⋯ column is held at 48px so the names keep the width. No sideways scroll at any width.
+
 Dialogs are modal: centred, at most 30rem wide (and 32px narrower than the screen), at most the viewport height less 32px and scrolling inside past that. At or below 720px a dialog becomes a sheet from the bottom: full width, square bottom corners, 16px inline padding (24px elsewhere), extra bottom padding for the safe-area inset, and its action buttons share the row's width. Contents stack 16px apart; the action row is right-aligned, Cancel first, 12px apart, 8px further from what precedes it. Radio choice rows stack 8px apart; a long album list scrolls inside the dialog (at most `min(22rem, 50dvh)` tall) so the buttons stay in reach, and its rows keep their height. Inside a dialog, decorative covers hide when their container is 22rem wide or less (large text in a narrow dialog): the words need the room more than the pictures.
 
 Widths 320 to 2560px are supported.
@@ -413,14 +474,14 @@ Widths 320 to 2560px are supported.
 
 ## Elevation & Depth
 
-Flat. Depth is tonal: white surfaces on a warm ground, tints for state, hairline borders where a surface meets the ground edge (tab bar). Box-shadow is used for the focus ring, the attention card's inset 2px amber border, the notice's inset 1px `line-strong` border and the inset 1px `ink` that doubles a chosen choice row's border. Album cards, choice rows and the move confirm's boxes stay flat. The soft `shadow-raised` token (sidecar) is kept for what genuinely floats or lifts: the Photos select bar while sticky above 720px; dialogs; the scrubber's date pill, and its grip on phones where it floats over the photos; and a photo tile while a mouse hovers it. A dialog also dims the page behind it with an `ink` backdrop at 45%. At rest, tiles, the upload panel, the viewer stage, the details card and every card stay flat.
+Flat. Depth is tonal: white surfaces on a warm ground, tints for state, hairline borders where a surface meets the ground edge (tab bar). Box-shadow is used for the focus ring, the attention card's inset 2px amber border, the notice's inset 1px `line-strong` border and the inset 1px `ink` that doubles a chosen choice row's border. Album cards, choice rows and the move confirm's boxes stay flat. The soft `shadow-raised` token (sidecar) is kept for what genuinely floats or lifts: the Photos select bar while sticky above 720px; dialogs; a row menu; the scrubber's date pill, and its grip on phones where it floats over the photos; and a photo tile while a mouse hovers it. A dialog also dims the page behind it with an `ink` backdrop at 45%. At rest, tiles, the upload panel, the viewer stage, the details card and every card stay flat.
 
 ### Named Rules
-**The Flat Panel Rule.** Surfaces separate by tone, not by shadow. Introduce `shadow-raised` only for a surface that genuinely floats (a dialog, a sheet, the sticky select bar, the scrubber's pill) or as a hover response on a photo tile; never for a card at rest.
+**The Flat Panel Rule.** Surfaces separate by tone, not by shadow. Introduce `shadow-raised` only for a surface that genuinely floats (a dialog, a sheet, a row menu, the sticky select bar, the scrubber's pill) or as a hover response on a photo tile; never for a card at rest.
 
 ## Shapes
 
-Soft, friendly rounding in four steps: 6px (`rounded.xs`) for photos only (timeline tiles, a checked tile's shrunk photo, the viewer photo, Trash thumbnails), so pictures read as pictures and not as cards; 10px for small chips and the default focus outline, 14px for the banner strip, sidebar cards, sidebar nav rows, inputs, notices, the pairing code panel, the delete sheet's option panel, the More link rows, radio choice rows, the move confirm's Leaving box, Moving to row and its 52px covers, and the Albums shelf's 4:3 album covers, 18px for content cards, the recovery key card, the attention card, the upload panel, the viewer stage, the details card, the Trash list card and dialogs (on phones only the sheet's top corners). Buttons, the skip link, meter, upload progress bar, tab icon pill, attention dot, video chip, the "This browser" badge, the scrubber's rail and date pill are full pills. The segmented control and the select bar are pills on one line that become rounded boxes (24px and 32px radius) when large text wraps them; a tile's select check, the hover select circle and the scrubber's grip are circles. The picker's 40px album covers are 6px. Borders are 1px; the heaviest strokes are 2px: the attention card's amber border and the Moving to row's green border. A chosen choice row draws a 2px `ink` edge (1px border plus a 1px inset shadow). Approved exception (owner, 2026-11-04): album covers on the shelf and in the move confirm are photos at 14px, because they are the album's face, not a picture in the timeline. Don't extend 14px to any other photo. Icons are line icons on a 24-unit grid, 2px stroke, rounded caps and joins.
+Soft, friendly rounding in four steps: 6px (`rounded.xs`) for photos only (timeline tiles, a checked tile's shrunk photo, the viewer photo, Trash thumbnails, a photo file's thumbnail in its Files chip), so pictures read as pictures and not as cards; 10px for small chips (the Files type chips) and the default focus outline, 14px for the row menu, the upload sheet's "Saving to" strip, the banner strip, sidebar cards, sidebar nav rows, inputs, notices, the pairing code panel, the delete sheet's option panel, the More link rows, radio choice rows, the move confirm's Leaving box, Moving to row and its 52px covers, and the Albums shelf's 4:3 album covers, 18px for content cards, the recovery key card, the attention card, the upload panel, the viewer stage, the details card, the Trash list card, the Files card and dialogs (on phones only the sheet's top corners). Buttons, the skip link, meter, upload progress bar, tab icon pill, attention dot, video chip, the "This browser" badge, the scrubber's rail and date pill, the Files search field and Sort select are full pills; an icon button (the row's ⋯, Clear search) is a 48px circle. The segmented control and the select bar are pills on one line that become rounded boxes (24px and 32px radius) when large text wraps them; a tile's select check, the hover select circle and the scrubber's grip are circles. The picker's 40px album covers are 6px. Borders are 1px; the heaviest strokes are 2px: the attention card's amber border and the Moving to row's green border. A chosen choice row draws a 2px `ink` edge (1px border plus a 1px inset shadow). Approved exception (owner, 2026-11-04): album covers on the shelf and in the move confirm are photos at 14px, because they are the album's face, not a picture in the timeline. Don't extend 14px to any other photo. Icons are line icons on a 24-unit grid, 2px stroke, rounded caps and joins.
 
 ## Components
 
@@ -435,7 +496,10 @@ Soft, friendly rounding in four steps: 6px (`rounded.xs`) for photos only (timel
 - **Busy:** the button that started the work is disabled and says what is happening ("Moving to Trash…", "Deleting…", "Restoring…").
 - **Back link:** a 48px text link, a 18px chevron-left and the word ("Albums") in `ink-2` semibold, `ink` on hover; above the header of a sub-page.
 - **Pressed / expanded:** a secondary button that toggles (Select, Favourite, Details) shows its state with an `ink` border via `aria-pressed` or `aria-expanded`; Favourite also fills its heart.
-- **Icons:** always beside a word (the viewer's Previous and Next keep their words on every width); 18px in buttons.
+- **Icon button:** a 48px circle with no fill or border, a 20px icon in `ink-2`; hover and `aria-expanded` fill it `surface-sunk` and turn the icon `ink`. Only where the word is in its accessible name and the job is plain from its place: a row's ⋯ ("More options for {name}") and the search field's Clear search.
+- **Select as button:** the Sort select wears the secondary pill (16px side padding, 15px semibold) and keeps its native arrow; its options carry the word ("Sort: Name"). Disabled while searching, since results keep their own order.
+- **File chooser:** "Choose files" is a `label` styled as the primary button, wrapping a visually hidden file input; the ring shows on the label when the input has keyboard focus.
+- **Icons:** always beside a word (the viewer's Previous and Next keep their words on every width), except an icon button whose name says the word; 18px in buttons.
 
 ### Segmented Control
 A `track` pill holding 48px options (15px semibold, `ink-3`, 20px side padding). The chosen option (`aria-pressed`) becomes a white pill with `ink` text, inset by a 3px `track` border. A labelled group ("Group photos by"); used for Days / Months / Years.
@@ -451,6 +515,7 @@ A `track` pill holding 48px options (15px semibold, `ink-3`, 20px side padding).
 - **Error:** a warning icon (20px) beside 15px semibold text, `role="alert"`, under its field; the input gets `aria-invalid` and its border changes colour (currently `danger`; see the open question under Colors). Errors stay until the field changes; never timed, never auto-dismissed, never repeating what was typed.
 - **Text area:** the same field, at least 144px tall, 12px 16px padding, resizes vertically. Used for the 24 recovery words.
 - **Code input:** the same field with tabular figures and 0.04em tracking; it stays in Inter.
+- **Search field:** a pill (48px, white, `line-strong` border) with a 20px `ink-2` magnifier 16px in, the text clear of it, and an `ink-2` placeholder ("Search files") over a visually hidden label. The native cancel cross is removed; once there is text, a 48px Clear search icon button sits at the right end and the text stops short of it. Focus turns the border `focus` and adds the ring.
 - **Typing secrets:** password, code and word fields switch off autocorrect, capitalisation and spellcheck.
 
 ### Checkbox
@@ -539,6 +604,29 @@ The picker's second step, only when some chosen photos already sit in another al
 - **New album / Rename album:** a sheet with one "Name" field (focus starts in it), Cancel and the green Create / Rename ("Creating…", "Renaming…"). An empty name says "Give the album a name." under the field.
 - **Delete album:** title `Delete "{name}"?`; with photos in it, two choice rows: "Keep the photos" (chosen by default, "They move back to Photos.") and "Move the photos to Trash" ("You can restore them from Trash for 30 days."); with none, "There are no photos in it." Focus starts on Cancel; the confirm is the ink Delete album ("Deleting…"), never red, because nothing here deletes a photo for good.
 
+### Breadcrumb Heading
+The heading of Files and of every folder, inside a `nav` labelled "Breadcrumb": an ordered list, `Files` › … › the folder you are in. Earlier crumbs are links (22px semibold `ink-2`, underlined 0.18em below, 48px tall, `ink` on hover); the last crumb is the screen's 30px `h1` with `aria-current="page"`. Long names wrap; nothing is cut off. A folder that has gone shows the empty state with "This folder isn't here any more" as its `h1` and a link back to Files.
+
+### File Table (signature)
+- **Card:** one white card (18px radius, no padding, no shadow, `container-type: inline-size`) holding a real `table` above 720px and the same rows stacked as a list at or below it.
+- **Name cell:** a 40px chip, then the name over its sub-lines ("{Modified} · {Size}" on phones; "In Files › {folder}" on a search result). The whole cell is the target: the name (a link into a folder, a button that opens or downloads a file) stretches its hit area over the cell with an `::after`. Hover underlines the name; focus draws an inset 3px `focus` ring round the cell (10px radius).
+- **Type chip:** a neutral 40px square (10px radius, `surface-sunk`): a folder shows a 20px `ink` folder icon, a file its extension (up to four letters) or a 20px file icon when it has none. A photo file shows its own decrypted thumbnail at 6px, the photo radius, with the label until it is ready. Chips are decorative (`aria-hidden`) and hide under a 22rem card.
+- **Columns:** Name, Modified, Size (sentence-case 15px semibold `ink-2` heads, the ⋯ column's head visually hidden as "Actions"). Size is right-aligned with tabular figures; a folder's size is its count ("3 files", or "2 folders" when it holds only folders).
+- **Row menu button:** the ⋯ icon button at the end of every row.
+
+### Row Menu
+A small white popover under its ⋯ button, right-aligned to it (above it when there is no room below): 14px radius, 1px `line-strong` border, `shadow-raised`, 4px block padding, 12–18rem wide. Items are 48px rows of 15px semibold `ink`, 16px side padding; hover and focus fill `surface-sunk`, focus adds an inset 3px `focus` ring. The last item sits after a `line` hairline. A file offers Download, Move to…, Delete; a folder offers Rename, Delete (no Move: folders can't move yet). Delete is `ink`, never red, because it goes to Trash (The Reversible Is Ink Rule; M2 Task 16 ruling). An unavailable item ("Folder isn't empty") stays focusable with `aria-disabled`, turns `ink-2`, and a reason line under the items says why ("Move or delete what is in it first."), tied to it by `aria-describedby`. Focus enters on the first item; ↑ ↓, Home and End move; Esc closes and returns focus to the button; Tab or a click elsewhere closes it.
+
+### Upload Sheet
+The dialog behind Upload to {folder}. First a `surface-sunk` strip (14px radius, 12px 16px padding): a 20px `ink-2` folder icon, "Saving to Files › {folder}" in semibold `ink` (breaks anywhere), and a secondary Change button (`aria-expanded`) that reveals the folders as radio choice rows (a 40px folder cover, the name, "In {path}"). Then Cancel and "Choose files", the primary button that opens the file chooser; focus starts there. Choosing files closes the sheet and the upload panel carries progress.
+
+### Move Picker
+The dialog behind Move to…: title `Move "{name}"`, the folders as radio choice rows (a 40px folder cover on `surface-sunk` at 6px, the name, "In {path}"). The folder the file is in is disabled with "It's here now" as its detail; focus and the choice start on the first other folder. Cancel and the green Move ("Moving…"); a failure shows a field-style error and focus returns to Move. Done says "Moved to {folder}" in the page's polite status line.
+
+### Folder Dialogs
+- **New folder / Rename:** the album name dialog in a folder's words: one "Name" field, Cancel and the green Create / Rename.
+- **Delete folder:** only an empty folder can be deleted. Title `Delete "{name}"?`, the line "The folder is empty, so nothing else is deleted.", focus on Cancel, and the ink Delete folder ("Deleting…"), never red. A file's Delete opens the delete sheet ("Delete this file?").
+
 ### Navigation
 - **Sidebar (above 720px):** rows 48px tall, 22px icon then 17px label, 14px radius. Hover `surface-sunk`; active (`aria-current`) `safe-tint` fill with `safe-strong` bold text.
 - **Bottom tabs (720px and below):** white bar with a hairline top border; four equal cells, 24px icon over a 13px label. Inactive `ink-2`; active `safe-strong` bold with a `safe-tint` pill behind the icon. Focus is an inset 3px `focus` ring.
@@ -577,6 +665,9 @@ A shield-marked strip that changes material with the box's truth. Icon (22px; 28
 - **Do** start every dialog's focus on Cancel, close it on Esc, and return focus to its opener.
 - **Do** keep hover-only affordances (the tile lift, the select circle) behind `hover: hover`, with a keyboard route to the same action.
 - **Do** let words win over pictures in a narrow dialog: decorative covers hide under a 22rem container, and names wrap between words.
+- **Do** keep file type chips neutral and let their letters tell the type.
+- **Do** make the whole name cell the target of a file row, and keep the Size column right-aligned in tabular figures.
+- **Do** keep a disabled menu item focusable, with a visible line saying why.
 
 ### Don't:
 - **Don't** use green for anything but "safe" or the primary action.
@@ -594,3 +685,5 @@ A shield-marked strip that changes material with the box's truth. Icon (22px; 28
 - **Don't** say "Safe" for an item unless it is replicated and the backup copy is running; tiles carry no backup badges.
 - **Don't** make the select bar sticky at or below 720px, where it would cover tiles.
 - **Don't** curate or hide photos in Months or Years; they show every photo, only smaller.
+- **Don't** colour file types (a red PDF, a blue DOC); a hue is a meaning, not a category.
+- **Don't** set column heads, labels or headings in capitals; only a file type's own letters (PDF, HEIC) are.

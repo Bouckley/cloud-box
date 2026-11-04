@@ -1675,6 +1675,13 @@ a.banner:hover {
 .choice:hover {
   background: var(--color-surface-sunk);
 }
+/* A row that can't be chosen (the folder a file is in now) doesn't invite a click. */
+.choice:has(input:disabled) {
+  cursor: default;
+}
+.choice:has(input:disabled):hover {
+  background: none;
+}
 .choice:has(input:checked) {
   border-color: var(--color-ink);
   box-shadow: inset 0 0 0 1px var(--color-ink);
@@ -2085,4 +2092,366 @@ a.banner:hover {
   .viewer__said {
     text-align: start;
   }
+}
+
+/* ---------- Files ---------- */
+
+/* The breadcrumb is the heading: earlier folders as quiet links, then the
+   folder you are in as the h1. Long names wrap; nothing is cut off. */
+.crumbs {
+  min-width: 0;
+}
+.crumbs ol {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.crumbs li {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.crumbs a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--target-min);
+  color: var(--color-ink-2);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-semibold);
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+  overflow-wrap: anywhere;
+}
+.crumbs a:hover {
+  color: var(--color-ink);
+}
+.crumbs li > span {
+  color: var(--color-ink-2);
+  font-size: var(--text-xl);
+}
+.crumbs h1 {
+  overflow-wrap: anywhere;
+}
+
+/* Search grows; New folder and Sort keep their size. */
+.files-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.search-field {
+  position: relative;
+  display: flex;
+  flex: 1 1 16rem;
+  align-items: center;
+  min-width: min(100%, 12rem);
+}
+.search-field svg {
+  position: absolute;
+  left: var(--space-4);
+  color: var(--color-ink-2);
+  pointer-events: none;
+}
+.search-field input {
+  width: 100%;
+  min-height: var(--target-min);
+  padding: 0 var(--space-4) 0 calc(var(--space-4) + 28px);
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font: inherit;
+}
+.search-field input::-webkit-search-cancel-button {
+  appearance: none;
+}
+.search-field__clear {
+  position: absolute;
+  right: 0;
+}
+.search-field input:not(:placeholder-shown) {
+  padding-right: var(--target-min);
+}
+.search-field input::placeholder {
+  color: var(--color-ink-2);
+}
+.search-field input:focus-visible {
+  outline: none;
+  border-color: var(--color-focus);
+  box-shadow: var(--focus-ring);
+}
+.files-sort {
+  appearance: auto;
+  padding-inline: var(--space-4);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+
+/* One white card holding the rows. */
+.file-card {
+  container-type: inline-size;
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+.file-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.file-table th {
+  padding: var(--space-3) var(--space-4);
+  color: var(--color-ink-2);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  text-align: left;
+}
+.file-table td {
+  padding: var(--space-1) var(--space-4);
+  border-top: 1px solid var(--color-line);
+  color: var(--color-ink-3);
+  font-variant-numeric: tabular-nums;
+  vertical-align: middle;
+}
+.file-table th.file-table__meta,
+.file-table td.file-table__meta {
+  white-space: nowrap;
+}
+.file-table__name {
+  position: relative;
+  width: 100%;
+}
+.file-table th.file-table__size,
+.file-table td.file-table__size {
+  text-align: right;
+}
+.file-table th:last-child,
+.file-table__more {
+  width: var(--target-min);
+  padding-inline: var(--space-1) var(--space-2);
+}
+.file-name {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 56px;
+}
+.file-chip {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-sunk);
+  color: var(--color-ink-3);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.02em;
+}
+.file-chip--photo {
+  overflow: hidden;
+  border-radius: var(--radius-xs);
+}
+.file-chip--photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.file-name__sub > span {
+  white-space: nowrap;
+}
+.file-chip--folder {
+  color: var(--color-ink);
+}
+/* DOCX, XLSX, HEIC: four letters still sit inside the chip. */
+.file-chip--long {
+  letter-spacing: -0.03em;
+}
+/* Big text in a narrow card: the names need the room more than the chips. */
+@container (max-width: 22rem) {
+  .file-chip {
+    display: none;
+  }
+  /* 48 px is still a full touch target; doubled with the text it ate the names. */
+  .file-table__more,
+  .file-table__more .icon-button {
+    width: 48px;
+  }
+}
+.file-name__text {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+}
+/* The whole name is the way in: a folder link or an open-the-file button. */
+.file-name__open {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-ink);
+  font: inherit;
+  font-weight: var(--weight-semibold);
+  text-align: left;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+.file-name__open:hover {
+  text-decoration: underline;
+}
+/* The whole name cell opens it: chip, name and the line under it. */
+.file-name__open::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+.file-name__open:focus-visible {
+  outline: none;
+}
+.file-name__open:focus-visible::after {
+  border-radius: var(--radius-sm);
+  box-shadow: inset 0 0 0 3px var(--color-focus);
+}
+.file-name__sub {
+  display: none;
+}
+.file-name__where,
+.file-name__sub {
+  color: var(--color-ink-2);
+  font-size: var(--text-sm);
+  overflow-wrap: anywhere;
+}
+
+/* Under 720 px: list rows, Modified · Size under the name, no columns. */
+@media (max-width: 720px) {
+  .file-table thead {
+    display: none;
+  }
+  .file-table td.file-table__meta {
+    display: none;
+  }
+  .file-table td {
+    padding-inline: var(--space-3) 0;
+  }
+  .file-name__sub:not(:empty) {
+    display: block;
+  }
+}
+
+.icon-button {
+  display: inline-grid;
+  place-items: center;
+  width: var(--target-min);
+  height: var(--target-min);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: none;
+  color: var(--color-ink-2);
+  cursor: pointer;
+}
+.icon-button:hover,
+.icon-button[aria-expanded='true'] {
+  background: var(--color-surface-sunk);
+  color: var(--color-ink);
+}
+
+/* A row's menu: a small white card under its button. */
+.row-menu {
+  position: relative;
+}
+.row-menu__pop {
+  position: absolute;
+  top: calc(100% + var(--space-1));
+  right: 0;
+  z-index: 5;
+  width: max-content;
+  min-width: 12rem;
+  max-width: min(18rem, calc(100vw - 2 * var(--space-4)));
+  padding: var(--space-1) 0;
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-raised);
+}
+.row-menu__pop--above {
+  top: auto;
+  bottom: calc(100% + var(--space-1));
+}
+.row-menu [role='menu'] {
+  display: flex;
+  flex-direction: column;
+}
+.row-menu [role='menu']:focus {
+  outline: none;
+}
+.row-menu__item {
+  min-height: var(--target-min);
+  padding: 0 var(--space-4);
+  border: 0;
+  background: none;
+  color: var(--color-ink);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  text-align: left;
+  cursor: pointer;
+}
+.row-menu__item:hover,
+.row-menu__item:focus-visible {
+  background: var(--color-surface-sunk);
+}
+.row-menu__item:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 3px var(--color-focus);
+}
+.row-menu__item--last {
+  margin-top: var(--space-1);
+  border-top: 1px solid var(--color-line);
+}
+.row-menu__item[aria-disabled='true'] {
+  color: var(--color-ink-2);
+  cursor: not-allowed;
+}
+.row-menu__reason {
+  margin: 0;
+  padding: 0 var(--space-4) var(--space-2);
+  color: var(--color-ink-2);
+  font-size: var(--text-xs);
+}
+
+/* Upload: where the files will go, then the chooser. */
+.upload-sheet__to {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-sunk);
+}
+.upload-sheet__to svg {
+  flex: none;
+  color: var(--color-ink-2);
+}
+.upload-sheet__to p {
+  flex: 1 1 10rem;
+  min-width: 0;
+  margin: 0;
+  font-weight: var(--weight-semibold);
+  overflow-wrap: anywhere;
+}
+.file-pick {
+  position: relative;
+}
+.file-pick:has(input:focus-visible) {
+  box-shadow: var(--focus-ring);
 }

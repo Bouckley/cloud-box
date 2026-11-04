@@ -27,7 +27,11 @@ export type UploadState = {
 type Send = (
   f: SourceFile,
   onProgress: (sent: number, total: number) => void,
+  /** The folder to save into; Photos when absent. */
+  collectionId?: string,
 ) => Promise<UploadResult>;
+
+type Waiting = { f: SourceFile; collectionId: string | undefined };
 
 const EMPTY: UploadState = {
   total: 0,
@@ -46,8 +50,8 @@ export class UploadQueue {
   readonly #send: Send;
   readonly #after: () => void;
   readonly #listeners = new Set<() => void>();
-  readonly #waiting: SourceFile[] = [];
-  readonly #failedFiles = new Map<number, SourceFile>();
+  readonly #waiting: Waiting[] = [];
+  readonly #failedFiles = new Map<number, Waiting>();
   #state: UploadState = EMPTY;
   #running = false;
   #nextId = 1;
@@ -70,9 +74,10 @@ export class UploadQueue {
     return this.#running || this.#waiting.length > 0;
   }
 
-  add(files: SourceFile[]): void {
+  /** Queues files for Photos, or for the folder given. */
+  add(files: SourceFile[], collectionId?: string): void {
     if (!files.length) return;
-    this.#waiting.push(...files);
+    this.#waiting.push(...files.map((f) => ({ f, collectionId })));
     this.#set({ total: this.#state.total + files.length, queued: this.#waiting.length });
     void this.#run();
   }
@@ -108,12 +113,15 @@ export class UploadQueue {
     if (this.#running) return;
     this.#running = true;
     try {
-      for (let f = this.#waiting.shift(); f; f = this.#waiting.shift()) {
+      for (let w = this.#waiting.shift(); w; w = this.#waiting.shift()) {
+        const { f, collectionId } = w;
         const name = f.name;
         this.#set({ current: { name, sent: 0, total: f.size }, queued: this.#waiting.length });
         try {
-          const r = await this.#send(f, (sent, total) =>
-            this.#set({ current: { name, sent, total } }),
+          const r = await this.#send(
+            f,
+            (sent, total) => this.#set({ current: { name, sent, total } }),
+            collectionId,
           );
           const duplicates =
             r.kind === 'duplicate'
@@ -123,7 +131,7 @@ export class UploadQueue {
           if (r.kind === 'uploaded') this.#after();
         } catch (error) {
           const id = this.#nextId++;
-          this.#failedFiles.set(id, f);
+          this.#failedFiles.set(id, w);
           this.#set({ failed: [...this.#state.failed, { id, name, error }] });
         }
       }
@@ -155,7 +163,8 @@ export function UploadsProvider({
     () =>
       library
         ? new UploadQueue(
-            (f, onProgress) => library.upload(f, library.roots().photos, webMedia, { onProgress }),
+            (f, onProgress, to) =>
+              library.upload(f, to ?? library.roots().photos, webMedia, { onProgress }),
             onUploaded,
           )
         : null,

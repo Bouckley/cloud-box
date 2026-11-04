@@ -65,6 +65,18 @@ test('files: make Taxes, upload there, download, search, move and delete', async
   await expect(row).toContainText('9.4 MB');
   await expectAccessible(page);
 
+  // Clicking a file the browser can't show opens its details; nothing downloads.
+  let downloads = 0;
+  page.on('download', () => downloads++);
+  await row.getByRole('button', { name: 'Return 2025.bin', exact: true }).click();
+  const details = page.getByRole('dialog', { name: 'Return 2025.bin' });
+  await expect(details).toContainText("This can't be shown here. Download it to open it.");
+  await expect(details).toContainText('In Files › Taxes');
+  await expect(details.getByRole('button', { name: 'Close' })).toBeFocused();
+  await expectAccessible(page);
+  await details.getByRole('button', { name: 'Close' }).click();
+  expect(downloads).toBe(0);
+
   // Download it from the row's menu; the bytes match.
   await row.getByRole('button', { name: 'More options for Return 2025.bin' }).click();
   const menu = page.getByRole('menu');
@@ -125,8 +137,9 @@ test('files: make Taxes, upload there, download, search, move and delete', async
   await expect(page.getByRole('row', { name: /Return 2025\.bin/ })).toHaveCount(0);
   await expect(page.getByRole('row', { name: /Taxes/ })).toBeVisible();
 
-  // Clicking a photo's name shows it in a new tab, decrypted here. (PDFs
-  // open the same way; headless Chromium has no PDF viewer to show one.)
+  // Clicking a photo's name shows it inside Cloud Box, decrypted here, and
+  // Close goes back to its folder. (PDFs show the same way, in the browser's
+  // own reader; headless Chromium has none, so a person checks that one.)
   const photo = join(dir, 'Passport scan.jpg');
   await writeFile(
     photo,
@@ -139,12 +152,16 @@ test('files: make Taxes, upload there, download, search, move and delete', async
     .setInputFiles(photo);
   const open = page.getByRole('button', { name: 'Passport scan.jpg', exact: true });
   await expect(open).toBeVisible({ timeout: 60_000 });
-  const popup = page.waitForEvent('popup');
   await open.click();
-  const tab = await popup;
-  await expect.poll(() => tab.url()).toMatch(/^blob:/);
-  await expect(tab.locator('img')).toBeVisible();
-  await tab.close();
+  await expect(page).toHaveURL(/\/files\/open\//);
+  await expect(page.getByRole('heading', { level: 1, name: 'Passport scan.jpg' })).toBeFocused();
+  await expect(page.getByRole('img', { name: 'Passport scan.jpg' })).toBeVisible();
+  await expect(page.getByText('In Files ·')).toBeVisible();
+  await expectAccessible(page);
+  await page.getByRole('button', { name: 'Close' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Files' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Passport scan.jpg', exact: true })).toBeFocused();
+  expect(downloads).toBe(1);
 
   // Phone width: list rows, nothing off the side.
   await page.setViewportSize({ width: 390, height: 844 });

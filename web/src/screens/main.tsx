@@ -30,7 +30,7 @@ export { PhotosScreen, PhotoViewerScreen } from './photos/Photos.tsx';
 export { AlbumsScreen } from './albums/Albums.tsx';
 export { AlbumScreen, FavouritesScreen, VideosScreen } from './albums/Album.tsx';
 export { TrashScreen } from './Trash.tsx';
-export { FilesScreen, FolderScreen } from './files/Files.tsx';
+export { FilesScreen, FolderScreen, FileViewerScreen } from './files/Files.tsx';
 // Task 17 adds status, storage, copies, Rename, Revoke, password and Lock.
 export const BoxScreen = () => (
   <Screen title="Box">

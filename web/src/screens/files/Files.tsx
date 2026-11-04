@@ -1,8 +1,8 @@
-import type { ItemView, Library } from '@cloudbox/core';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useParams } from 'react-router';
+import type { ItemView, LibrarySnapshot } from '@cloudbox/core';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useLocation, useNavigate, useParams } from 'react-router';
 import { Dialog } from '../../app/Dialog.tsx';
-import { DownloadTooBig, MAX_IN_MEMORY, saveOriginal } from '../../app/download.ts';
+import { DownloadTooBig, saveOriginal } from '../../app/download.ts';
 import {
   allFolders,
   folderEntries,
@@ -22,6 +22,8 @@ import { fileSource } from '../../platform/media.ts';
 import { DeleteSheet } from '../DeleteSheet.tsx';
 import { FieldError } from '../forms.tsx';
 import { Uploads } from '../photos/Photos.tsx';
+import { FileDetails } from './FileDetails.tsx';
+import { FileViewer } from './FileViewer.tsx';
 import { FileTable, entryKey, shownName, type FileAction } from './FileTable.tsx';
 import { MovePicker } from './MovePicker.tsx';
 import { NewFolderDialog } from './NewFolderDialog.tsx';
@@ -31,6 +33,7 @@ type Open =
   | { kind: 'upload' }
   | { kind: 'new' }
   | { kind: 'rename'; entry: Extract<FileEntry, { kind: 'folder' }> }
+  | { kind: 'details'; entry: Extract<FileEntry, { kind: 'file' }> }
   | { kind: 'move'; entry: Extract<FileEntry, { kind: 'file' }> }
   | { kind: 'delete-file'; entry: Extract<FileEntry, { kind: 'file' }> }
   | { kind: 'delete-folder'; entry: Extract<FileEntry, { kind: 'folder' }> };
@@ -41,24 +44,11 @@ const SORTS: { by: SortBy; label: string }[] = [
   { by: 'size', label: 'Sort: Size' },
 ];
 
-/**
- * Opens a photo or PDF in a new tab. The tab is opened at once, while the
- * click still counts as the person's own (or the browser blocks it), then
- * shown the file once it is decrypted here.
- */
-async function openInTab(library: Library, item: ItemView): Promise<void> {
-  const tab = window.open('', '_blank');
-  if (!tab) return saveOriginal(library, item);
-  try {
-    const bytes = await library.readBlob(item, 'original');
-    const url = URL.createObjectURL(new Blob([bytes as BlobPart], { type: item.meta?.mime ?? '' }));
-    tab.location.href = url;
-    setTimeout(() => URL.revokeObjectURL(url), 60_000);
-  } catch (e) {
-    tab.close();
-    throw e;
-  }
-}
+/** `Files › Taxes`: where a folder is, in words. */
+export const pathText = (snapshot: LibrarySnapshot, folderId: string) =>
+  folderPath(snapshot, folderId)
+    .map((c) => c.name ?? "Folder that can't be read")
+    .join(' › ');
 
 /** A row's menu button, to give focus back to; null once the row has gone. */
 const rowButton = (entry: FileEntry) =>
@@ -85,15 +75,22 @@ export function FilesScreen() {
   const uploadButton = useRef<HTMLButtonElement>(null);
   const searchBox = useRef<HTMLInputElement>(null);
 
+  // Back from a file: focus its name again, so keyboard users keep their place.
+  const back = (useLocation().state as { focus?: string } | null)?.focus;
+  useEffect(() => {
+    if (!back || !ready) return;
+    document
+      .querySelector<HTMLElement>(`[data-row="${CSS.escape(back)}"] .file-name__open`)
+      ?.focus();
+  }, [back, ready]);
+
   const searching = query.trim() !== '';
   const rows = useMemo(() => {
     if (!here) return [];
     if (searching)
       return searchEntries(snapshot, here.id, query).map(({ entry, folderId: at }) => ({
         entry,
-        where: folderPath(snapshot, at)
-          .map((c) => c.name ?? "Folder that can't be read")
-          .join(' › '),
+        where: pathText(snapshot, at),
       }));
     return sortEntries(folderEntries(snapshot, here.id), sort).map((entry) => ({ entry }));
   }, [snapshot, here, searching, query, sort]);
@@ -124,31 +121,28 @@ export function FilesScreen() {
     setProblem(words);
   };
 
-  const fetchFile = async (entry: Extract<FileEntry, { kind: 'file' }>, show: boolean) => {
+  const download = async (entry: Extract<FileEntry, { kind: 'file' }>) => {
     if (!library) return;
     const name = shownName(entry);
-    const inTab =
-      show &&
-      opensInTab(entry.item.meta?.mime ?? '') &&
-      (entry.item.blobs.original?.size ?? 0) <= MAX_IN_MEMORY;
-    tell(inTab ? `Opening ${name}…` : `Downloading ${name}…`);
+    tell(`Downloading ${name}…`);
     try {
-      await (inTab ? openInTab(library, entry.item) : saveOriginal(library, entry.item));
+      await saveOriginal(library, entry.item);
       tell('');
     } catch (e) {
-      fail(
-        e instanceof DownloadTooBig
-          ? e.message
-          : inTab
-            ? `Couldn't open ${name}. Try again.`
-            : `Couldn't download ${name}. Try again.`,
-      );
+      fail(e instanceof DownloadTooBig ? e.message : `Couldn't download ${name}. Try again.`);
     }
+  };
+
+  // Photos and PDFs open inside Cloud Box; anything else shows its details.
+  const navigate = useNavigate();
+  const openFile = (entry: Extract<FileEntry, { kind: 'file' }>) => {
+    if (opensInTab(entry.item.meta?.mime ?? '')) void navigate(`/files/open/${entry.item.id}`);
+    else setOpen({ kind: 'details', entry });
   };
 
   const act = (action: FileAction, entry: FileEntry) => {
     if (entry.kind === 'file') {
-      if (action === 'download') void fetchFile(entry, false);
+      if (action === 'download') void download(entry);
       if (action === 'move') setOpen({ kind: 'move', entry });
       if (action === 'delete') setOpen({ kind: 'delete-file', entry });
     } else {
@@ -297,7 +291,7 @@ export function FilesScreen() {
             rows={rows}
             isEmpty={(id) => isEmptyFolder(snapshot, id)}
             onOpen={(entry) => {
-              if (entry.kind === 'file') void fetchFile(entry, true);
+              if (entry.kind === 'file') openFile(entry);
             }}
             onAction={act}
           />
@@ -337,6 +331,17 @@ export function FilesScreen() {
             const f = folders.find((x) => x.folder.id === to);
             tell(`Moved to ${f?.folder.name ?? 'the folder'}`);
           }}
+          onClose={() => setOpen(null)}
+          returnFocus={() => rowButton(open.entry) ?? uploadButton.current}
+        />
+      )}
+      {open?.kind === 'details' && library && (
+        <FileDetails
+          item={open.entry.item}
+          where={pathText(snapshot, open.entry.item.collectionId)}
+          onDownload={() => saveOriginal(library, open.entry.item)}
+          onMove={() => setOpen({ kind: 'move', entry: open.entry })}
+          onDelete={() => setOpen({ kind: 'delete-file', entry: open.entry })}
           onClose={() => setOpen(null)}
           returnFocus={() => rowButton(open.entry) ?? uploadButton.current}
         />
@@ -422,4 +427,101 @@ function DeleteFolderDialog({
 export function FolderScreen() {
   const { folderId } = useParams();
   return <FilesScreen key={folderId} />;
+}
+
+/** A photo or PDF from Files, shown inside Cloud Box (`/files/open/:itemId`). */
+export function FileViewerScreen() {
+  const { itemId } = useParams();
+  const { library, snapshot } = useLibrary();
+  const { refresh } = useStatus();
+  const navigate = useNavigate();
+  const ready = snapshot.syncedAt !== null;
+  const found = itemId ? snapshot.items.get(itemId) : undefined;
+  const item = found && !found.trashedAt ? found : undefined;
+  useTitle(item?.meta?.name ?? 'Files');
+  const [open, setOpen] = useState<'move' | 'delete' | null>(null);
+  const [said, setSaid] = useState('');
+  const folders = useMemo(() => allFolders(snapshot), [snapshot]);
+
+  const load = useCallback(
+    async (it: ItemView, role: 'original' | 'preview', signal: AbortSignal) => {
+      if (!library) throw new Error('locked');
+      const bytes = await library.readBlob(it, role, signal);
+      const type = (role === 'preview' ? it.meta?.previewMime : it.meta?.mime) ?? '';
+      return new Blob([bytes as BlobPart], { type });
+    },
+    [library],
+  );
+
+  const folderLink = (id: string) => {
+    const c = snapshot.collections.get(id);
+    return c?.role === 'files' ? '/files' : `/files/${id}`;
+  };
+  const back = () =>
+    void navigate(item ? folderLink(item.collectionId) : '/files', {
+      state: { focus: item?.id },
+    });
+
+  if (!ready) {
+    return (
+      <p className="waiting" aria-live="polite">
+        Opening your files…
+      </p>
+    );
+  }
+  if (!item || !library) {
+    return (
+      <div className="empty">
+        <FilesIcon size={40} />
+        <h1>This file isn&apos;t here any more</h1>
+        <p>
+          <Link to="/files">Back to Files</Link>
+        </p>
+      </div>
+    );
+  }
+  const name = item.meta?.name ?? "File that can't be read";
+  return (
+    <>
+      <FileViewer
+        item={item}
+        where={pathText(snapshot, item.collectionId)}
+        load={load}
+        onClose={back}
+        onDownload={() => saveOriginal(library, item)}
+        onMove={() => setOpen('move')}
+        onDelete={() => setOpen('delete')}
+        said={said}
+      />
+      {open === 'move' && (
+        <MovePicker
+          name={name}
+          folders={folders}
+          hereId={item.collectionId}
+          onMove={async (to) => {
+            await library.move([item.id], to);
+            const f = folders.find((x) => x.folder.id === to);
+            setSaid(`Moved to ${f?.folder.name ?? 'the folder'}`);
+          }}
+          onClose={() => setOpen(null)}
+        />
+      )}
+      {open === 'delete' && (
+        <DeleteSheet
+          what="file"
+          count={1}
+          onConfirm={async () => {
+            const home = folderLink(item.collectionId);
+            try {
+              await library.trash([item.id]);
+              void navigate(home);
+            } finally {
+              refresh({ sync: false });
+            }
+          }}
+          onClose={() => setOpen(null)}
+        />
+      )}
+    </>
+  );
 }

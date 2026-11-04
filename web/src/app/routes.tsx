@@ -112,6 +112,7 @@ export function routes(): RouteObject[] {
     { path: '/trash', element: <screens.TrashScreen /> },
     { path: '/files', element: <screens.FilesScreen /> },
     { path: '/files/:folderId', element: <screens.FolderScreen /> },
+    { path: '/files/open/:itemId', element: <screens.FileViewerScreen /> },
     { path: '/box', element: <screens.BoxScreen /> },
   ];
   const list: RouteObject[] = [

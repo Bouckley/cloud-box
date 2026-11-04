@@ -627,6 +627,11 @@ The dialog behind Move to…: title `Move "{name}"`, the folders as radio choice
 - **New folder / Rename:** the album name dialog in a folder's words: one "Name" field, Cancel and the green Create / Rename.
 - **Delete folder:** only an empty folder can be deleted. Title `Delete "{name}"?`, the line "The folder is empty, so nothing else is deleted.", focus on Cancel, and the ink Delete folder ("Deleting…"), never red. A file's Delete opens the delete sheet ("Delete this file?").
 
+### File Viewer and File Details
+- **Opening a file (owner, 2026-11-04):** clicking a photo's or PDF's name opens it inside Cloud Box at `/files/open/{id}`, never in a new tab. The photo viewer's frame: Close, then the file name (22px bold h1, focused on arrival) with "In {path} · {size}" in 15px `ink-2` under it; Download, Move to… and Delete at the end. Close returns to the folder with focus on the file's name.
+- **Stage:** a photo shows its preview at the photo radius; a PDF shows in the browser's own reader in a frame (18px radius, white, viewport-tall). Where the browser has no PDF reader (Android Chrome) or the file is over the in-memory limit, the stage says why and points to Download; it is never left blank.
+- **File details sheet:** any other file (an installer, a spreadsheet) opens a sheet titled with its name: a 15px line with the file icon ("This can't be shown here. Download it to open it."), Size / Modified / Folder as a two-column list (`ink-2` 15px terms), then Move to…, Delete, Close and the green Download. Focus starts on Close; nothing downloads until Download is pressed.
+
 ### Navigation
 - **Sidebar (above 720px):** rows 48px tall, 22px icon then 17px label, 14px radius. Hover `surface-sunk`; active (`aria-current`) `safe-tint` fill with `safe-strong` bold text.
 - **Bottom tabs (720px and below):** white bar with a hairline top border; four equal cells, 24px icon over a 13px label. Inactive `ink-2`; active `safe-strong` bold with a `safe-tint` pill behind the icon. Focus is an inset 3px `focus` ring.

@@ -2455,3 +2455,57 @@ a.banner:hover {
 .file-pick:has(input:focus-visible) {
   box-shadow: var(--focus-ring);
 }
+
+/* A file shown inside the app: the photo, or the browser's own PDF reader. */
+.file-viewer__title {
+  display: flex;
+  flex: 1 1 14rem;
+  flex-direction: column;
+  min-width: 0;
+}
+.file-viewer__title .viewer__title {
+  flex: none;
+  overflow-wrap: anywhere;
+}
+.file-viewer__where {
+  margin: 0;
+  color: var(--color-ink-2);
+  font-size: var(--text-sm);
+  overflow-wrap: anywhere;
+}
+.file-viewer__pdf {
+  display: block;
+  width: 100%;
+  /* Viewport units only: large text must not shrink the page. */
+  height: max(60dvh, calc(100dvh - 240px));
+  border: 0;
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+/* A file the browser can't show: what it is, then what you can do. */
+.file-details__lede {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+.file-details__lede svg {
+  flex: none;
+  margin-top: 0.15em;
+  color: var(--color-ink-2);
+}
+.file-details__facts {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-1) var(--space-4);
+  margin: 0;
+}
+.file-details__facts dt {
+  color: var(--color-ink-2);
+  font-size: var(--text-sm);
+}
+.file-details__facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}

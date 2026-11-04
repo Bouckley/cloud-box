@@ -31,6 +31,10 @@ export function Dialog({
   const titleId = useId();
   const latest = useRef({ onClose, busy, returnFocus });
   const mounted = useRef(false);
+  // Closes this component asked for itself. The browser reports each one with
+  // a close event on a later task, after a StrictMode remount (dev builds) has
+  // opened the dialog again; those must not read as the user closing it.
+  const selfClosed = useRef(0);
   useLayoutEffect(() => {
     latest.current = { onClose, busy, returnFocus };
   });
@@ -47,8 +51,10 @@ export function Dialog({
     mounted.current = true;
     return () => {
       mounted.current = false;
-      if (d.open && typeof d.close === 'function') d.close();
-      else d.removeAttribute('open');
+      if (d.open && typeof d.close === 'function') {
+        selfClosed.current++;
+        d.close();
+      } else d.removeAttribute('open');
       if (opener?.isConnected) opener.focus();
       else latest.current.returnFocus?.()?.focus();
     };
@@ -69,6 +75,10 @@ export function Dialog({
       onClose={(e) => {
         // The browser may close it anyway (Chrome lets a page block Esc only
         // once). While busy, open it again so its result or error is seen.
+        if (selfClosed.current > 0) {
+          selfClosed.current--;
+          return;
+        }
         if (!mounted.current) return;
         const d = e.currentTarget;
         if (latest.current.busy) {

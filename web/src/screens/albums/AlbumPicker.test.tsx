@@ -24,6 +24,7 @@ function open(over: Partial<Parameters<typeof AlbumPicker>[0]> = {}) {
     count: 2,
     homes: [] as AlbumHome[],
     onlyInPhotos: 2,
+    unmovable: 0,
     onAdd: vi.fn(() => Promise.resolve()),
     onClose: vi.fn(),
     ...over,
@@ -166,6 +167,18 @@ describe('AlbumPicker', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Move photo' }));
     expect(screen.getByRole('button', { name: 'Moving…' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
+  });
+
+  it('says plainly when some photos cannot be moved', () => {
+    open({ count: 3, unmovable: 1 });
+    expect(screen.getByRole('dialog')).toHaveTextContent(
+      "1 photo can't be moved because its album can't be read.",
+    );
+  });
+
+  it('says nothing about unmovable photos when every photo can move', () => {
+    open();
+    expect(screen.getByRole('dialog')).not.toHaveTextContent("can't be moved");
   });
 
   it('a failure says so and stays open', async () => {

@@ -85,6 +85,10 @@ export function scopeHome(scope: Scope): string {
   }
 }
 
+/** A photo can move only when its album's key can be read (its file key is wrapped by it). */
+const movable = (snapshot: LibrarySnapshot, collectionId: string) =>
+  snapshot.collections.get(collectionId)?.key !== null;
+
 /** One of the user's albums holding some of the chosen photos, and how many. */
 export type AlbumHome = { entry: AlbumEntry; count: number };
 
@@ -96,24 +100,26 @@ export type AlbumHome = { entry: AlbumEntry; count: number };
 export function pickerChoices(
   snapshot: LibrarySnapshot,
   ids: readonly string[],
-): { albums: AlbumEntry[]; homes: AlbumHome[]; onlyInPhotos: number } {
+): { albums: AlbumEntry[]; homes: AlbumHome[]; onlyInPhotos: number; unmovable: number } {
   const list = albumList(snapshot);
   const order = new Map(list.map((a, i) => [a.album.id, i]));
   const counts = new Map<string, number>();
   const where = new Set<string>();
   let onlyInPhotos = 0;
+  let unmovable = 0;
   for (const id of ids) {
     const item = snapshot.items.get(id);
     if (!item) continue;
     where.add(item.collectionId);
-    if (order.has(item.collectionId)) {
+    if (!movable(snapshot, item.collectionId)) unmovable++;
+    else if (order.has(item.collectionId)) {
       counts.set(item.collectionId, (counts.get(item.collectionId) ?? 0) + 1);
     } else if (snapshot.collections.get(item.collectionId)?.role === 'photos') {
       onlyInPhotos++;
     }
   }
   const homes = list
-    .filter((a) => counts.has(a.album.id))
+    .filter((a) => counts.has(a.album.id) && a.album.key !== null)
     .map((entry) => ({ entry, count: counts.get(entry.album.id)! }))
     .sort(
       (x, y) => y.count - x.count || order.get(x.entry.album.id)! - order.get(y.entry.album.id)!,
@@ -123,22 +129,40 @@ export function pickerChoices(
     albums: list.filter((a) => a.album.id !== only && a.album.key !== null),
     homes,
     onlyInPhotos,
+    unmovable,
   };
 }
 
 export type AlbumTarget = { id: string; name: string } | { newName: string };
 
-/** Moves the photos into an album (made first for a new one); returns its name. */
-export async function addToAlbum(
-  library: Library,
-  ids: readonly string[],
-  target: AlbumTarget,
-): Promise<{ id: string; name: string }> {
-  const id = 'id' in target ? target.id : await library.createCollection('album', target.newName);
-  const items = library.snapshot().items;
-  await library.move(
-    ids.filter((i) => items.get(i)?.collectionId !== id),
-    id,
-  );
-  return { id, name: 'id' in target ? target.name : target.newName };
+/**
+ * Moves photos into an album, made first for a new one; returns where they
+ * went. Each adder remembers the albums it made, so a retry after a failed
+ * move reuses the album instead of making a second with the same name.
+ * Photos whose album key cannot be read are left where they are.
+ */
+export function albumAdder(library: Library) {
+  const made = new Map<string, string>();
+  return async (
+    ids: readonly string[],
+    target: AlbumTarget,
+  ): Promise<{ id: string; name: string }> => {
+    let id: string;
+    let name: string;
+    if ('id' in target) ({ id, name } = target);
+    else {
+      name = target.newName;
+      id = made.get(name) ?? (await library.createCollection('album', name));
+      made.set(name, id);
+    }
+    const snapshot = library.snapshot();
+    await library.move(
+      ids.filter((i) => {
+        const item = snapshot.items.get(i);
+        return item && item.collectionId !== id && movable(snapshot, item.collectionId);
+      }),
+      id,
+    );
+    return { id, name };
+  };
 }

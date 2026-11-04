@@ -1,7 +1,8 @@
-import type { LibrarySnapshot } from '@cloudbox/core';
-import { describe, expect, it } from 'vitest';
+import type { Library, LibrarySnapshot } from '@cloudbox/core';
+import { describe, expect, it, vi } from 'vitest';
 import { coll, photo } from '../test/photos.ts';
 import {
+  albumAdder,
   albumList,
   countText,
   parseScope,
@@ -21,6 +22,7 @@ const library = (): LibrarySnapshot => ({
     ['empty', coll('empty', 'album', { name: 'empty one' })],
     ['gone', coll('gone', 'album', { name: 'Gone', deletedAt: new Date() })],
     ['secret', coll('secret', 'album', { name: null })],
+    ['locked', coll('locked', 'album', { name: null, key: null })],
     ['files', coll('files', 'folder', { name: 'Files', role: 'files' })],
   ]),
   items: new Map(
@@ -34,6 +36,7 @@ const library = (): LibrarySnapshot => ({
       }),
       photo('f1', '2026-09-01T10:00:00Z', { collectionId: 'family' }, { mime: 'video/mp4' }),
       photo('d1', '2026-09-02T10:00:00Z', { collectionId: 'files' }, { favourite: true }),
+      photo('l1', '2026-09-03T10:00:00Z', { collectionId: 'locked' }),
     ].map((i) => [i.id, i]),
   ),
   syncedAt: new Date(),
@@ -42,7 +45,7 @@ const library = (): LibrarySnapshot => ({
 describe('albumList', () => {
   it('lists the user’s albums by name, not Photos, deleted ones or folders', () => {
     const names = albumList(library()).map((a) => a.album.name);
-    expect(names).toEqual(['empty one', 'Family', 'Garden', null]);
+    expect(names).toEqual(['empty one', 'Family', 'Garden', null, null]);
   });
 
   it('counts photos outside Trash, and covers with the newest', () => {
@@ -76,6 +79,7 @@ describe('scopes', () => {
       'g2',
       'g1',
       'r1',
+      'l1',
       'f1',
     ]);
   });
@@ -120,6 +124,13 @@ describe('pickerChoices', () => {
     expect(c.onlyInPhotos).toBe(0);
   });
 
+  it('a photo in an album whose key cannot be read cannot move, and is said apart', () => {
+    const c = pickerChoices(library(), ['g1', 'l1']);
+    expect(homes(c)).toEqual([['garden', 1]]);
+    expect(c.unmovable).toBe(1);
+    expect(c.albums.map((a) => a.album.id)).not.toContain('locked');
+  });
+
   it('photos in a folder are neither leaving an album nor in Photos', () => {
     const c = pickerChoices(library(), ['d1']);
     expect(c.homes).toEqual([]);
@@ -132,5 +143,41 @@ describe('videoCountText', () => {
     expect(videoCountText(0)).toBe('0 videos');
     expect(videoCountText(1)).toBe('1 video');
     expect(videoCountText(1200)).toBe('1,200 videos');
+  });
+});
+
+describe('albumAdder', () => {
+  /** A library whose first move fails, like a box that drops off mid-move. */
+  function flaky() {
+    const snapshot = library();
+    let made = 0;
+    const lib = {
+      snapshot: () => snapshot,
+      createCollection: vi.fn(() => Promise.resolve(`new${++made}`)),
+      move: vi
+        .fn<(ids: string[], to: string) => Promise<void>>()
+        .mockRejectedValueOnce(new Error('offline'))
+        .mockResolvedValue(undefined),
+    };
+    return lib;
+  }
+
+  it('a retry after the album was made reuses it, not a second one', async () => {
+    const lib = flaky();
+    const add = albumAdder(lib as unknown as Library);
+    await expect(add(['g1'], { newName: 'Trips' })).rejects.toThrow('offline');
+    expect(await add(['g1'], { newName: 'Trips' })).toEqual({ id: 'new1', name: 'Trips' });
+    expect(lib.createCollection).toHaveBeenCalledTimes(1);
+    expect(lib.move).toHaveBeenLastCalledWith(['g1'], 'new1');
+  });
+
+  it('leaves out photos whose album cannot be read, so the rest move', async () => {
+    const lib = flaky();
+    lib.move.mockReset().mockResolvedValue(undefined);
+    await albumAdder(lib as unknown as Library)(['l1', 'g1', 'r1'], {
+      id: 'family',
+      name: 'Family',
+    });
+    expect(lib.move).toHaveBeenCalledWith(['g1', 'r1'], 'family');
   });
 });

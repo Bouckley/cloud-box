@@ -22,6 +22,8 @@ export type AlbumPickerProps = {
   homes: AlbumHome[];
   /** How many of them are only in Photos. */
   onlyInPhotos: number;
+  /** How many of them sit in an album whose key can't be read: they stay put. */
+  unmovable?: number | undefined;
   /** Adds them; the picker closes when it resolves. */
   onAdd(target: AlbumTarget): Promise<void>;
   onClose(): void;
@@ -49,6 +51,7 @@ export function AlbumPicker({
   count,
   homes,
   onlyInPhotos,
+  unmovable = 0,
   onAdd,
   onClose,
   returnFocus,
@@ -154,6 +157,13 @@ export function AlbumPicker({
           </>
         ) : (
           <>
+            {unmovable > 0 && (
+              <p className="sheet__lede">
+                {unmovable === 1
+                  ? "1 photo can't be moved because its album can't be read."
+                  : `${unmovable.toLocaleString()} photos can't be moved because their album can't be read.`}
+              </p>
+            )}
             <fieldset ref={radios} className="choices picker__list">
               <legend className="visually-hidden">Albums</legend>
               {albums.map((entry, i) => (

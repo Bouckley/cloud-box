@@ -2,7 +2,7 @@ import type { ItemView } from '@cloudbox/core';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router';
 import {
-  addToAlbum,
+  albumAdder,
   albumName,
   parseScope,
   pickerChoices,
@@ -70,16 +70,19 @@ function AddToAlbum({
   const { library, snapshot } = useLibrary();
   // Read once when it opens: the list should not shift under the pointer.
   const [choices] = useState(() => pickerChoices(snapshot, ids));
+  // One adder per picker, so a retry reuses an album it already made.
+  const [add] = useState(() => (library ? albumAdder(library) : null));
   return (
     <AlbumPicker
       albums={choices.albums}
       count={ids.length}
       homes={choices.homes}
       onlyInPhotos={choices.onlyInPhotos}
+      unmovable={choices.unmovable}
       onAdd={async (target: AlbumTarget) => {
-        if (!library) throw new Error('locked');
+        if (!add) throw new Error('locked');
         await around(async () => {
-          const album = await addToAlbum(library, ids, target);
+          const album = await add(ids, target);
           onAdded(album);
           return album;
         });

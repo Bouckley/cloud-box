@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { useRef } from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { StrictMode, useRef } from 'react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Dialog } from './Dialog.tsx';
 
 function Probe({ busy, onClose }: { busy: boolean; onClose(): void }) {
@@ -12,7 +12,41 @@ function Probe({ busy, onClose }: { busy: boolean; onClose(): void }) {
   );
 }
 
+/** Chromium's dialog: close() fires its close event on a later task. */
+function browserDialog() {
+  const proto = HTMLDialogElement.prototype as HTMLDialogElement & Record<string, unknown>;
+  const saved = { showModal: proto.showModal, close: proto.close };
+  proto.showModal = function (this: HTMLDialogElement) {
+    this.setAttribute('open', '');
+  };
+  proto.close = function (this: HTMLDialogElement) {
+    if (!this.hasAttribute('open')) return;
+    this.removeAttribute('open');
+    setTimeout(() => this.dispatchEvent(new Event('close')), 0);
+  };
+  return () => Object.assign(proto, saved);
+}
+
 describe('Dialog', () => {
+  let restore: (() => void) | null = null;
+  afterEach(() => {
+    restore?.();
+    restore = null;
+  });
+
+  it('stays open in StrictMode, where React mounts it twice (dev builds)', async () => {
+    restore = browserDialog();
+    const onClose = vi.fn();
+    render(
+      <StrictMode>
+        <Probe busy={false} onClose={onClose} />
+      </StrictMode>,
+    );
+    await new Promise((r) => setTimeout(r, 10));
+    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.getByRole('dialog')).toHaveAttribute('open');
+  });
+
   it('Esc is ignored while busy', () => {
     const onClose = vi.fn();
     render(<Probe busy onClose={onClose} />);

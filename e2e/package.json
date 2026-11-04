@@ -1,0 +1,16 @@
+{
+  "name": "@cloudbox/e2e",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit -p .",
+    "test:e2e": "playwright test",
+    "fixtures": "node scripts/make-fixtures.ts"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.14.0",
+    "@cloudbox/testbox": "workspace:*",
+    "@playwright/test": "^1.64.1"
+  }
+}

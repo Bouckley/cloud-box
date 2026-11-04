@@ -75,8 +75,16 @@ make dev
 ```
 
 This builds `boxd` with the Go build tag `sim` and starts it as
-`boxd --hal=sim --data=./.data` on https://localhost:8443. The web app with hot
-reload (http://localhost:5173) and the simulator page arrive in M2.
+`boxd --hal=sim --data=./.data` on https://localhost:8443, and starts the web
+app with hot reload on http://localhost:5173. Use the Vite address in dev: it
+is a secure context with no certificate warning, and it proxies `/v1` and
+`/dev` to the box.
+
+http://localhost:5173/sim is the simulator page (dev builds only, never in the
+production build): buttons for the dev API below, inside the app's frame.
+
+The box serves the production build itself on https://localhost:8443 after
+`make web` (the browser warns once about the self-signed certificate).
 
 The `sim` tag adds a dev API for driving the simulated hardware. It has no
 auth, is not in `api/openapi.yaml`, and a Pi build (`make build-pi`) never
@@ -107,8 +115,15 @@ make lint
 make test        # needs Go and Node: Go tests run twice (with and without
                  # -tags sim), then Vitest, then the contract test, which
                  # builds and starts a real boxd
+make test-e2e    # Playwright + axe in Chromium: builds the web app and a
+                 # sim boxd, then gives each test its own box
 make test-arm64  # box tests on linux/arm64 under QEMU (Docker)
 ```
+
+The first `make test-e2e` needs a browser:
+`pnpm --filter @cloudbox/e2e exec playwright install chromium`. Traces,
+videos and screenshots are off (pages show decrypted photos and recovery
+words); a failure prints axe rule ids and element targets only.
 
 ## Reset
 

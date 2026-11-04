@@ -1,0 +1,325 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-03T00:00:00Z",
+  "title": "Design System: Cloud Box",
+  "extensions": {
+    "colorMeta": {
+      "ground": {
+        "role": "neutral",
+        "displayName": "Warm Paper",
+        "canonical": "#f4f4f1",
+        "tonalRamp": [
+          "oklch(20% 0.004 105)",
+          "oklch(32% 0.004 105)",
+          "oklch(45% 0.004 105)",
+          "oklch(58% 0.004 105)",
+          "oklch(70% 0.004 105)",
+          "oklch(82% 0.004 105)",
+          "oklch(91% 0.004 105)",
+          "oklch(96.5% 0.004 105)"
+        ]
+      },
+      "surface": { "role": "neutral", "displayName": "White", "canonical": "#ffffff" },
+      "surface-sunk": { "role": "neutral", "displayName": "Sunk Paper", "canonical": "#f2f2ef" },
+      "line": { "role": "neutral", "displayName": "Hairline", "canonical": "#e4e4e0" },
+      "line-strong": { "role": "neutral", "displayName": "Firm Line", "canonical": "#d5d6d2" },
+      "track": { "role": "neutral", "displayName": "Meter Track", "canonical": "#e2e2de" },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "#16181b",
+        "tonalRamp": [
+          "#16181b",
+          "oklch(30% 0.008 260)",
+          "#4a4e54",
+          "#5c6066",
+          "oklch(62% 0.008 260)",
+          "oklch(75% 0.006 260)",
+          "oklch(87% 0.004 260)",
+          "oklch(95% 0.003 260)"
+        ]
+      },
+      "ink-2": { "role": "neutral", "displayName": "Ink Soft", "canonical": "#5c6066" },
+      "ink-3": { "role": "neutral", "displayName": "Ink Meta (reserved)", "canonical": "#4a4e54" },
+      "safe": {
+        "role": "primary",
+        "displayName": "Safe Green",
+        "canonical": "#2e7d5b",
+        "tonalRamp": [
+          "#1f4a38",
+          "#1f5a41",
+          "#2e7d5b",
+          "oklch(62% 0.09 160)",
+          "oklch(72% 0.07 160)",
+          "oklch(82% 0.05 160)",
+          "oklch(90% 0.03 160)",
+          "#e6f1eb"
+        ]
+      },
+      "safe-strong": {
+        "role": "primary",
+        "displayName": "Deep Safe Green",
+        "canonical": "#1f5a41"
+      },
+      "safe-tint": { "role": "primary", "displayName": "Safe Mist", "canonical": "#e6f1eb" },
+      "safe-ink": { "role": "primary", "displayName": "Safe Ink", "canonical": "#1f4a38" },
+      "safe-ink-2": { "role": "primary", "displayName": "Safe Ink Soft", "canonical": "#3f5f51" },
+      "attention": {
+        "role": "secondary",
+        "displayName": "Attention Amber",
+        "canonical": "#e0a33a",
+        "tonalRamp": [
+          "#3b2800",
+          "#4a3200",
+          "#8a5a00",
+          "oklch(66% 0.13 75)",
+          "#e0a33a",
+          "oklch(84% 0.10 80)",
+          "oklch(91% 0.06 82)",
+          "#fbf0d9"
+        ]
+      },
+      "attention-tint": {
+        "role": "secondary",
+        "displayName": "Amber Wash",
+        "canonical": "#fbf0d9"
+      },
+      "attention-ink": { "role": "secondary", "displayName": "Amber Ink", "canonical": "#3b2800" },
+      "attention-ink-2": {
+        "role": "secondary",
+        "displayName": "Amber Ink Soft",
+        "canonical": "#4a3200"
+      },
+      "attention-strong": {
+        "role": "secondary",
+        "displayName": "Deep Amber (reserved)",
+        "canonical": "#8a5a00"
+      },
+      "danger": {
+        "role": "tertiary",
+        "displayName": "Delete Red",
+        "canonical": "#b3261e",
+        "tonalRamp": [
+          "oklch(28% 0.10 28)",
+          "oklch(38% 0.14 28)",
+          "#b3261e",
+          "oklch(60% 0.17 28)",
+          "oklch(70% 0.12 28)",
+          "oklch(80% 0.08 28)",
+          "oklch(89% 0.04 28)",
+          "#fbe9e7"
+        ]
+      },
+      "danger-tint": {
+        "role": "tertiary",
+        "displayName": "Delete Wash (reserved)",
+        "canonical": "#fbe9e7"
+      },
+      "focus": { "role": "neutral", "displayName": "Focus Green", "canonical": "#1f5a41" }
+    },
+    "typographyMeta": {
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "The single h1 each screen owns; solo pages."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Product name, attention banner title, section headings."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "All running text, inputs and sidebar nav; 17px, tabular numbers."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Buttons, storage label, banner detail, field labels."
+      },
+      "label-xs": {
+        "displayName": "Tab Label",
+        "purpose": "Bottom tab labels, capped at min(13px, 5vw), never wrapping."
+      }
+    },
+    "shadows": [
+      {
+        "name": "focus-ring",
+        "value": "0 0 0 2px var(--color-surface), 0 0 0 5px var(--color-focus)",
+        "purpose": "Keyboard focus on every focusable element; never removed."
+      },
+      {
+        "name": "attention-border",
+        "value": "inset 0 0 0 2px var(--color-attention)",
+        "purpose": "The attention banner card's amber border."
+      },
+      {
+        "name": "shadow-raised",
+        "value": "0 1px 2px rgb(22 24 27 / 6%), 0 4px 12px rgb(22 24 27 / 5%)",
+        "purpose": "Reserved for genuinely floating surfaces (sheets, menus); unused in the M2 shell."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-out",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "All state transitions."
+      },
+      {
+        "name": "duration-fast",
+        "value": "120ms",
+        "purpose": "Hover fills on buttons and nav; 0ms under reduced motion."
+      },
+      {
+        "name": "duration-base",
+        "value": "220ms",
+        "purpose": "Safety banner material change; 0ms under reduced motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sidebar",
+        "value": "720.02px",
+        "purpose": "Above: sticky 264px sidebar. At or below 720px: four fixed bottom tabs, 72px tall plus safe-area inset."
+      }
+    ],
+    "sizes": [
+      { "name": "target-min", "value": "48px" },
+      { "name": "sidebar-width", "value": "264px" },
+      { "name": "tabbar-height", "value": "72px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The screen's one primary action, in its header row right of the h1.",
+      "html": "<button class=\"ds-btn ds-btn-primary\">Upload</button>",
+      "css": ".ds-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 0 20px; border: 1px solid var(--color-line-strong, #d5d6d2); border-radius: 999px; background: var(--color-surface, #fff); color: var(--color-ink, #16181b); font-family: var(--font-sans, Inter, system-ui, sans-serif); font-size: 15px; font-weight: 600; cursor: pointer; transition: background-color 120ms cubic-bezier(0.16, 1, 0.3, 1); } .ds-btn-primary { border-color: var(--color-safe, #2e7d5b); background: var(--color-safe, #2e7d5b); color: #fff; font-weight: 700; } .ds-btn-primary:hover { background: var(--color-safe-strong, #1f5a41); } .ds-btn:focus-visible { outline: none; box-shadow: 0 0 0 2px #fff, 0 0 0 5px #1f5a41; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Any non-primary action.",
+      "html": "<button class=\"ds-btn-secondary\">Cancel</button>",
+      "css": ".ds-btn-secondary { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 0 20px; border: 1px solid var(--color-line-strong, #d5d6d2); border-radius: 999px; background: var(--color-surface, #fff); color: var(--color-ink, #16181b); font-family: var(--font-sans, Inter, system-ui, sans-serif); font-size: 15px; font-weight: 600; cursor: pointer; transition: background-color 120ms cubic-bezier(0.16, 1, 0.3, 1); } .ds-btn-secondary:hover { background: var(--color-surface-sunk, #f2f2ef); } .ds-btn-secondary:focus-visible { outline: none; box-shadow: 0 0 0 2px #fff, 0 0 0 5px #1f5a41; }"
+    },
+    {
+      "name": "Danger Button",
+      "kind": "button",
+      "refersTo": "button-danger",
+      "description": "Permanent deletion only (from Trash).",
+      "html": "<button class=\"ds-btn-danger\">Delete forever</button>",
+      "css": ".ds-btn-danger { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 0 20px; border: 1px solid var(--color-danger, #b3261e); border-radius: 999px; background: var(--color-danger, #b3261e); color: #fff; font-family: var(--font-sans, Inter, system-ui, sans-serif); font-size: 15px; font-weight: 600; cursor: pointer; } .ds-btn-danger:focus-visible { outline: none; box-shadow: 0 0 0 2px #fff, 0 0 0 5px #1f5a41; }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Labelled field, 48px tall, label above.",
+      "html": "<label class=\"ds-field\">Box address<input class=\"ds-input\" value=\"cloudbox.local\"></label>",
+      "css": ".ds-field { display: flex; flex-direction: column; gap: 4px; font-family: var(--font-sans, Inter, system-ui, sans-serif); font-size: 15px; font-weight: 600; color: var(--color-ink, #16181b); } .ds-input { min-height: 48px; padding: 0 16px; border: 1px solid var(--color-line-strong, #d5d6d2); border-radius: 14px; background: #fff; font: inherit; font-size: 17px; font-weight: 400; color: inherit; } .ds-input:focus-visible { outline: none; border-color: #1f5a41; box-shadow: 0 0 0 2px #fff, 0 0 0 5px #1f5a41; }"
+    },
+    {
+      "name": "Sidebar Navigation",
+      "kind": "nav",
+      "refersTo": "nav-item",
+      "description": "Above 720px: four rows; active row has a green tint, Box carries the attention dot in attention states only.",
+      "html": "<nav class=\"ds-side\"><a class=\"ds-side-link\" aria-current=\"page\" href=\"#\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"3\" y=\"4\" width=\"18\" height=\"16\" rx=\"3\"/><circle cx=\"9\" cy=\"10\" r=\"2\"/><path d=\"M21 16l-5-5-9 9\"/></svg>Photos</a><a class=\"ds-side-link\" href=\"#\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"4\" y=\"8\" width=\"16\" height=\"12\" rx=\"2\"/><path d=\"M7 5h10\"/></svg>Albums</a><a class=\"ds-side-link\" href=\"#\" aria-label=\"Box, needs attention\"><span class=\"ds-glyph\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"4\" y=\"4\" width=\"16\" height=\"16\" rx=\"3\"/><path d=\"M4 14h16\"/><path d=\"M8 17h2\"/></svg><span class=\"ds-dot\"></span></span>Box</a></nav>",
+      "css": ".ds-side { display: flex; flex-direction: column; gap: 4px; width: 232px; font-family: var(--font-sans, Inter, system-ui, sans-serif); } .ds-side-link { display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 0 12px; border-radius: 14px; color: #16181b; font-size: 17px; font-weight: 600; text-decoration: none; transition: background-color 120ms cubic-bezier(0.16, 1, 0.3, 1); } .ds-side-link:hover { background: #f2f2ef; } .ds-side-link[aria-current='page'] { background: #e6f1eb; color: #1f5a41; font-weight: 700; } .ds-side-link:focus-visible { outline: none; box-shadow: 0 0 0 2px #fff, 0 0 0 5px #1f5a41; } .ds-glyph { position: relative; display: flex; } .ds-dot { position: absolute; top: -4px; right: -4px; width: 12px; height: 12px; border-radius: 999px; background: #e0a33a; border: 2px solid #fff; box-sizing: border-box; }"
+    },
+    {
+      "name": "Bottom Tabs",
+      "kind": "nav",
+      "refersTo": "tab",
+      "description": "At or below 720px: four fixed tabs, icon over label, a green-tint pill behind the active icon.",
+      "html": "<nav class=\"ds-tabs\"><a class=\"ds-tab\" aria-current=\"page\" href=\"#\"><svg class=\"ds-tab-icon\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"3\" y=\"4\" width=\"18\" height=\"16\" rx=\"3\"/><circle cx=\"9\" cy=\"10\" r=\"2\"/><path d=\"M21 16l-5-5-9 9\"/></svg><span>Photos</span></a><a class=\"ds-tab\" href=\"#\"><svg class=\"ds-tab-icon\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"4\" y=\"8\" width=\"16\" height=\"12\" rx=\"2\"/><path d=\"M7 5h10\"/></svg><span>Albums</span></a><a class=\"ds-tab\" href=\"#\"><svg class=\"ds-tab-icon\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z\"/></svg><span>Files</span></a><a class=\"ds-tab\" href=\"#\"><svg class=\"ds-tab-icon\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"4\" y=\"4\" width=\"16\" height=\"16\" rx=\"3\"/><path d=\"M4 14h16\"/><path d=\"M8 17h2\"/></svg><span>Box</span></a></nav>",
+      "css": ".ds-tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); min-height: 72px; width: 360px; background: #fff; border-top: 1px solid #e4e4e0; font-family: var(--font-sans, Inter, system-ui, sans-serif); } .ds-tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-height: 48px; padding: 6px 0; color: #5c6066; font-size: 13px; font-weight: 600; line-height: 1.2; text-decoration: none; white-space: nowrap; } .ds-tab-icon { box-sizing: content-box; padding: 2px 14px; border-radius: 999px; } .ds-tab[aria-current='page'] { color: #1f5a41; font-weight: 700; } .ds-tab[aria-current='page'] .ds-tab-icon { background: #e6f1eb; } .ds-tab:focus-visible { outline: none; border-radius: 14px; box-shadow: inset 0 0 0 3px #1f5a41; }"
+    },
+    {
+      "name": "Safety Banner: Safe",
+      "kind": "custom",
+      "refersTo": "banner-safe",
+      "description": "Signature. Green-tint strip, shield-check icon, title and last backup time. Only when the box reports safe.",
+      "html": "<a class=\"ds-banner ds-banner-safe\" href=\"#\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 3l8 3v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6z\"/><path d=\"M8.5 12l2.5 2.5 4.5-5\"/></svg><span class=\"ds-banner-text\"><span class=\"ds-banner-title\">Everything is safe</span><span class=\"ds-banner-detail\">Backup copy updated 4 min ago</span></span></a>",
+      "css": ".ds-banner { display: flex; align-items: flex-start; gap: 12px; padding: 12px 16px; border-radius: 14px; text-decoration: none; font-family: var(--font-sans, Inter, system-ui, sans-serif); transition: background-color 220ms cubic-bezier(0.16, 1, 0.3, 1); } .ds-banner svg { flex: none; } .ds-banner-text { display: flex; flex-wrap: wrap; column-gap: 8px; row-gap: 2px; font-size: 15px; line-height: 1.3; } .ds-banner-title { font-size: 17px; font-weight: 700; } .ds-banner-safe { background: #e6f1eb; color: #1f4a38; } .ds-banner-safe .ds-banner-detail { color: #3f5f51; } .ds-banner:hover { filter: saturate(1.15) brightness(0.98); } .ds-banner:focus-visible { outline: none; box-shadow: 0 0 0 2px #fff, 0 0 0 5px #1f5a41; }"
+    },
+    {
+      "name": "Safety Banner: Copying",
+      "kind": "custom",
+      "refersTo": "banner-copying",
+      "description": "White strip, full ink, shield-sync icon, a count waiting for the backup copy. Never green.",
+      "html": "<div class=\"ds-banner-c\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 3l8 3v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6z\"/><path d=\"M9 11.5a3 3 0 0 1 5.2-1.6L15 11\"/><path d=\"M15 8.5V11h-2.5\"/><path d=\"M15 13a3 3 0 0 1-5.2 1.6L9 14\"/><path d=\"M9 16.5V14h2.5\"/></svg><span class=\"ds-banner-c-text\"><span class=\"ds-banner-c-title\">37 waiting for the backup copy</span><span class=\"ds-banner-c-detail\">They're on your box. The backup copy runs every hour.</span></span></div>",
+      "css": ".ds-banner-c { display: flex; align-items: flex-start; gap: 12px; padding: 12px 16px; border-radius: 14px; background: #fff; color: #16181b; font-family: var(--font-sans, Inter, system-ui, sans-serif); } .ds-banner-c svg { flex: none; } .ds-banner-c-text { display: flex; flex-wrap: wrap; column-gap: 8px; row-gap: 2px; font-size: 15px; line-height: 1.3; } .ds-banner-c-title { font-size: 17px; font-weight: 700; } .ds-banner-c-detail { color: #5c6066; }"
+    },
+    {
+      "name": "Safety Banner: Attention",
+      "kind": "custom",
+      "refersTo": "banner-attention",
+      "description": "Amber bordered card that grows to hold the reason and what to do. Paused, almost full, unreachable.",
+      "html": "<a class=\"ds-banner-a\" href=\"#\"><svg width=\"28\" height=\"28\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 3l10 18H2z\"/><path d=\"M12 10v5\"/><path d=\"M12 18h.01\"/></svg><span class=\"ds-banner-a-text\"><span class=\"ds-banner-a-title\">Backup copy paused</span><span>The backup drive isn't connected. Your photos are on the main drive only.</span></span></a>",
+      "css": ".ds-banner-a { display: flex; align-items: flex-start; gap: 12px; padding: 16px; border-radius: 18px; background: #fbf0d9; box-shadow: inset 0 0 0 2px #e0a33a; color: #4a3200; text-decoration: none; font-family: var(--font-sans, Inter, system-ui, sans-serif); transition: padding 220ms cubic-bezier(0.16, 1, 0.3, 1), border-radius 220ms cubic-bezier(0.16, 1, 0.3, 1); } .ds-banner-a svg { flex: none; } .ds-banner-a-text { display: flex; flex-direction: column; row-gap: 2px; font-size: 15px; line-height: 1.3; } .ds-banner-a-title { font-size: 19px; font-weight: 700; color: #3b2800; } .ds-banner-a:hover { filter: saturate(1.15) brightness(0.98); } .ds-banner-a:focus-visible { outline: none; box-shadow: inset 0 0 0 2px #e0a33a, 0 0 0 2px #fff, 0 0 0 5px #1f5a41; }"
+    },
+    {
+      "name": "Storage Card",
+      "kind": "card",
+      "refersTo": "storage-card",
+      "description": "Sidebar card under the nav: used of size, with a pill meter. Hidden when status is unknown or unreachable.",
+      "html": "<div class=\"ds-storage\"><span class=\"ds-storage-label\">412 GB of 1 TB used</span><div class=\"ds-meter\" role=\"img\" aria-label=\"41 percent of storage used\"><div class=\"ds-meter-fill\"></div></div></div>",
+      "css": ".ds-storage { display: flex; flex-direction: column; gap: 8px; width: 232px; padding: 16px; border-radius: 14px; background: #fff; font-family: var(--font-sans, Inter, system-ui, sans-serif); color: #16181b; } .ds-storage-label { font-size: 15px; font-weight: 600; } .ds-meter { height: 8px; border-radius: 999px; background: #e2e2de; overflow: hidden; } .ds-meter-fill { width: 41%; height: 100%; background: #2e7d5b; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Calm Appliance Panel",
+    "overview": "The frame exists to answer one question first and truthfully: are my photos safe? Everything else is quiet: a warm off-white ground, white rounded cards, deep ink text, line icons, and a single green that is spent only on safety and the primary action. Status is never buried in settings; it leads every main screen as the safety banner.\n\nDensity is low and targets are large, built for less confident, older users as much as for households leaving paid clouds. Surfaces are flat; meaning is carried by colour family, material change and words, never by decoration. Motion is short and quiet and disappears under reduced motion.",
+    "keyCharacteristics": [
+      "One green, one amber, one red, each with a single meaning.",
+      "The safety banner changes material with the box's truth.",
+      "Icon plus words, always; never colour alone.",
+      "48px minimum targets, a visible two-ring focus, WCAG 2.2 AA.",
+      "Inter, 17px body, bold short headings."
+    ],
+    "rules": [
+      {
+        "name": "The One Green Rule",
+        "body": "Green means \"safe\" or \"this is the primary action\". Never use it decoratively, for categories or for brand flourish.",
+        "section": "colors"
+      },
+      {
+        "name": "The One Meaning Per Hue Rule",
+        "body": "Amber is attention (paused, almost full, unreachable) and nothing else. Red is permanent deletion and nothing else; moving to Trash is not red.",
+        "section": "colors"
+      },
+      {
+        "name": "The Never Colour Alone Rule",
+        "body": "Every status carries an icon and words with its colour. The active tab adds a shape (pill) to its colour; the attention dot is paired with the accessible name \"Box, needs attention\".",
+        "section": "colors"
+      },
+      {
+        "name": "The 17 Rule",
+        "body": "Body text is 17px and is never set smaller for density. Text must scale to 200% with no sideways scroll at 320px.",
+        "section": "typography"
+      },
+      {
+        "name": "The Flat Panel Rule",
+        "body": "Surfaces separate by tone, not by shadow. Introduce shadow-raised only for a surface that genuinely floats (a sheet or menu), not for cards.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do use token names from tokens.css, never raw values; a new value needs owner approval and a DESIGN.md update.",
+      "Do lead every main screen with the safety banner, and pair every status colour with an icon and words.",
+      "Do keep every interactive target at least 48px (--target-min) and keep the focus ring visible.",
+      "Do set dynamic values (meter widths, positions) through the CSSOM (el.style.setProperty); the CSP is style-src 'self'.",
+      "Do keep line icons at 2px stroke with rounded joins, aria-hidden beside a visible word.",
+      "Do honour prefers-reduced-motion: durations drop to 0."
+    ],
+    "donts": [
+      "Don't use green for anything but \"safe\" or the primary action.",
+      "Don't show green or the word \"safe\" while checking, copying or in any attention state.",
+      "Don't use red for anything but permanent deletion, or amber for anything but paused, almost full or unreachable.",
+      "Don't use inline style attributes or injected <style>; the CSP blocks them.",
+      "Don't show the Box attention dot for copying or checking.",
+      "Don't let tab labels wrap or shrink body text below 17px."
+    ]
+  }
+}

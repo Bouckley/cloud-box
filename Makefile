@@ -26,8 +26,8 @@ test: ## Go tests (with -race, with and without the sim tag), TypeScript tests a
 	pnpm test
 	pnpm --filter @cloudbox/api-client test:contract
 
-test-e2e: ## Playwright + axe web tests (stub until M2)
-	@echo "Playwright + axe web tests arrive in M2 (e2e/). Nothing to run yet."
+test-e2e: ## Playwright + axe web tests (Chromium; builds the web app and a sim boxd first)
+	pnpm --filter @cloudbox/e2e test:e2e
 
 test-arm64: ## Go tests on linux/arm64 under QEMU (Docker)
 	"$(CURDIR)/deploy/docker/test-arm64.sh"

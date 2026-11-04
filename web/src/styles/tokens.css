@@ -1,0 +1,98 @@
+/*
+ * Cloud Box design tokens (doc 12, extended in M2 Task 11).
+ * Light theme only in M2. Components use these names, never raw values, so a
+ * dark set can later be added by redefining them under one selector.
+ * Changing a value needs the owner's approval and a DESIGN.md update.
+ */
+:root {
+  color-scheme: light;
+
+  /* Ground and surfaces */
+  --color-ground: #f4f4f1;
+  --color-surface: #ffffff;
+  --color-surface-sunk: #f2f2ef;
+  --color-line: #e4e4e0;
+  --color-line-strong: #d5d6d2;
+  --color-track: #e2e2de;
+
+  /* Text */
+  --color-ink: #16181b;
+  --color-ink-2: #5c6066; /* secondary text: 5.9:1 on ground, 6.4:1 on white */
+  --color-ink-3: #4a4e54; /* table and meta text */
+
+  /* Safe: the one green, used only to mean "safe" or the primary action */
+  --color-safe: #2e7d5b;
+  --color-safe-strong: #1f5a41;
+  --color-safe-tint: #e6f1eb;
+  --color-safe-ink: #1f4a38;
+  --color-safe-ink-2: #3f5f51;
+
+  /* Attention: backup paused, box nearly full, box unreachable */
+  --color-attention: #e0a33a;
+  --color-attention-tint: #fbf0d9;
+  --color-attention-ink: #3b2800;
+  --color-attention-ink-2: #4a3200;
+  --color-attention-strong: #8a5a00;
+
+  /* Danger: only for permanent deletion */
+  --color-danger: #b3261e;
+  --color-danger-tint: #fbe9e7;
+
+  /* Focus: dark green ring, visible on ground, white, tints and green fills */
+  --color-focus: #1f5a41;
+  --focus-ring: 0 0 0 2px var(--color-surface), 0 0 0 5px var(--color-focus);
+
+  /* Type: Inter, self-hosted. Body 17 px (doc 12). */
+  --font-sans: 'Inter Variable', Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --text-xs: 0.8125rem; /* 13 */
+  --text-sm: 0.9375rem; /* 15 */
+  --text-body: 1.0625rem; /* 17 */
+  --text-lg: 1.1875rem; /* 19 */
+  --text-xl: 1.375rem; /* 22 */
+  --text-2xl: 1.875rem; /* 30 */
+  --leading-tight: 1.15;
+  --leading-snug: 1.3;
+  --leading-body: 1.5;
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+  --tracking-display: -0.01em;
+
+  /* Space (4-based) */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-14: 3.5rem;
+
+  /* Radius */
+  --radius-sm: 0.625rem; /* 10: icon chips */
+  --radius-md: 0.875rem; /* 14: banner strip, cards in the sidebar */
+  --radius-lg: 1.125rem; /* 18: content cards, attention card */
+  --radius-pill: 999px;
+
+  /* Size */
+  --target-min: 3rem; /* 48 px touch target */
+  --sidebar-width: 16.5rem;
+  --tabbar-height: 4.5rem;
+
+  /* Depth: one soft, offset shadow for raised surfaces */
+  --shadow-raised: 0 1px 2px rgb(22 24 27 / 6%), 0 4px 12px rgb(22 24 27 / 5%);
+
+  /* Motion: quiet and short; none when the user asks for less */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --duration-fast: 120ms;
+  --duration-base: 220ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 0ms;
+    --duration-base: 0ms;
+  }
+}

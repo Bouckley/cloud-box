@@ -1,0 +1,112 @@
+import type { ReactElement } from 'react';
+
+/**
+ * Line icons from the design canvas: 24-unit grid, 2 px stroke, rounded caps
+ * and joins. Always decorative here: the word beside each icon carries the
+ * meaning, so every icon is aria-hidden.
+ */
+type IconProps = { size?: number; className?: string };
+
+function Icon({
+  size = 22,
+  className,
+  children,
+}: IconProps & { children: ReactElement[] | ReactElement }) {
+  return (
+    <svg
+      aria-hidden="true"
+      focusable="false"
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      {children}
+    </svg>
+  );
+}
+
+export const PhotosIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <rect x="3" y="4" width="18" height="16" rx="3" />
+    <circle cx="9" cy="10" r="2" />
+    <path d="M21 16l-5-5-9 9" />
+  </Icon>
+);
+
+export const AlbumsIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <rect x="4" y="8" width="16" height="12" rx="2" />
+    <path d="M7 5h10" />
+  </Icon>
+);
+
+export const FilesIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+  </Icon>
+);
+
+export const BoxIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <rect x="4" y="4" width="16" height="16" rx="3" />
+    <path d="M4 14h16" />
+    <path d="M8 17h2" />
+  </Icon>
+);
+
+export const ShieldCheckIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M12 3l8 3v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6z" />
+    <path d="M8.5 12l2.5 2.5 4.5-5" />
+  </Icon>
+);
+
+export const ShieldClockIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M12 3l8 3v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6z" />
+    <path d="M12 8.5V12l2.5 1.5" />
+  </Icon>
+);
+
+/** Copying: a shield with two arrows going round (the backup copy running). */
+export const ShieldSyncIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M12 3l8 3v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6z" />
+    <path d="M9 11.5a3 3 0 0 1 5.2-1.6L15 11" />
+    <path d="M15 8.5V11h-2.5" />
+    <path d="M15 13a3 3 0 0 1-5.2 1.6L9 14" />
+    <path d="M9 16.5V14h2.5" />
+  </Icon>
+);
+
+export const WarningIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M12 3l10 18H2z" />
+    <path d="M12 10v5" />
+    <path d="M12 18h.01" />
+  </Icon>
+);
+
+export const NoSignalIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M2 8.8a15 15 0 0 1 4.2-2.6" />
+    <path d="M10.7 5.1A15 15 0 0 1 22 8.8" />
+    <path d="M5 12.5a10 10 0 0 1 3.3-2" />
+    <path d="M15.4 10.6A10 10 0 0 1 19 12.5" />
+    <path d="M8.5 16.1a5 5 0 0 1 7 0" />
+    <path d="M12 20h.01" />
+    <path d="M3 3l18 18" />
+  </Icon>
+);
+
+export const ChevronIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M9 5l7 7-7 7" />
+  </Icon>
+);

@@ -518,6 +518,34 @@ a.banner:hover {
 }
 
 /* Dev simulator page */
+.sim-now {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-block-end: var(--space-4);
+}
+.sim-state {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+  gap: var(--space-3) var(--space-6);
+  margin: 0;
+}
+.sim-state dt {
+  color: var(--color-ink-2);
+  font-size: var(--text-sm);
+}
+.sim-state dd {
+  margin: 0;
+  font-weight: var(--weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+.sim-last {
+  margin: 0;
+  padding: var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-sunk);
+  font-size: var(--text-sm);
+}
 .sim-grid {
   display: grid;
   gap: var(--space-4);
@@ -555,14 +583,4 @@ a.banner:hover {
 }
 .input:focus-visible {
   border-color: var(--color-focus);
-}
-.output {
-  margin: 0;
-  padding: var(--space-3);
-  border-radius: var(--radius-sm);
-  background: var(--color-surface-sunk);
-  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
-  font-size: var(--text-xs);
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
 }

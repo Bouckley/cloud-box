@@ -1,5 +1,5 @@
 import type { Status } from '@cloudbox/core';
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { SafetyBanner, type BannerInput } from '../app/SafetyBanner.tsx';
 import { useTitle } from '../app/title.ts';
 
@@ -35,30 +35,97 @@ const STATES: { label: string; input: BannerInput; photoCount?: number }[] = [
   { label: "Can't reach", input: { kind: 'unreachable' } },
 ];
 
+type SimDrive = { role: string; sizeBytes: number; freeBytes: number };
+type SimState = { light: string; clockOffsetSeconds: number; drives: SimDrive[] };
+
+const percentFull = (d: SimDrive) => `${Math.round((1 - d.freeBytes / d.sizeBytes) * 100)}% full`;
+
+function aheadText(seconds: number): string {
+  if (seconds <= 0) return 'Real time';
+  const d = Math.floor(seconds / 86400);
+  const h = Math.floor((seconds % 86400) / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const parts = [d && `${d} d`, h && `${h} h`, m && `${m} min`].filter(Boolean);
+  return `${parts.length ? parts.join(' ') : `${seconds} s`} ahead`;
+}
+
+const lightText = (light: string) => {
+  const words = light.replace(/[-_]/g, ' ');
+  return words.charAt(0).toUpperCase() + words.slice(1);
+};
+
+/** The simulator's state in words, as a developer would say it. */
+function summary(s: SimState): [string, string][] {
+  const main = s.drives.find((d) => d.role === 'main');
+  const backup = s.drives.find((d) => d.role === 'backup');
+  return [
+    ['Light', lightText(s.light)],
+    ['Main drive', main ? percentFull(main) : 'Missing'],
+    ['Backup drive', backup ? `Plugged in, ${percentFull(backup)}` : 'Unplugged'],
+    ['Clock', aheadText(s.clockOffsetSeconds)],
+  ];
+}
+
+const NO_ANSWER = 'The box did not answer. Is make dev running?';
+
 /**
  * Dev only (never in the production build): buttons for the box's simulator
  * API (doc 07), so hardware can be "pressed" and "unplugged" in the browser.
+ * The simulator's own state is shown and refreshed after every press, since
+ * the safety banner needs a signed-in browser before it can follow the box.
  */
 export function SimPage() {
   useTitle('Box simulator');
-  const [out, setOut] = useState('');
+  const [state, setState] = useState<SimState | null>(null);
+  const [stateError, setStateError] = useState('');
+  const [last, setLast] = useState('Nothing yet.');
   const [seconds, setSeconds] = useState('3600');
   const [fill, setFill] = useState('95');
 
-  const call = async (method: 'GET' | 'POST', path: string, body?: unknown) => {
+  const refresh = useCallback(async () => {
     try {
-      const res = await fetch(path, {
-        method,
+      const res = await fetch('/dev/sim/state');
+      if (!res.ok) throw new Error(String(res.status));
+      setState((await res.json()) as SimState);
+      setStateError('');
+    } catch {
+      setStateError(NO_ANSWER);
+    }
+  }, []);
+
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
+
+  const act = (label: string, path: string, body?: unknown) => async () => {
+    let res: Response;
+    try {
+      res = await fetch(path, {
+        method: 'POST',
         headers: body === undefined ? {} : { 'Content-Type': 'application/json' },
         ...(body === undefined ? {} : { body: JSON.stringify(body) }),
       });
-      const text = await res.text();
-      setOut(`${method} ${path} → ${res.status}\n${text}`);
     } catch {
-      setOut(`${method} ${path} → the box did not answer`);
+      setLast(NO_ANSWER);
+      return;
     }
+    if (res.ok) {
+      setLast(`${label}: done`);
+    } else {
+      const err = (await res.json().catch(() => null)) as { message?: string } | null;
+      setLast(`${label}: ${err?.message ?? `the box said ${res.status}`}`);
+    }
+    await refresh();
   };
-  const post = (path: string, body?: unknown) => () => void call('POST', path, body);
+  const button = (label: string, path: string, body?: unknown, primary = false) => (
+    <button
+      type="button"
+      className={primary ? 'button button--primary' : 'button'}
+      onClick={() => void act(label, path, body)()}
+    >
+      {label}
+    </button>
+  );
 
   return (
     <>
@@ -66,45 +133,42 @@ export function SimPage() {
         <h1>Box simulator</h1>
       </header>
       <p className="lede">
-        Development only. These act on the simulated hardware of the box you are running.
+        Development only. These act on the simulated hardware of the box you are running. The banner
+        above follows the box&apos;s real status only once this browser is signed in; until then it
+        stays on &ldquo;Checking your box&rdquo;. The state below is read straight from the
+        simulator.
       </p>
+      <section className="card sim-now" aria-labelledby="sim-now">
+        <h2 id="sim-now">The simulated box now</h2>
+        {state ? (
+          <dl className="sim-state">
+            {summary(state).map(([k, v]) => (
+              <div key={k}>
+                <dt>{k}</dt>
+                <dd>{v}</dd>
+              </div>
+            ))}
+          </dl>
+        ) : (
+          <p>{stateError || 'Asking the box…'}</p>
+        )}
+        <p className="sim-last" role="status" aria-label="Last action">
+          {last}
+        </p>
+      </section>
       <div className="sim-grid">
         <section className="card" aria-labelledby="sim-button">
           <h2 id="sim-button">Power button</h2>
           <div className="row">
-            <button
-              type="button"
-              className="button button--primary"
-              onClick={post('/dev/sim/button', { kind: 'short' })}
-            >
-              Short press
-            </button>
-            <button
-              type="button"
-              className="button"
-              onClick={post('/dev/sim/button', { kind: 'long' })}
-            >
-              Long press
-            </button>
+            {button('Short press', '/dev/sim/button', { kind: 'short' }, true)}
+            {button('Long press', '/dev/sim/button', { kind: 'long' })}
           </div>
         </section>
         <section className="card" aria-labelledby="sim-drives">
           <h2 id="sim-drives">Drives</h2>
           <div className="row">
-            <button
-              type="button"
-              className="button"
-              onClick={post('/dev/sim/drives/backup', { present: false })}
-            >
-              Unplug backup
-            </button>
-            <button
-              type="button"
-              className="button"
-              onClick={post('/dev/sim/drives/backup', { present: true })}
-            >
-              Plug in backup
-            </button>
+            {button('Unplug backup', '/dev/sim/drives/backup', { present: false })}
+            {button('Plug in backup', '/dev/sim/drives/backup', { present: true })}
           </div>
           <label className="field">
             Main drive full (percent)
@@ -119,13 +183,7 @@ export function SimPage() {
             />
           </label>
           <div className="row">
-            <button
-              type="button"
-              className="button"
-              onClick={post('/dev/sim/drives/main', { fillPercent: Number(fill) })}
-            >
-              Set main drive fill
-            </button>
+            {button('Set main drive fill', '/dev/sim/drives/main', { fillPercent: Number(fill) })}
           </div>
         </section>
         <section className="card" aria-labelledby="sim-clock">
@@ -142,35 +200,15 @@ export function SimPage() {
             />
           </label>
           <div className="row">
-            <button
-              type="button"
-              className="button"
-              onClick={post('/dev/sim/clock/advance', { seconds: Number(seconds) })}
-            >
-              Advance clock
-            </button>
+            {button('Advance clock', '/dev/sim/clock/advance', { seconds: Number(seconds) })}
           </div>
         </section>
         <section className="card" aria-labelledby="sim-jobs">
           <h2 id="sim-jobs">Jobs</h2>
           <div className="row">
             {(['replicate', 'purge', 'cleanup', 'light'] as const).map((j) => (
-              <button key={j} type="button" className="button" onClick={post(`/dev/sim/jobs/${j}`)}>
-                Run {j}
-              </button>
+              <span key={j}>{button(`Run ${j}`, `/dev/sim/jobs/${j}`)}</span>
             ))}
-          </div>
-        </section>
-        <section className="card" aria-labelledby="sim-state">
-          <h2 id="sim-state">State</h2>
-          <div className="row">
-            <button
-              type="button"
-              className="button"
-              onClick={() => void call('GET', '/dev/sim/state')}
-            >
-              Show state
-            </button>
           </div>
         </section>
       </div>
@@ -187,12 +225,6 @@ export function SimPage() {
             />
           </div>
         ))}
-      </section>
-      <section aria-labelledby="sim-result" className="card">
-        <h2 id="sim-result">Last result</h2>
-        <pre className="output" aria-live="polite">
-          {out || 'Nothing yet.'}
-        </pre>
       </section>
     </>
   );

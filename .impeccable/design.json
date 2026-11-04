@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-03T18:00:00Z",
+  "generatedAt": "2026-11-04T12:00:00Z",
   "title": "Design System: Cloud Box",
   "extensions": {
     "colorMeta": {
@@ -66,7 +66,7 @@
       },
       "ink-3": {
         "role": "neutral",
-        "displayName": "Ink Meta (reserved)",
+        "displayName": "Ink Meta",
         "canonical": "#4a4e54"
       },
       "safe": {
@@ -210,7 +210,12 @@
       {
         "name": "shadow-raised",
         "value": "0 1px 2px rgb(22 24 27 / 6%), 0 4px 12px rgb(22 24 27 / 5%)",
-        "purpose": "Genuinely floating surfaces only. One shipped use: the Photos select bar, sticky over the timeline above 720px."
+        "purpose": "What genuinely floats or lifts: the Photos select bar (sticky above 720px), dialogs, the scrubber's date pill and its phone grip, and a photo tile on mouse hover. Never a card at rest."
+      },
+      {
+        "name": "dialog-backdrop",
+        "value": "::backdrop { background: rgb(22 24 27 / 45%) }",
+        "purpose": "Dims the page behind a modal dialog (ink at 45%)."
       }
     ],
     "motion": [
@@ -222,24 +227,29 @@
       {
         "name": "duration-fast",
         "value": "120ms",
-        "purpose": "Hover fills on buttons and nav; 0ms under reduced motion."
+        "purpose": "Hover fills on buttons, nav and More links; the scrubber grip growing while dragged and its date pill fading in; 0ms under reduced motion."
       },
       {
         "name": "duration-base",
         "value": "220ms",
-        "purpose": "Safety banner material change; a checked tile's photo shrinking to 88%; 0ms under reduced motion."
+        "purpose": "Safety banner material change; a checked tile's photo shrinking to 88%; the tile hover lift and greying; dialog-in; the phone scrubber handle fading; 0ms under reduced motion."
       },
       {
-        "name": "strip-paging",
-        "value": "scroll-behavior: smooth (auto under reduced motion)",
-        "purpose": "Previous/Next page a photo strip by whole tiles."
+        "name": "dialog-in",
+        "value": "from { opacity: 0; transform: translateY(12px) } over duration-base, ease-out",
+        "purpose": "A dialog or sheet arriving."
+      },
+      {
+        "name": "tile-lift",
+        "value": "transform: translateY(-3px); filter: saturate(0.6) brightness(0.92)",
+        "purpose": "Photo tile on mouse hover (hover: hover only). The lift is dropped under reduced motion; the greying stays."
       }
     ],
     "breakpoints": [
       {
         "name": "sidebar",
         "value": "720.02px",
-        "purpose": "Above: sticky 264px sidebar. At or below 720px: four fixed bottom tabs, 72px tall plus safe-area inset. Photos: tile sides 190/128/88px above, 140/104/72px at or below; select bar sticky only above; viewer puts the photo first at or below."
+        "purpose": "Above: sticky 264px sidebar. At or below 720px: four fixed bottom tabs, 72px tall plus safe-area inset. Photos: tile sizes aim for 180/120/80px above, 110/80/56px at or below; the scrubber is a 3.5rem column above and a lone fixed handle at or below; select bar sticky only above; viewer puts the photo first at or below; dialogs become bottom sheets at or below."
       },
       {
         "name": "viewer-details",
@@ -272,19 +282,35 @@
       },
       {
         "name": "tile-days",
-        "value": "190px / 140px at or below 720px"
+        "value": "aims for 180px / 110px at or below 720px; at least 3 columns"
       },
       {
         "name": "tile-months",
-        "value": "128px / 104px at or below 720px"
+        "value": "aims for 120px / 80px at or below 720px; at least 4 columns"
       },
       {
         "name": "tile-years",
-        "value": "88px / 72px at or below 720px"
+        "value": "aims for 80px / 56px at or below 720px; at least 6 columns"
+      },
+      {
+        "name": "tile-min",
+        "value": "48px"
       },
       {
         "name": "tile-gap",
         "value": "6px"
+      },
+      {
+        "name": "scrubber-column",
+        "value": "3.5rem"
+      },
+      {
+        "name": "trash-thumb",
+        "value": "64px"
+      },
+      {
+        "name": "dialog-max-width",
+        "value": "30rem"
       },
       {
         "name": "viewer-details-width",
@@ -310,10 +336,26 @@
       "css": ".ds-btn-secondary { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 0 20px; border: 1px solid var(--color-line-strong, #d5d6d2); border-radius: 999px; background: var(--color-surface, #fff); color: var(--color-ink, #16181b); font-family: var(--font-sans, Inter, system-ui, sans-serif); font-size: 15px; font-weight: 600; cursor: pointer; transition: background-color 120ms cubic-bezier(0.16, 1, 0.3, 1); } .ds-btn-secondary:hover { background: var(--color-surface-sunk, #f2f2ef); } .ds-btn-secondary:focus-visible { outline: none; box-shadow: 0 0 0 2px #fff, 0 0 0 5px #1f5a41; }"
     },
     {
+      "name": "Ink Button",
+      "kind": "button",
+      "refersTo": "button-ink",
+      "description": "Move to Trash: firm and reversible, so dark ink, never red (owner, 2026-11-04).",
+      "html": "<button class=\"ds-btn-ink\">Move to Trash</button>",
+      "css": ".ds-btn-ink { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 0 20px; border-radius: 999px; font-family: var(--font-sans, Inter, system-ui, sans-serif); font-size: 15px; font-weight: 600; cursor: pointer; transition: background-color 120ms cubic-bezier(0.16, 1, 0.3, 1); border: 1px solid var(--color-ink, #16181b); background: var(--color-ink, #16181b); color: #fff; } .ds-btn-ink:hover { border-color: var(--color-ink-3, #4a4e54); background: var(--color-ink-3, #4a4e54); } .ds-btn-ink:focus-visible { outline: none; box-shadow: 0 0 0 2px #fff, 0 0 0 5px #1f5a41; }"
+    },
+    {
+      "name": "Quiet Danger Button",
+      "kind": "button",
+      "refersTo": "button-quiet-danger",
+      "description": "Where permanent deletion is offered (Delete forever on a Trash row, Empty Trash): red words on white. Always opens a confirm.",
+      "html": "<button class=\"ds-btn-qd\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M4 7h16\"/><path d=\"M10 11v6\"/><path d=\"M14 11v6\"/><path d=\"M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12\"/><path d=\"M9 7V4h6v3\"/></svg>Empty Trash</button>",
+      "css": ".ds-btn-qd { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 0 20px; border-radius: 999px; font-family: var(--font-sans, Inter, system-ui, sans-serif); font-size: 15px; font-weight: 600; cursor: pointer; transition: background-color 120ms cubic-bezier(0.16, 1, 0.3, 1); border: 1px solid var(--color-line-strong, #d5d6d2); background: var(--color-surface, #fff); color: var(--color-danger, #b3261e); } .ds-btn-qd svg { flex: none; } .ds-btn-qd:hover { background: var(--color-surface-sunk, #f2f2ef); } .ds-btn-qd:focus-visible { outline: none; box-shadow: 0 0 0 2px #fff, 0 0 0 5px #1f5a41; }"
+    },
+    {
       "name": "Danger Button",
       "kind": "button",
       "refersTo": "button-danger",
-      "description": "Permanent deletion only (from Trash).",
+      "description": "Red fill only on the final confirm of a permanent deletion (Delete forever in the confirm dialog).",
       "html": "<button class=\"ds-btn-danger\">Delete forever</button>",
       "css": ".ds-btn-danger { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 0 20px; border: 1px solid var(--color-danger, #b3261e); border-radius: 999px; background: var(--color-danger, #b3261e); color: #fff; font-family: var(--font-sans, Inter, system-ui, sans-serif); font-size: 15px; font-weight: 600; cursor: pointer; } .ds-btn-danger:focus-visible { outline: none; box-shadow: 0 0 0 2px #fff, 0 0 0 5px #1f5a41; }"
     },
@@ -329,9 +371,9 @@
       "name": "Sidebar Navigation",
       "kind": "nav",
       "refersTo": "nav-item",
-      "description": "Above 720px: four rows; active row has a green tint, Box carries the attention dot in attention states only.",
+      "description": "Above 720px: four rows; the active row (aria-current page, or true for a page under it, e.g. Albums on /trash) has a green tint; Box carries the attention dot in attention states only.",
       "html": "<nav class=\"ds-side\"><a class=\"ds-side-link\" aria-current=\"page\" href=\"#\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"3\" y=\"4\" width=\"18\" height=\"16\" rx=\"3\"/><circle cx=\"9\" cy=\"10\" r=\"2\"/><path d=\"M21 16l-5-5-9 9\"/></svg>Photos</a><a class=\"ds-side-link\" href=\"#\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"4\" y=\"8\" width=\"16\" height=\"12\" rx=\"2\"/><path d=\"M7 5h10\"/></svg>Albums</a><a class=\"ds-side-link\" href=\"#\" aria-label=\"Box, needs attention\"><span class=\"ds-glyph\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"4\" y=\"4\" width=\"16\" height=\"16\" rx=\"3\"/><path d=\"M4 14h16\"/><path d=\"M8 17h2\"/></svg><span class=\"ds-dot\"></span></span>Box</a></nav>",
-      "css": ".ds-side { display: flex; flex-direction: column; gap: 4px; width: 232px; font-family: var(--font-sans, Inter, system-ui, sans-serif); } .ds-side-link { display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 0 12px; border-radius: 14px; color: #16181b; font-size: 17px; font-weight: 600; text-decoration: none; transition: background-color 120ms cubic-bezier(0.16, 1, 0.3, 1); } .ds-side-link:hover { background: #f2f2ef; } .ds-side-link[aria-current='page'] { background: #e6f1eb; color: #1f5a41; font-weight: 700; } .ds-side-link:focus-visible { outline: none; box-shadow: 0 0 0 2px #fff, 0 0 0 5px #1f5a41; } .ds-glyph { position: relative; display: flex; } .ds-dot { position: absolute; top: -4px; right: -4px; width: 12px; height: 12px; border-radius: 999px; background: #e0a33a; border: 2px solid #fff; box-sizing: border-box; }"
+      "css": ".ds-side { display: flex; flex-direction: column; gap: 4px; width: 232px; font-family: var(--font-sans, Inter, system-ui, sans-serif); } .ds-side-link { display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 0 12px; border-radius: 14px; color: #16181b; font-size: 17px; font-weight: 600; text-decoration: none; transition: background-color 120ms cubic-bezier(0.16, 1, 0.3, 1); } .ds-side-link:hover { background: #f2f2ef; } .ds-side-link[aria-current] { background: #e6f1eb; color: #1f5a41; font-weight: 700; } .ds-side-link:focus-visible { outline: none; box-shadow: 0 0 0 2px #fff, 0 0 0 5px #1f5a41; } .ds-glyph { position: relative; display: flex; } .ds-dot { position: absolute; top: -4px; right: -4px; width: 12px; height: 12px; border-radius: 999px; background: #e0a33a; border: 2px solid #fff; box-sizing: border-box; }"
     },
     {
       "name": "Bottom Tabs",
@@ -430,12 +472,20 @@
       "css": ".ds-seg { display: inline-flex; flex-wrap: wrap; border-radius: 24px; background: var(--color-track, #e2e2de); font-family: var(--font-sans, Inter, system-ui, sans-serif); } .ds-seg-opt { min-height: 48px; padding: 0 20px; border: 3px solid transparent; border-radius: 999px; background: transparent; color: var(--color-ink-3, #4a4e54); font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; } .ds-seg-opt[aria-pressed='true'] { border-color: var(--color-track, #e2e2de); background: var(--color-surface, #fff); color: var(--color-ink, #16181b); } .ds-seg-opt:focus-visible { outline: none; box-shadow: 0 0 0 2px #fff, 0 0 0 5px var(--color-focus, #1f5a41); }"
     },
     {
-      "name": "Photo Strip",
+      "name": "Photo Grid",
       "kind": "custom",
       "refersTo": "tile",
-      "description": "One group of the timeline: 19px semibold heading and count, Previous/Next with words, a sideways row of 6px-radius square tiles 6px apart.",
-      "html": "<section class=\"ds-strip\" aria-labelledby=\"ds-strip-h\"><div class=\"ds-strip-head\"><div><h2 id=\"ds-strip-h\">3 November</h2><p class=\"ds-strip-count\">24 photos</p></div><div class=\"ds-strip-pager\"><button type=\"button\" class=\"ds-strip-btn\" disabled aria-label=\"Previous, 3 November\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"m15 18-6-6 6-6\"/></svg><span>Previous</span></button><button type=\"button\" class=\"ds-strip-btn\" aria-label=\"Next, 3 November\"><span>Next</span><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"m9 18 6-6-6-6\"/></svg></button></div></div><ul class=\"ds-strip-list\"><li><a class=\"ds-tile\" href=\"#\" aria-label=\"Photo, 3 November 14:05\"></a></li><li><a class=\"ds-tile\" href=\"#\" tabindex=\"-1\" aria-label=\"Photo, 3 November 13:40\"></a></li><li><span class=\"ds-tile ds-tile-file\"><span>HEIC</span></span></li></ul></section>",
-      "css": ".ds-strip { display: flex; flex-direction: column; gap: 12px; font-family: var(--font-sans, Inter, system-ui, sans-serif); color: var(--color-ink, #16181b); } .ds-strip-head { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; min-height: 48px; } .ds-strip-head h2 { margin: 0; font-size: 19px; font-weight: 600; } .ds-strip-count { margin: 0; font-size: 15px; color: var(--color-ink-2, #5c6066); font-variant-numeric: tabular-nums; } .ds-strip-pager { display: flex; gap: 8px; margin-inline-start: auto; } .ds-strip-btn { display: inline-flex; align-items: center; gap: 8px; min-height: 48px; padding: 0 16px; border: 1px solid var(--color-line-strong, #d5d6d2); border-radius: 999px; background: var(--color-surface, #fff); color: inherit; font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; } .ds-strip-btn:hover { background: var(--color-surface-sunk, #f2f2ef); } .ds-strip-btn:disabled { opacity: .55; cursor: not-allowed; } .ds-strip-btn:focus-visible, .ds-tile:focus-visible { outline: none; box-shadow: 0 0 0 2px #fff, 0 0 0 5px var(--color-focus, #1f5a41); } .ds-strip-list { display: flex; gap: 6px; margin: 0; padding: 6px; list-style: none; overflow-x: auto; } .ds-tile { display: block; width: 190px; height: 190px; border-radius: 6px; background: var(--color-surface-sunk, #f2f2ef); color: var(--color-ink-2, #5c6066); } .ds-tile-file { display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; letter-spacing: .04em; }"
+      "description": "Signature. A group heading with its count, then rows of 6px-radius square tiles that fill the width, 6px apart. Mouse hover greys the photo, lifts the tile with shadow-raised and shows the select circle.",
+      "html": "<section class=\"ds-grid\"><div class=\"ds-grid-head\"><h2>3 November</h2><p class=\"ds-grid-count\">5 photos</p></div><ul class=\"ds-grid-tiles\"><li class=\"ds-cell\"><a class=\"ds-tile\" href=\"#\" aria-label=\"Photo, 3 November 14:05\"></a><button type=\"button\" class=\"ds-pick\" tabindex=\"-1\" aria-label=\"Select Photo, 3 November 14:05\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"m5 12 5 5 9-10\"/></svg></button></li><li class=\"ds-cell\"><a class=\"ds-tile\" href=\"#\" tabindex=\"-1\" aria-label=\"Photo, 3 November 13:40\"></a></li><li class=\"ds-cell\"><a class=\"ds-tile\" href=\"#\" tabindex=\"-1\" aria-label=\"Photo, 3 November 13:12\"></a></li><li class=\"ds-cell\"><span class=\"ds-tile ds-tile-file\"><span>HEIC</span></span></li><li class=\"ds-cell\"><a class=\"ds-tile\" href=\"#\" tabindex=\"-1\" aria-label=\"Photo, 3 November 09:30\"></a></li></ul></section>",
+      "css": ".ds-grid { width: 600px; font-family: var(--font-sans, Inter, system-ui, sans-serif); color: var(--color-ink, #16181b); } .ds-grid-head { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 12px; padding: 0 0 12px; } .ds-grid-head h2 { margin: 0; font-size: 19px; font-weight: 600; } .ds-grid-count { margin: 0; font-size: 15px; color: var(--color-ink-2, #5c6066); font-variant-numeric: tabular-nums; } .ds-grid-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: 0; padding: 0; list-style: none; } .ds-cell { position: relative; aspect-ratio: 1; } .ds-tile { position: relative; display: block; width: 100%; height: 100%; border-radius: 6px; background: linear-gradient(135deg, #c9d3c4, #8fa39a); color: var(--color-ink-2, #5c6066); transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 220ms cubic-bezier(0.16, 1, 0.3, 1), filter 220ms cubic-bezier(0.16, 1, 0.3, 1); } .ds-tile-file { display: flex; align-items: center; justify-content: center; background: var(--color-surface-sunk, #f2f2ef); font-size: 13px; font-weight: 600; letter-spacing: .04em; } .ds-tile:focus-visible { outline: none; box-shadow: 0 0 0 2px #fff, 0 0 0 5px #1f5a41; } .ds-pick { position: absolute; top: 8px; right: 8px; z-index: 1; display: none; place-items: center; width: 28px; height: 28px; padding: 0; border: 2px solid #fff; border-radius: 50%; background: rgb(22 24 27 / 30%); color: rgb(255 255 255 / 60%); cursor: pointer; } .ds-pick:hover { background: #16181b; border-color: #16181b; color: #fff; } @media (hover: hover) { .ds-cell:hover > .ds-tile { filter: saturate(0.6) brightness(0.92); box-shadow: 0 1px 2px rgb(22 24 27 / 6%), 0 4px 12px rgb(22 24 27 / 5%); transform: translateY(-3px); } .ds-cell:hover > .ds-pick { display: grid; transform: translateY(-3px); } }"
+    },
+    {
+      "name": "Date Scrubber",
+      "kind": "custom",
+      "refersTo": "scrubber-grip",
+      "description": "Signature. A slider named 'Jump to a date' beside the grid: a 2px rail with year marks, an ink grip in a 48px handle, and a white date pill on drag, hover or focus. On phones only the handle shows.",
+      "html": "<div class=\"ds-scrub\"><span class=\"ds-scrub-year ds-y1\">2026</span><span class=\"ds-scrub-year ds-y2\">2025</span><div class=\"ds-scrub-handle\" role=\"slider\" tabindex=\"0\" aria-label=\"Jump to a date\" aria-orientation=\"vertical\" aria-valuemin=\"0\" aria-valuemax=\"30\" aria-valuenow=\"4\" aria-valuetext=\"March 2026\"><span class=\"ds-scrub-grip\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"m8 9 4-4 4 4\"/><path d=\"m8 15 4 4 4-4\"/></svg></span><span class=\"ds-scrub-pill\" aria-hidden=\"true\">March 2026</span></div></div>",
+      "css": ".ds-scrub { position: relative; width: 56px; height: 280px; margin-left: 140px; background: var(--color-ground, #f4f4f1); font-family: var(--font-sans, Inter, system-ui, sans-serif); } .ds-scrub::before { content: ''; position: absolute; inset: 24px auto 24px 50%; width: 2px; margin-left: -1px; border-radius: 999px; background: var(--color-track, #e2e2de); } .ds-scrub-year { position: absolute; left: 0; right: 0; transform: translateY(-50%); padding: 0 2px; background: var(--color-ground, #f4f4f1); color: var(--color-ink-2, #5c6066); font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1.4; text-align: center; } .ds-y1 { top: 40px; } .ds-y2 { top: 190px; } .ds-scrub-handle { position: absolute; top: 90px; left: 0; z-index: 1; display: grid; place-items: center; width: 100%; height: 48px; border-radius: 24px; outline: none; } .ds-scrub-grip { display: grid; place-items: center; width: 36px; height: 36px; box-sizing: border-box; border: 4px solid var(--color-ground, #f4f4f1); border-radius: 50%; background: var(--color-ink, #16181b); background-clip: padding-box; color: #fff; } .ds-scrub-handle:focus-visible .ds-scrub-grip { box-shadow: 0 0 0 2px #fff, 0 0 0 5px #1f5a41; } .ds-scrub-pill { position: absolute; top: 50%; right: calc(100% + 8px); transform: translateY(-50%); padding: 4px 12px; border-radius: 999px; background: #fff; color: var(--color-ink, #16181b); box-shadow: 0 1px 2px rgb(22 24 27 / 6%), 0 4px 12px rgb(22 24 27 / 5%); font-size: 15px; font-weight: 600; white-space: nowrap; opacity: 0; transition: opacity 120ms cubic-bezier(0.16, 1, 0.3, 1); } .ds-scrub-handle:hover .ds-scrub-pill, .ds-scrub-handle:focus-visible .ds-scrub-pill { opacity: 1; }"
     },
     {
       "name": "Upload Panel",
@@ -452,6 +502,22 @@
       "description": "Name and size, then one truthful status line: Safe (safe-ink, shield-check) only when replicated and the backup copy is running, else pending (ink-3, shield-clock).",
       "html": "<section class=\"ds-vd\" aria-labelledby=\"ds-vd-h\"><h2 id=\"ds-vd-h\">Details</h2><dl><dt>Name</dt><dd>IMG_2041.HEIC</dd><dt>Size</dt><dd>2.4 MB</dd></dl><p class=\"ds-vd-pending\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 3 5 6v5c0 4.5 3 8.5 7 10 4-1.5 7-5.5 7-10V6z\"/><path d=\"M12 9v3l2 1.5\"/></svg>On your box. Backup copy pending.</p></section>",
       "css": ".ds-vd { display: flex; flex-direction: column; gap: 12px; width: 320px; padding: 20px; border-radius: 18px; background: var(--color-surface, #fff); color: var(--color-ink, #16181b); font-family: var(--font-sans, Inter, system-ui, sans-serif); } .ds-vd h2 { margin: 0; font-size: 19px; } .ds-vd dl { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 16px; margin: 0; } .ds-vd dt { font-size: 15px; color: var(--color-ink-2, #5c6066); } .ds-vd dd { margin: 0; overflow-wrap: anywhere; } .ds-vd-pending, .ds-vd-safe { display: flex; align-items: flex-start; gap: 8px; margin: 0; font-weight: 600; } .ds-vd-pending { color: var(--color-ink-3, #4a4e54); } .ds-vd-safe { color: var(--color-safe-ink, #1f4a38); } .ds-vd svg { flex: none; margin-top: 2px; }"
+    },
+    {
+      "name": "Delete Sheet",
+      "kind": "card",
+      "refersTo": "dialog",
+      "description": "A native modal dialog: white 18px card with shadow-raised over an ink 45% backdrop; centred on wide screens, a bottom sheet on phones. Focus starts on Cancel; Move to Trash is ink, not red.",
+      "html": "<div class=\"ds-dlg\" role=\"dialog\" aria-labelledby=\"ds-dlg-t\"><h2 id=\"ds-dlg-t\" class=\"ds-dlg-title\">Delete this photo?</h2><p class=\"ds-dlg-lede\">It stays safe on your box until you choose.</p><div class=\"ds-dlg-opt\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M4 7h16\"/><path d=\"M10 11v6\"/><path d=\"M14 11v6\"/><path d=\"M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12\"/><path d=\"M9 7V4h6v3\"/></svg><div><p class=\"ds-dlg-opt-t\">Move to Trash</p><p class=\"ds-dlg-opt-d\">You can restore it from Trash for 30 days.</p></div></div><div class=\"ds-dlg-actions\"><button class=\"ds-dlg-btn\">Cancel</button><button class=\"ds-dlg-btn ds-dlg-ink\">Move to Trash</button></div></div>",
+      "css": ".ds-dlg { display: flex; flex-direction: column; gap: 16px; width: 440px; padding: 24px; border-radius: 18px; background: #fff; color: var(--color-ink, #16181b); box-shadow: 0 1px 2px rgb(22 24 27 / 6%), 0 4px 12px rgb(22 24 27 / 5%); font-family: var(--font-sans, Inter, system-ui, sans-serif); font-size: 17px; line-height: 1.5; } .ds-dlg p { margin: 0; } .ds-dlg-title { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.15; } .ds-dlg-opt { display: flex; align-items: flex-start; gap: 12px; padding: 16px; border-radius: 14px; background: var(--color-surface-sunk, #f2f2ef); } .ds-dlg-opt svg { flex: none; margin-top: 1px; } .ds-dlg-opt-t { font-weight: 600; } .ds-dlg-opt-d { font-size: 15px; color: var(--color-ink-2, #5c6066); } .ds-dlg-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 12px; margin-top: 8px; } .ds-dlg-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 0 20px; border-radius: 999px; font-family: var(--font-sans, Inter, system-ui, sans-serif); font-size: 15px; font-weight: 600; cursor: pointer; transition: background-color 120ms cubic-bezier(0.16, 1, 0.3, 1); border: 1px solid var(--color-line-strong, #d5d6d2); background: #fff; color: var(--color-ink, #16181b); } .ds-dlg-btn:hover { background: var(--color-surface-sunk, #f2f2ef); } .ds-dlg-ink { border-color: #16181b; background: #16181b; color: #fff; } .ds-dlg-ink:hover { border-color: #4a4e54; background: #4a4e54; } .ds-dlg-btn:focus-visible { outline: none; box-shadow: 0 0 0 2px #fff, 0 0 0 5px #1f5a41; }"
+    },
+    {
+      "name": "Trash Row",
+      "kind": "card",
+      "refersTo": "trash-thumb",
+      "description": "In the white Trash list card: a 64px thumbnail, the name over days left, then Restore and the quiet-danger Delete forever.",
+      "html": "<ul class=\"ds-tr\"><li class=\"ds-tr-row\"><span class=\"ds-tr-thumb\"></span><span class=\"ds-tr-text\"><span class=\"ds-tr-name\">IMG_2041.HEIC</span><span class=\"ds-tr-left\">12 days left</span></span><span class=\"ds-tr-actions\"><button class=\"ds-tr-btn\" aria-label=\"Restore IMG_2041.HEIC\">Restore</button><button class=\"ds-tr-btn ds-tr-qd\" aria-label=\"Delete forever IMG_2041.HEIC\">Delete forever</button></span></li><li class=\"ds-tr-row\"><span class=\"ds-tr-thumb\"></span><span class=\"ds-tr-text\"><span class=\"ds-tr-name\">Sat, Oct 31</span><span class=\"ds-tr-left\">1 day left</span></span><span class=\"ds-tr-actions\"><button class=\"ds-tr-btn\">Restore</button><button class=\"ds-tr-btn ds-tr-qd\">Delete forever</button></span></li></ul>",
+      "css": ".ds-tr { width: 560px; margin: 0; padding: 8px 20px; list-style: none; border-radius: 18px; background: #fff; color: var(--color-ink, #16181b); font-family: var(--font-sans, Inter, system-ui, sans-serif); font-size: 17px; line-height: 1.5; } .ds-tr-row { display: flex; flex-wrap: wrap; align-items: center; column-gap: 16px; row-gap: 12px; padding-block: 12px; } .ds-tr-row + .ds-tr-row { border-top: 1px solid var(--color-line, #e4e4e0); } .ds-tr-thumb { flex: none; width: 64px; height: 64px; border-radius: 6px; background: linear-gradient(135deg, #c9d3c4, #8fa39a); } .ds-tr-text { display: flex; flex: 1 1 12rem; flex-direction: column; min-width: 0; } .ds-tr-name { font-weight: 600; overflow-wrap: anywhere; } .ds-tr-left { font-size: 15px; color: var(--color-ink-2, #5c6066); font-variant-numeric: tabular-nums; } .ds-tr-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-left: auto; } .ds-tr-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 0 20px; border-radius: 999px; font-family: var(--font-sans, Inter, system-ui, sans-serif); font-size: 15px; font-weight: 600; cursor: pointer; transition: background-color 120ms cubic-bezier(0.16, 1, 0.3, 1); border: 1px solid var(--color-line-strong, #d5d6d2); background: #fff; color: var(--color-ink, #16181b); } .ds-tr-btn:hover { background: var(--color-surface-sunk, #f2f2ef); } .ds-tr-qd { color: var(--color-danger, #b3261e); } .ds-tr-btn:focus-visible { outline: none; box-shadow: 0 0 0 2px #fff, 0 0 0 5px #1f5a41; }"
     }
   ],
   "narrative": {
@@ -476,6 +542,11 @@
         "section": "colors"
       },
       {
+        "name": "The Reversible Is Ink Rule",
+        "section": "colors",
+        "body": "(Owner, 2026-11-04.) Move to Trash can be undone for 30 days, so its button is dark ink (`button--ink`), never red. Red appears only where something can't be undone: red words on a quiet white button where the choice is offered (Delete forever on a row, Empty Trash), and a red fill only on the final confirm. A red fill never appears outside that second question."
+      },
+      {
         "name": "The Never Colour Alone Rule",
         "body": "Every status carries an icon and words with its colour. The active tab adds a shape (pill) to its colour; the attention dot is paired with the accessible name \"Box, needs attention\".",
         "section": "colors"
@@ -487,7 +558,7 @@
       },
       {
         "name": "The Flat Panel Rule",
-        "body": "Surfaces separate by tone, not by shadow. Introduce shadow-raised only for a surface that genuinely floats (a sheet or menu), not for cards.",
+        "body": "Surfaces separate by tone, not by shadow. Introduce `shadow-raised` only for a surface that genuinely floats (a dialog, a sheet, the sticky select bar, the scrubber's pill) or as a hover response on a photo tile; never for a card at rest.",
         "section": "elevation"
       },
       {
@@ -496,9 +567,9 @@
         "section": "typography"
       },
       {
-        "name": "The One Row Per Group Rule",
-        "body": "Photos are read as a stack of days (or months, or years), one sideways strip each, with the count beside every heading; never an endless undifferentiated grid. Each strip is one tab stop: ←, →, Home and End move within it, and the tile holding the tab stop is always rendered.",
-        "section": "layout"
+        "name": "The Every Photo Under Its Heading Rule",
+        "section": "layout",
+        "body": "Photos are read as days (or months, or years), each under a heading with its count, newest first; Months and Years show every photo, only smaller, and nothing is curated or hidden. The whole grid is one tab stop: ← → follow reading order, ↑ ↓ keep the nearest column, Home and End go to the ends of the row, Ctrl (or Cmd) with Home or End to the ends of the library, Page Up and Page Down a screen at a time. The tile holding the tab stop is always rendered."
       }
     ],
     "dos": [
@@ -512,13 +583,17 @@
       "Do tie every hint and error to its field, and keep errors until the field changes.",
       "Do set codes a person must copy character by character in --font-code; everything else in Inter.",
       "Do keep photos at 6px radius (rounded.xs) and cards at 14 or 18px; a photo is not a card.",
-      "Do keep visible words on Previous and Next, and name each pager button with its group.",
-      "Do make each photo strip one tab stop with ←, →, Home and End inside it."
+      "Do keep visible words on the viewer's Previous and Next.",
+      "Do make the photo grid one tab stop, with arrows, Home, End and Page Up / Page Down inside it.",
+      "Do use the ink button for Move to Trash, and put red only on permanent deletion: red words where it is offered, a red fill only on the final confirm.",
+      "Do start every dialog's focus on Cancel, close it on Esc, and return focus to its opener.",
+      "Do keep hover-only affordances (the tile lift, the select circle) behind hover: hover, with a keyboard route to the same action."
     ],
     "donts": [
       "Don't use green for anything but \"safe\" or the primary action.",
       "Don't show green or the word \"safe\" while checking, copying or in any attention state.",
       "Don't use red for anything but permanent deletion, or amber for anything but paused, almost full or unreachable.",
+      "Don't make Move to Trash, or anything reversible, red.",
       "Don't use inline style attributes or injected <style>; the CSP blocks them.",
       "Don't show the Box attention dot for copying or checking.",
       "Don't let tab labels wrap or shrink body text below 17px.",
@@ -528,7 +603,8 @@
       "Don't add time limits, countdowns or auto-dismissing errors to entry pages.",
       "Don't fill progress bars green; progress is ink-3 on track.",
       "Don't say \"Safe\" for an item unless it is replicated and the backup copy is running; tiles carry no backup badges.",
-      "Don't make the select bar sticky at or below 720px, where it would cover tiles."
+      "Don't make the select bar sticky at or below 720px, where it would cover tiles.",
+      "Don't curate or hide photos in Months or Years; they show every photo, only smaller."
     ]
   }
 }

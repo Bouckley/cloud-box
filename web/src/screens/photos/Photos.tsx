@@ -1,8 +1,9 @@
 import type { ItemView } from '@cloudbox/core';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router';
 import { saveOriginal } from '../../app/download.ts';
-import { PhotosIcon } from '../../app/icons.tsx';
+import { PhotosIcon, TrashIcon } from '../../app/icons.tsx';
+import { DeleteSheet } from '../DeleteSheet.tsx';
 import { useLibrary, useStatus } from '../../app/session.tsx';
 import { photoItems, type Grouping } from '../../app/timeline.ts';
 import { useTitle } from '../../app/title.ts';
@@ -53,6 +54,11 @@ export function PhotosScreen() {
   const grouping = asGrouping(params.get('by'));
   const focusId = (useLocation().state as { focus?: string } | null)?.focus ?? null;
   const [selected, setSelected] = useState<Set<string> | null>(null);
+  const [deleting, setDeleting] = useState<string[] | null>(null);
+  const { library } = useLibrary();
+  const { refresh: refreshStatus } = useStatus();
+  const selectButton = useRef<HTMLButtonElement>(null);
+  const present = useMemo(() => new Set(items.map((i) => i.id)), [items]);
 
   const toggle = useCallback((id: string) => {
     setSelected((s) => {
@@ -88,6 +94,7 @@ export function PhotosScreen() {
           )}
           {!empty && (
             <button
+              ref={selectButton}
               type="button"
               className="button"
               aria-pressed={selected !== null}
@@ -109,10 +116,44 @@ export function PhotosScreen() {
                 ? '1 selected'
                 : `${selected.size} selected`}
           </p>
-          <button type="button" className="button" onClick={() => setSelected(null)}>
-            Cancel
-          </button>
+          <div className="select-bar__actions">
+            <button
+              type="button"
+              className="button"
+              disabled={selected.size === 0}
+              onClick={() => {
+                const ids = [...selected].filter((id) => present.has(id));
+                if (ids.length > 0) setDeleting(ids);
+                else setSelected(new Set());
+              }}
+            >
+              <TrashIcon size={18} />
+              Delete
+            </button>
+            <button type="button" className="button" onClick={() => setSelected(null)}>
+              Cancel
+            </button>
+          </div>
         </div>
+      )}
+      {deleting && (
+        <DeleteSheet
+          what="photo"
+          count={deleting.length}
+          onConfirm={async () => {
+            if (!library) throw new Error('locked');
+            // Only what is still here: a photo deleted on another device meanwhile
+            // would stop the rest (the box answers 404 for it).
+            try {
+              await library.trash(deleting.filter((id) => present.has(id)));
+              setSelected(null);
+            } finally {
+              refreshStatus({ sync: false });
+            }
+          }}
+          onClose={() => setDeleting(null)}
+          returnFocus={() => selectButton.current}
+        />
       )}
 
       <Uploads />
@@ -145,11 +186,14 @@ export function PhotoViewerScreen() {
   const { itemId } = useParams();
   const { items, ready } = usePhotos();
   const { library } = useLibrary();
-  const { status } = useStatus();
+  const { status, refresh: refreshStatus } = useStatus();
   const navigate = useNavigate();
   const { search } = useLocation();
+  // The photo being moved to Trash: it leaves the list before the next one is
+  // shown, and the viewer stays on it until then (no flash, and focus stays put).
+  const [moving, setMoving] = useState<ItemView | null>(null);
   const at = items.findIndex((i) => i.id === itemId);
-  const item = at >= 0 ? items[at]! : null;
+  const item = at >= 0 ? items[at]! : moving?.id === itemId ? moving : null;
   useTitle(item ? 'Photo' : 'Photos');
 
   const load = useCallback(
@@ -161,6 +205,8 @@ export function PhotoViewerScreen() {
     },
     [library],
   );
+
+  const [deleting, setDeleting] = useState(false);
 
   const go = (to: ItemView | undefined) => {
     if (to) void navigate(`/photos/${to.id}${search}`, { replace: true });
@@ -187,20 +233,44 @@ export function PhotoViewerScreen() {
     );
   }
   return (
-    <Viewer
-      item={item}
-      hasPrevious={at > 0}
-      hasNext={at < items.length - 1}
-      backupOk={status !== null && !status.warnings.some((w) => w.code === 'backup_missing')}
-      load={load}
-      onPrevious={() => go(items[at - 1])}
-      onNext={() => go(items[at + 1])}
-      onClose={close}
-      onFavourite={(on) => void library?.setFavourite(item.id, on)}
-      onDownload={async () => {
-        if (!library) throw new Error('locked');
-        await saveOriginal(library, item);
-      }}
-    />
+    <>
+      <Viewer
+        item={item}
+        hasPrevious={at > 0}
+        hasNext={at < items.length - 1}
+        backupOk={status !== null && !status.warnings.some((w) => w.code === 'backup_missing')}
+        load={load}
+        onPrevious={() => go(items[at - 1])}
+        onNext={() => go(items[at + 1])}
+        onClose={close}
+        onFavourite={(on) => void library?.setFavourite(item.id, on)}
+        onDownload={async () => {
+          if (!library) throw new Error('locked');
+          await saveOriginal(library, item);
+        }}
+        onDelete={() => setDeleting(true)}
+      />
+      {deleting && (
+        <DeleteSheet
+          what="photo"
+          count={1}
+          onConfirm={async () => {
+            if (!library) throw new Error('locked');
+            // Show the next (older) photo, or the newer one at the end; none left: back to Photos.
+            const after = items[at + 1] ?? items[at - 1];
+            setMoving(item);
+            try {
+              await library.trash([item.id]);
+              if (after) go(after);
+              else void navigate(`/photos${search}`);
+            } finally {
+              setMoving(null);
+              refreshStatus({ sync: false });
+            }
+          }}
+          onClose={() => setDeleting(false)}
+        />
+      )}
+    </>
   );
 }

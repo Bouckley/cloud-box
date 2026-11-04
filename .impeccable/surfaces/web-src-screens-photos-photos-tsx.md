@@ -47,11 +47,21 @@ from docs/plans/M2.md (Task 13 Interfaces, Copy table, Scope rulings S3, S6, S7)
 
 ## Layout intent
 
-One row per day. Each group (day, month or year) is a heading with its count,
-then one horizontal strip of tiles that scrolls sideways, with Previous and
-Next buttons at the heading's end. Days uses large tiles, Months smaller,
-Years a tight strip. The page scrolls vertically through groups; both
-directions are virtualised.
+A wrapping grid (ADR 0007). Each group (day, month or year) is a heading with
+its count, then rows of square tiles that fill the width, 6 px apart. Tiles
+aim for 180 / 120 / 80 px (Days / Months / Years) above 720 px and
+110 / 80 / 56 px at or below, with at least 3 / 4 / 6 columns and never under
+48 px; Months and Years show every photo, only smaller. Groups that fit in one
+row share it, each with its own heading above its own tiles, lined up by CSS
+subgrid; a group one tile wide uses its short date. The page is virtualised
+by row, and the whole grid is one tab stop. On mouse hover a tile greys
+slightly and lifts, and a select circle appears that starts Select with that
+photo.
+
+A date scrubber (a slider, "Jump to a date") appears once the timeline is
+longer than 2½ screens: above 720 px a column beside the grid with year marks
+and a date pill; at or below 720 px only its handle, over the grid's right
+edge, shown once the photos are scrolled into view.
 
 ## Direction contract
 

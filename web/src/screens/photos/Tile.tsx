@@ -20,7 +20,7 @@ function typeText(item: ItemView): string {
   return ext && ext !== item.meta?.name ? ext.slice(0, 5).toUpperCase() : '';
 }
 
-function TileMedia({ item }: { item: ItemView }) {
+export function TileMedia({ item }: { item: ItemView }) {
   const { url, missing } = useThumb(item);
   const hasThumb = !!item.blobs.thumb && !!item.meta?.thumbMime && !missing;
   return (

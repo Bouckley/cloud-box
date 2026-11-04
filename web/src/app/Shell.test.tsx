@@ -16,7 +16,7 @@ function at(path: string, props: Partial<ShellProps> = {}) {
     [
       {
         element: shell,
-        children: ['photos', 'albums', 'files', 'box'].map((p) => ({
+        children: ['photos', 'albums', 'files', 'box', 'trash'].map((p) => ({
           path: `/${p}`,
           element: <h1>{p}</h1>,
         })),
@@ -39,6 +39,15 @@ describe('Shell', () => {
       'page',
     );
     expect(within(nav).getByRole('link', { name: 'Photos' })).not.toHaveAttribute('aria-current');
+  });
+
+  it('Trash lives under Albums: Albums stays marked there', () => {
+    at('/trash');
+    const nav = screen.getByRole('navigation', { name: 'Main' });
+    expect(within(nav).getByRole('link', { name: 'Albums' })).toHaveAttribute(
+      'aria-current',
+      'true',
+    );
   });
 
   it('a skip link leads to main, and the banner comes first in main', () => {

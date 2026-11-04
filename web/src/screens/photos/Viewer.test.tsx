@@ -19,6 +19,7 @@ function show(item: ItemView, over: Partial<ViewerProps> = {}) {
     onClose: vi.fn(),
     onFavourite: vi.fn(),
     onDownload: vi.fn(),
+    onDelete: vi.fn(),
     ...over,
   };
   render(<Viewer {...props} />);
@@ -109,5 +110,23 @@ describe('Viewer', () => {
       ),
     );
     expect(screen.getByText(/too big to play here/)).toBeInTheDocument();
+  });
+
+  it('Delete asks to delete this photo', () => {
+    const p = show(photo('a', '2026-11-03T14:05:00Z'));
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+    expect(p.onDelete).toHaveBeenCalled();
+  });
+
+  it('Esc inside an open dialog does not close the viewer', () => {
+    const p = show(photo('a', '2026-11-03T14:05:00Z'));
+    const d = document.createElement('dialog');
+    d.setAttribute('open', '');
+    const b = document.createElement('button');
+    d.appendChild(b);
+    document.body.appendChild(d);
+    fireEvent.keyDown(b, { key: 'Escape' });
+    expect(p.onClose).not.toHaveBeenCalled();
+    d.remove();
   });
 });

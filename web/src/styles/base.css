@@ -236,12 +236,12 @@ a {
   line-height: 1.2;
   white-space: nowrap;
 }
-.nav-link[aria-current='page'] {
+.nav-link[aria-current] {
   color: var(--color-safe-strong);
   font-weight: var(--weight-bold);
 }
 /* Shape cue for the active tab, not colour alone: a pill behind the icon. */
-.nav-link[aria-current='page'] .nav-link__icon {
+.nav-link[aria-current] .nav-link__icon {
   background: var(--color-safe-tint);
 }
 .nav-link:focus-visible {
@@ -309,7 +309,7 @@ a {
     height: 1.375rem;
     padding: 0;
   }
-  .nav-link[aria-current='page'] .nav-link__icon {
+  .nav-link[aria-current] .nav-link__icon {
     background: none;
   }
   .nav-link__label {
@@ -318,7 +318,7 @@ a {
   .nav-link:hover {
     background: var(--color-surface-sunk);
   }
-  .nav-link[aria-current='page'] {
+  .nav-link[aria-current] {
     background: var(--color-safe-tint);
     color: var(--color-safe-strong);
   }
@@ -1053,7 +1053,7 @@ a.banner:hover {
   inset: calc(var(--target-min) / 2) auto calc(var(--target-min) / 2) 50%;
   width: 2px;
   margin-left: -1px;
-  border-radius: 1px;
+  border-radius: var(--radius-pill);
   background: var(--color-track);
 }
 .scrubber__year {
@@ -1286,10 +1286,10 @@ a.banner:hover {
   color: #fff;
 }
 .tile-pick::before {
-  /* A 44 px hit area round the 28 px circle. */
+  /* A 48 px hit area round the 28 px circle. */
   content: '';
   position: absolute;
-  inset: -8px;
+  inset: -10px;
 }
 .tile::after {
   content: '';
@@ -1328,6 +1328,202 @@ a.banner:hover {
   .timeline__cell:hover > .tile-pick {
     transform: translateY(-3px);
   }
+}
+
+/* ---------- Dialogs: the delete sheet and Delete forever ---------- */
+
+/* A native modal <dialog>: a white card over a dimmed page, centred on wide
+   screens and a sheet from the bottom on phones. The one floating surface
+   besides the select bar, so it carries shadow-raised. */
+.dialog {
+  width: calc(100% - 32px);
+  max-width: 30rem;
+  max-height: calc(100dvh - 32px);
+  padding: var(--space-6);
+  border: 0;
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  box-shadow: var(--shadow-raised);
+  overflow-y: auto;
+}
+.dialog[open] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  animation: dialog-in var(--duration-base) var(--ease-out);
+}
+.dialog::backdrop {
+  background: rgb(22 24 27 / 45%);
+}
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+.dialog__title {
+  font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-display);
+  overflow-wrap: anywhere;
+}
+.dialog__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+.sheet__lede {
+  overflow-wrap: anywhere;
+}
+/* The one choice the web offers (scope ruling S5), described before the buttons. */
+.sheet__option {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-sunk);
+}
+.sheet__option svg {
+  flex: none;
+  margin-top: 1px;
+}
+.sheet__option-title {
+  font-weight: var(--weight-semibold);
+}
+.sheet__option-detail {
+  color: var(--color-ink-2);
+  font-size: var(--text-sm);
+}
+@media (max-width: 720px) {
+  .dialog {
+    width: 100%;
+    max-width: none;
+    margin: auto 0 0;
+    padding-bottom: calc(var(--space-6) + env(safe-area-inset-bottom));
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  }
+  .dialog__actions .button {
+    flex: 1 1 auto;
+  }
+}
+
+/* Move to Trash: firm, but not red. Red is only for what can't be undone
+   (owner, 2026-11-04). */
+.button--ink {
+  border-color: var(--color-ink);
+  background: var(--color-ink);
+  color: var(--color-surface);
+}
+.button--ink:hover {
+  border-color: var(--color-ink-3);
+  background: var(--color-ink-3);
+}
+/* A row's Delete forever: red words on white; the red fill waits for the confirm. */
+.button--quiet-danger {
+  color: var(--color-danger);
+}
+
+/* ---------- Trash ---------- */
+
+.trash__said:empty {
+  /* Kept in the page (a live region must exist before it speaks) but out of the flow. */
+  position: absolute;
+}
+.trash-list {
+  margin: 0;
+  padding: var(--space-2) var(--space-5);
+  list-style: none;
+}
+.trash-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: var(--space-4);
+  row-gap: var(--space-3);
+  padding-block: var(--space-3);
+}
+.trash-row + .trash-row {
+  border-top: 1px solid var(--color-line);
+}
+.trash-row__thumb {
+  position: relative;
+  flex: none;
+  width: 64px;
+  height: 64px;
+  overflow: hidden;
+  border-radius: var(--radius-xs);
+  background: var(--color-surface-sunk);
+  color: var(--color-ink-2);
+}
+.trash-row__thumb .tile__video {
+  bottom: var(--space-1);
+  left: var(--space-1);
+  padding: 2px;
+}
+.trash-row__thumb .tile__video span,
+.trash-row__thumb .tile__file span {
+  display: none;
+}
+.trash-row__text {
+  display: flex;
+  flex: 1 1 12rem;
+  flex-direction: column;
+  min-width: 0;
+}
+.trash-row__name {
+  font-weight: var(--weight-semibold);
+  overflow-wrap: anywhere;
+}
+.trash-row__left {
+  color: var(--color-ink-2);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+.trash-row__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+
+/* Albums › More: the way to Trash (Task 15 adds the rest of Albums). */
+.more-links {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-width: 28rem;
+}
+.more-link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--target-min);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font-weight: var(--weight-semibold);
+  text-decoration: none;
+}
+.more-link:hover {
+  background: var(--color-surface-sunk);
+}
+.more-link > svg:last-child {
+  margin-left: auto;
+  color: var(--color-ink-2);
+}
+.more-link__count {
+  font-variant-numeric: tabular-nums;
+}
+
+.select-bar__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
 }
 
 /* ---------- Upload panel ---------- */

@@ -179,3 +179,19 @@ export const UpDownIcon = (p: IconProps) => (
     <path d="M8 15l4 4 4-4" />
   </Icon>
 );
+
+export const TrashIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M4 7h16" />
+    <path d="M10 11v6M14 11v6" />
+    <path d="M6 7l1 12a2 2 0 002 2h6a2 2 0 002-2l1-12" />
+    <path d="M9 7V4h6v3" />
+  </Icon>
+);
+
+export const RestoreIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M4 12a8 8 0 108-8 8 8 0 00-6 2.7L4 9" />
+    <path d="M4 4v5h5" />
+  </Icon>
+);

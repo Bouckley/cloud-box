@@ -11,6 +11,7 @@ import {
   InfoIcon,
   ShieldCheckIcon,
   ShieldClockIcon,
+  TrashIcon,
   WarningIcon,
 } from '../../app/icons.tsx';
 import { useThumbUrl } from '../../app/thumbs.ts';
@@ -34,6 +35,8 @@ export type ViewerProps = {
   onFavourite(on: boolean): void;
   /** Saves the original; rejects if it did not finish. */
   onDownload(): Promise<void>;
+  /** Opens the delete sheet for this photo. */
+  onDelete(): void;
 };
 
 type Media =
@@ -104,6 +107,8 @@ export function Viewer(p: ViewerProps) {
       if (e.altKey || e.ctrlKey || e.metaKey || e.defaultPrevented) return;
       const t = e.target;
       if (t instanceof Element && t.closest('input, textarea, select, video')) return;
+      // A dialog (the delete sheet) owns the keys while it is open: Esc closes it, not the viewer.
+      if (document.querySelector('dialog[open]')) return;
       const k = keys.current;
       if (e.key === 'ArrowLeft' && k.hasPrevious) k.onPrevious();
       else if (e.key === 'ArrowRight' && k.hasNext) k.onNext();
@@ -200,6 +205,10 @@ export function Viewer(p: ViewerProps) {
         <button type="button" className="button" onClick={download} disabled={downloading}>
           <DownloadIcon size={18} />
           {downloading ? 'Downloading…' : 'Download'}
+        </button>
+        <button type="button" className="button" onClick={p.onDelete}>
+          <TrashIcon size={18} />
+          Delete
         </button>
         {downloadFailed && (
           <p className="form-error viewer__error" role="alert">

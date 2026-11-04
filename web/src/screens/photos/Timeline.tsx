@@ -1,11 +1,5 @@
 import type { ItemView } from '@cloudbox/core';
-import {
-  defaultRangeExtractor,
-  observeElementRect,
-  useVirtualizer,
-  useWindowVirtualizer,
-  type Range,
-} from '@tanstack/react-virtual';
+import { defaultRangeExtractor, useWindowVirtualizer, type Range } from '@tanstack/react-virtual';
 import {
   useCallback,
   useEffect,
@@ -15,19 +9,22 @@ import {
   useState,
   type KeyboardEvent,
 } from 'react';
-import { ChevronIcon, ChevronLeftIcon } from '../../app/icons.tsx';
 import { countText, groupItems, tileLabel, type Group, type Grouping } from '../../app/timeline.ts';
+import { CheckIcon } from '../../app/icons.tsx';
+import { Scrubber, stopsOf } from './Scrubber.tsx';
 import { Tile } from './Tile.tsx';
 
-/** Tile sides in px: Days large, Months smaller, Years a tight strip. */
-const TILE: Record<Grouping, { wide: number; narrow: number }> = {
-  days: { wide: 190, narrow: 140 },
-  months: { wide: 128, narrow: 104 },
-  years: { wide: 88, narrow: 72 },
+/** Tile sizes the grid aims for, and the fewest columns, per grouping. */
+const SIZE: Record<Grouping, { wide: number; narrow: number; minCols: number }> = {
+  days: { wide: 180, narrow: 110, minCols: 3 },
+  months: { wide: 120, narrow: 80, minCols: 4 },
+  years: { wide: 80, narrow: 56, minCols: 6 },
 };
+/** No tile is ever smaller than a touch target. */
+const MIN_TILE = 48;
 const GAP = 6;
-/** Heading row plus the space between groups, before a group is measured. */
-const GROUP_CHROME = 92;
+/** A group heading's height before it is measured (heading, count, space above). */
+const HEAD = 72;
 const NARROW = '(max-width: 720px)';
 
 function useMedia(query: string): boolean {
@@ -43,11 +40,73 @@ function useMedia(query: string): boolean {
   return on;
 }
 
-const smooth = (): ScrollBehavior =>
-  typeof window.matchMedia === 'function' &&
-  window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    ? 'auto'
-    : 'smooth';
+/** How many columns fit in `width`, and each tile's side. */
+export function columns(width: number, grouping: Grouping, narrow: boolean) {
+  const s = SIZE[grouping];
+  const fit = (side: number) => Math.max(1, Math.floor((width + GAP) / (side + GAP)));
+  const cols = Math.min(Math.max(fit(narrow ? s.narrow : s.wide), s.minCols), fit(MIN_TILE));
+  return { cols, tile: (width - (cols - 1) * GAP) / cols };
+}
+
+/** A cell in a row of tiles: the item and the grid column it sits in. */
+type Cell = { item: ItemView; col: number };
+/** A small group sharing a row with others: its heading spans `span` columns. */
+type Seg = { g: number; span: number; cells: Cell[] };
+type Row =
+  | { kind: 'head'; key: string; g: number }
+  | { kind: 'tiles'; key: string; g: number; cells: Cell[] }
+  | { kind: 'pack'; key: string; segs: Seg[]; cells: Cell[] };
+
+/** Narrowest a packed group's heading may be, in px; it wraps inside that. */
+const PACK_HEAD = 110;
+
+/**
+ * Groups laid out as rows. A group that fits in one row may share it with the
+ * groups after it (each with its own heading), so days of one or two photos
+ * do not leave most of a row empty. A bigger group gets a heading row, then
+ * rows of `cols` tiles.
+ */
+function layOut(groups: Group[], cols: number, tile: number) {
+  const rows: Row[] = [];
+  const at = new Map<string, { row: number; col: number }>();
+  const order: string[] = [];
+  /** The first row of each group, for the scrubber. */
+  const groupRow: number[] = [];
+  const minSpan = Math.min(cols, Math.ceil(PACK_HEAD / (tile + GAP)));
+  let pack: Seg[] = [];
+  let used = 0;
+  const flush = () => {
+    if (!pack.length) return;
+    const cells = pack.flatMap((seg) => seg.cells);
+    cells.forEach((c) => at.set(c.item.id, { row: rows.length, col: c.col }));
+    rows.push({ kind: 'pack', key: `p:${groups[pack[0]!.g]!.key}`, segs: pack, cells });
+    pack = [];
+    used = 0;
+  };
+  groups.forEach((group, g) => {
+    group.items.forEach((it) => order.push(it.id));
+    const n = group.items.length;
+    if (n <= cols) {
+      const span = Math.min(cols, Math.max(n, minSpan));
+      if (used + span > cols) flush();
+      groupRow[g] = rows.length;
+      const cells = group.items.map((item, i) => ({ item, col: used + i }));
+      pack.push({ g, span, cells });
+      used += span;
+      return;
+    }
+    flush();
+    groupRow[g] = rows.length;
+    rows.push({ kind: 'head', key: `h:${group.key}`, g });
+    for (let i = 0; i < n; i += cols) {
+      const cells = group.items.slice(i, i + cols).map((item, col) => ({ item, col }));
+      cells.forEach((c) => at.set(c.item.id, { row: rows.length, col: c.col }));
+      rows.push({ kind: 'tiles', key: `t:${group.key}:${i}`, g, cells });
+    }
+  });
+  flush();
+  return { rows, at, order, groupRow };
+}
 
 export type TimelineProps = {
   items: ItemView[];
@@ -59,12 +118,15 @@ export type TimelineProps = {
   onToggle?: ((id: string) => void) | undefined;
   /** Scroll to this photo and focus its tile (coming back from the viewer). */
   focusId?: string | null | undefined;
+  /** Outside Select mode: a photo's select circle was clicked. */
+  onPick?: ((id: string) => void) | undefined;
 };
 
 /**
- * The Photos timeline: one row per day (or month, or year), newest first.
- * The page scrolls through groups and each row scrolls sideways; both are
- * virtual, so a 100,000-photo library keeps a few hundred tiles in the page.
+ * The Photos timeline: a grid of square tiles under a heading per day (or
+ * month, or year), newest first, with a scrubber to jump through time. Rows
+ * are virtual, so a 100,000-photo library keeps a few hundred tiles in the
+ * page, however many photos one day holds.
  */
 export function Timeline({
   items,
@@ -74,9 +136,9 @@ export function Timeline({
   selected,
   onToggle,
   focusId,
+  onPick,
 }: TimelineProps) {
   const narrow = useMedia(NARROW);
-  const tile = TILE[grouping][narrow ? 'narrow' : 'wide'];
   const groups = useMemo(
     () => groupItems(items, grouping, { timeZone, now }),
     [items, grouping, timeZone, now],
@@ -85,266 +147,241 @@ export function Timeline({
 
   const listRef = useRef<HTMLDivElement>(null);
   const [margin, setMargin] = useState(0);
+  const [width, setWidth] = useState(0);
   useLayoutEffect(() => {
     const el = listRef.current;
-    if (el) setMargin(el.getBoundingClientRect().top + window.scrollY);
+    if (!el) return;
+    const read = () => {
+      setMargin(el.getBoundingClientRect().top + window.scrollY);
+      // jsdom (and a hidden tab) measure 0: assume the window's width then.
+      setWidth(el.clientWidth || window.innerWidth);
+    };
+    read();
+    const ro = typeof ResizeObserver === 'function' ? new ResizeObserver(read) : null;
+    ro?.observe(el);
+    return () => ro?.disconnect();
   }, [narrow]);
 
-  const estimate = useCallback(() => GROUP_CHROME + tile, [tile]);
-  const rows = useWindowVirtualizer({
-    count: groups.length,
-    estimateSize: estimate,
-    overscan: 3,
-    scrollMargin: margin,
-    getItemKey: (i) => groups[i]!.key,
-    // jsdom (and a hidden tab) measure 0: keep the estimate then.
-    measureElement: (el) => el.getBoundingClientRect().height || estimate(),
-  });
+  const { cols, tile } = columns(width || window.innerWidth, grouping, narrow);
+  const { rows, at, order, groupRow } = useMemo(
+    () => layOut(groups, cols, tile),
+    [groups, cols, tile],
+  );
+  const stops = useMemo(() => stopsOf(groups, grouping, groupRow), [groups, grouping, groupRow]);
 
-  // Coming back from the viewer: bring that photo's row into view first.
+  // The roving tab stop: one tile in the whole timeline is reachable by Tab.
+  const [activeId, setActiveId] = useState<string | null>(null);
+  // Coming back from the viewer: that photo holds the tab stop and gets focus.
   // Applied once: later changes (uploads, other devices) never move focus.
   const [focusDone, setFocusDone] = useState<string | null>(null);
-  const focusAt = findItem(groups, focusId && focusDone !== focusId ? focusId : null);
-  const focusKey = focusAt ? `${focusAt.g}:${focusAt.i}` : null;
-  useLayoutEffect(() => {
-    if (focusAt) rows.scrollToIndex(focusAt.g, { align: 'center' });
-    // Only when the target changes, not on every render.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [focusKey]);
+  const focusTarget = focusId && focusDone !== focusId && at.has(focusId) ? focusId : null;
+  const active = focusTarget ?? (activeId && at.has(activeId) ? activeId : (order[0] ?? null));
+  const activeRow = active ? at.get(active)!.row : -1;
+  const pendingFocus = useRef<string | null>(null);
 
-  return (
-    <div ref={listRef} className="timeline">
-      <div
-        className="timeline__inner"
-        ref={(el) => {
-          el?.style.setProperty('height', `${rows.getTotalSize()}px`);
-        }}
-      >
-        {rows.getVirtualItems().map((row) => {
-          const group = groups[row.index]!;
-          return (
-            <div
-              key={row.key}
-              data-index={row.index}
-              ref={(el) => {
-                if (!el) return;
-                el.style.setProperty(
-                  'transform',
-                  `translateY(${row.start - rows.options.scrollMargin}px)`,
-                );
-                rows.measureElement(el);
-              }}
-              className="timeline__row"
-            >
-              <Strip
-                group={group}
-                tile={tile}
-                where={where}
-                selected={selected}
-                onToggle={onToggle}
-                focusIndex={focusAt?.g === row.index ? focusAt.i : null}
-                onFocused={() => setFocusDone(focusId ?? null)}
-              />
-            </div>
-          );
-        })}
-      </div>
-    </div>
+  const estimate = useCallback(
+    (i: number) => {
+      const kind = rows[i]?.kind;
+      return kind === 'head' ? HEAD : kind === 'pack' ? HEAD + tile + GAP : tile + GAP;
+    },
+    [rows, tile],
   );
-}
-
-function findItem(groups: Group[], id: string | null | undefined) {
-  if (!id) return null;
-  for (let g = 0; g < groups.length; g++) {
-    const i = groups[g]!.items.findIndex((x) => x.id === id);
-    if (i >= 0) return { g, i };
-  }
-  return null;
-}
-
-type StripProps = {
-  group: Group;
-  tile: number;
-  where: { timeZone?: string | undefined };
-  selected: ReadonlySet<string> | undefined;
-  onToggle: ((id: string) => void) | undefined;
-  focusIndex: number | null;
-  onFocused(): void;
-};
-
-/** One group: its heading and count, Previous/Next, and a sideways row of tiles. */
-function Strip({ group, tile, where, selected, onToggle, focusIndex, onFocused }: StripProps) {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const [active, setActive] = useState(0);
-  const pendingFocus = useRef<number | null>(null);
-  const count = group.items.length;
-  const current = Math.min(active, count - 1);
-
-  // The tile that holds the row's tab stop is always in the page.
   const rangeExtractor = useCallback(
     (range: Range) => {
       const out = defaultRangeExtractor(range);
-      if (!out.includes(current)) out.push(current);
+      if (activeRow >= 0 && !out.includes(activeRow)) out.push(activeRow);
       return out.sort((a, b) => a - b);
     },
-    [current],
+    [activeRow],
   );
-  // TanStack Virtual re-renders on scroll itself; the compiler leaves this component unmemoised.
-  // eslint-disable-next-line react-hooks/incompatible-library
-  const cols = useVirtualizer({
-    horizontal: true,
-    count,
-    getScrollElement: () => scrollRef.current,
-    estimateSize: () => tile + GAP,
+  const list = useWindowVirtualizer({
+    count: rows.length,
+    estimateSize: estimate,
     overscan: 4,
+    scrollMargin: margin,
+    scrollPaddingStart: 16,
     rangeExtractor,
-    getItemKey: (i) => group.items[i]!.id,
-    // A row not yet laid out (jsdom, a hidden tab) reads 0 wide: assume the window's width.
-    observeElementRect: (instance, cb) =>
-      observeElementRect(instance, (rect) =>
-        cb(rect.width ? rect : { width: window.innerWidth, height: tile }),
-      ),
+    getItemKey: (i) => rows[i]!.key,
+    measureElement: (el) =>
+      el.getBoundingClientRect().height || estimate(Number(el.getAttribute('data-index'))),
   });
 
-  const [edges, setEdges] = useState({ start: true, end: true });
-  const readEdges = useCallback(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const max = el.scrollWidth - el.clientWidth;
-    setEdges({ start: el.scrollLeft <= 1, end: el.scrollLeft >= max - 1 });
-  }, []);
-  useEffect(() => {
-    readEdges();
-    const el = scrollRef.current;
-    if (!el) return;
-    el.addEventListener('scroll', readEdges, { passive: true });
-    const ro = typeof ResizeObserver === 'function' ? new ResizeObserver(readEdges) : null;
-    ro?.observe(el);
-    return () => {
-      el.removeEventListener('scroll', readEdges);
-      ro?.disconnect();
-    };
-  }, [readEdges, count, tile]);
-
-  const page = (dir: 1 | -1) => {
-    const el = scrollRef.current;
-    if (!el) return;
-    // Whole tiles: a page is the tiles that fit, less one for context.
-    const step = tile + GAP;
-    const fit = Math.max(1, Math.floor(el.clientWidth / step) - 1);
-    el.scrollBy({ left: dir * fit * step, behavior: smooth() });
+  const moveTo = (id: string | undefined) => {
+    if (!id) return;
+    setActiveId(id);
+    pendingFocus.current = id;
+    list.scrollToIndex(at.get(id)!.row, { align: 'auto' });
   };
 
-  const moveTo = (i: number) => {
-    const next = Math.max(0, Math.min(count - 1, i));
-    setActive(next);
-    pendingFocus.current = next;
-    cols.scrollToIndex(next, { align: 'auto' });
-  };
-
-  useEffect(() => {
-    if (focusIndex !== null) moveTo(focusIndex);
+  useLayoutEffect(() => {
+    if (!focusTarget) return;
+    pendingFocus.current = focusTarget;
+    list.scrollToIndex(at.get(focusTarget)!.row, { align: 'center' });
+    // Only when the target changes, not on every render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [focusIndex]);
+  }, [focusTarget]);
 
   useLayoutEffect(() => {
     const want = pendingFocus.current;
-    if (want === null) return;
-    const el = scrollRef.current?.querySelector<HTMLElement>(
-      `[data-col="${want}"] a, [data-col="${want}"] input`,
+    if (!want) return;
+    const el = listRef.current?.querySelector<HTMLElement>(
+      `[data-cell="${CSS.escape(want)}"] a, [data-cell="${CSS.escape(want)}"] input`,
     );
     if (el) {
       pendingFocus.current = null;
       el.focus({ preventScroll: true });
-      onFocused();
     }
   });
 
-  const onKeyDown = (e: KeyboardEvent<HTMLElement>) => {
-    const keys: Record<string, number> = {
-      ArrowRight: current + 1,
-      ArrowLeft: current - 1,
-      Home: 0,
-      End: count - 1,
-    };
-    const to = keys[e.key];
-    if (to === undefined) return;
-    e.preventDefault();
-    moveTo(to);
+  /** The tile `steps` rows of tiles down (or up), in the same column or the nearest one. */
+  const vertical = (id: string, dir: 1 | -1, steps = 1): string | undefined => {
+    const { row, col } = at.get(id)!;
+    let target: string | undefined;
+    for (let r = row + dir, n = 0; r >= 0 && r < rows.length && n < steps; r += dir) {
+      const next = rows[r]!;
+      if (next.kind === 'head') continue;
+      const near = next.cells.reduce((a, b) =>
+        Math.abs(b.col - col) < Math.abs(a.col - col) ? b : a,
+      );
+      target = near.item.id;
+      n++;
+    }
+    return target;
   };
 
-  const headingId = `day-${group.key}`;
-  const scrolls = !(edges.start && edges.end);
-  return (
-    <section className="strip" aria-labelledby={headingId}>
-      <div className="strip__head">
-        <div className="strip__title">
-          <h2 id={headingId}>{group.label}</h2>
-          <p className="strip__count">{countText(group.items)}</p>
-        </div>
-        {scrolls && (
-          <div className="strip__pager">
-            <button
-              type="button"
-              className="button strip__btn"
-              onClick={() => page(-1)}
-              disabled={edges.start}
-              aria-label={`Previous, ${group.label}`}
-            >
-              <ChevronLeftIcon size={20} />
-              <span>Previous</span>
-            </button>
-            <button
-              type="button"
-              className="button strip__btn"
-              onClick={() => page(1)}
-              disabled={edges.end}
-              aria-label={`Next, ${group.label}`}
-            >
-              <span>Next</span>
-              <ChevronIcon size={20} />
-            </button>
-          </div>
+  const onKeyDown = (e: KeyboardEvent<HTMLElement>) => {
+    if (!active) return;
+    const { row } = at.get(active)!;
+    const line = rows[row] as Exclude<Row, { kind: 'head' }>;
+    const i = order.indexOf(active);
+    const page = Math.max(1, Math.floor(window.innerHeight / (tile + GAP)) - 1);
+    const keys: Record<string, () => string | undefined> = {
+      ArrowRight: () => order[i + 1],
+      ArrowLeft: () => order[i - 1],
+      ArrowDown: () => vertical(active, 1),
+      ArrowUp: () => vertical(active, -1),
+      PageDown: () => vertical(active, 1, page),
+      PageUp: () => vertical(active, -1, page),
+      Home: () => (e.ctrlKey || e.metaKey ? order[0] : line.cells[0]!.item.id),
+      End: () => (e.ctrlKey || e.metaKey ? order.at(-1) : line.cells.at(-1)!.item.id),
+    };
+    const to = keys[e.key];
+    if (!to) return;
+    e.preventDefault();
+    moveTo(to());
+  };
+
+  const pickable = !selected && onPick;
+  const cell = ({ item }: Cell) => {
+    const label = tileLabel(item, where);
+    return (
+      <li key={item.id} data-cell={item.id} className="timeline__cell">
+        <Tile
+          item={item}
+          label={label}
+          tabIndex={item.id === active ? 0 : -1}
+          onKeyDown={onKeyDown}
+          onFocus={() => {
+            setActiveId(item.id);
+            if (item.id === focusTarget) setFocusDone(item.id);
+          }}
+          select={
+            selected && onToggle
+              ? { checked: selected.has(item.id), onToggle: () => onToggle(item.id) }
+              : undefined
+          }
+        />
+        {pickable && (
+          // Mouse and trackpad only (Select in the header does the same from
+          // the keyboard), so the grid stays one tab stop.
+          <button
+            type="button"
+            className="tile-pick"
+            tabIndex={-1}
+            aria-label={`Select ${label}`}
+            onClick={() => onPick(item.id)}
+          >
+            <CheckIcon size={16} />
+          </button>
         )}
-      </div>
-      <div className="strip__scroll" ref={scrollRef}>
-        <ul
-          className="strip__list"
+      </li>
+    );
+  };
+
+  // Decided from the layout, not from measured heights: the scrubber's column
+  // narrows the grid, which changes measured heights, which must not flip it.
+  const laidOut = rows.reduce((n, _r, i) => n + estimate(i), 0);
+  const showScrubber = stops.length > 1 && laidOut > window.innerHeight * 2.5;
+  const starts = stops.map((s) => list.measurementsCache[s.row]?.start ?? 0);
+
+  return (
+    <div className={`timeline${showScrubber ? ' timeline--scrub' : ''}`}>
+      <div ref={listRef} className="timeline__list">
+        <div
+          className="timeline__inner"
           ref={(el) => {
-            if (!el) return;
-            el.style.setProperty('width', `${cols.getTotalSize() - GAP}px`);
-            el.style.setProperty('height', `${tile}px`);
-            el.style.setProperty('--tile', `${tile}px`);
+            el?.style.setProperty('height', `${list.getTotalSize()}px`);
+            el?.style.setProperty('--cols', String(cols));
           }}
         >
-          {cols.getVirtualItems().map((col) => {
-            const item = group.items[col.index]!;
+          {list.getVirtualItems().map((v) => {
+            const row = rows[v.index]!;
+            const first = v.index === 0;
             return (
-              <li
-                key={col.key}
-                data-col={col.index}
-                className="strip__item"
+              <div
+                key={v.key}
+                data-index={v.index}
+                className="timeline__row"
                 ref={(el) => {
-                  el?.style.setProperty('transform', `translateX(${col.start}px)`);
+                  if (!el) return;
+                  el.style.setProperty(
+                    'transform',
+                    `translateY(${v.start - list.options.scrollMargin}px)`,
+                  );
+                  list.measureElement(el);
                 }}
               >
-                <Tile
-                  item={item}
-                  label={tileLabel(item, where)}
-                  tabIndex={col.index === current ? 0 : -1}
-                  onKeyDown={onKeyDown}
-                  onFocus={() => setActive(col.index)}
-                  select={
-                    selected && onToggle
-                      ? { checked: selected.has(item.id), onToggle: () => onToggle(item.id) }
-                      : undefined
-                  }
-                />
-              </li>
+                {row.kind === 'head' ? (
+                  <Heading group={groups[row.g]!} first={first} />
+                ) : row.kind === 'tiles' ? (
+                  <ul className="timeline__tiles">{row.cells.map(cell)}</ul>
+                ) : (
+                  <div className={`timeline__pack${first ? ' timeline__pack--first' : ''}`}>
+                    {row.segs.map((seg) => (
+                      <div
+                        key={seg.g}
+                        className="timeline__seg"
+                        style={{ gridColumn: `span ${seg.span}` }}
+                      >
+                        <Heading group={groups[seg.g]!} first short={seg.span === 1} />
+                        <ul className="timeline__tiles">{seg.cells.map(cell)}</ul>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             );
           })}
-        </ul>
+        </div>
       </div>
-    </section>
+      {showScrubber && (
+        <Scrubber
+          stops={stops}
+          starts={starts}
+          padding={16}
+          onJump={(i) => list.scrollToIndex(stops[i]!.row, { align: 'start' })}
+        />
+      )}
+    </div>
+  );
+}
+
+/** A group's heading and count; the short date when it is one tile wide. */
+function Heading({ group, first, short }: { group: Group; first: boolean; short?: boolean }) {
+  return (
+    <div className={`timeline__head${first ? ' timeline__head--first' : ''}`}>
+      <h2>{short ? group.short : group.label}</h2>
+      <p className="timeline__count">{countText(group.items)}</p>
+    </div>
   );
 }

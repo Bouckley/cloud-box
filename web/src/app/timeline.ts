@@ -2,7 +2,8 @@ import type { ItemView, LibrarySnapshot } from '@cloudbox/core';
 
 export type Grouping = 'days' | 'months' | 'years';
 
-export type Group = { key: string; label: string; items: ItemView[] };
+/** `short` is for a heading only one tile wide, e.g. "Sat, Oct 31". */
+export type Group = { key: string; label: string; short: string; items: ItemView[] };
 
 type Where = { timeZone?: string | undefined; locale?: string | undefined };
 
@@ -64,6 +65,11 @@ export function groupItems(
     month: 'long',
     year: 'numeric',
   });
+  const short = (o2: Intl.DateTimeFormatOptions) =>
+    new Intl.DateTimeFormat(o.locale, { timeZone: o.timeZone, ...o2 });
+  const dayShort = short({ weekday: 'short', month: 'short', day: 'numeric' });
+  const dayYearShort = short({ weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+  const monthShort = short({ month: 'short', year: 'numeric' });
 
   const groups: Group[] = [];
   let current = null as Group | null;
@@ -74,12 +80,19 @@ export function groupItems(
       grouping === 'days' ? day : grouping === 'months' ? day.slice(0, 7) : day.slice(0, 4);
     if (current?.key !== key) {
       let label: string;
-      if (grouping === 'years') label = key;
-      else if (grouping === 'months') label = monthFmt.format(when);
-      else if (key === today) label = 'Today';
-      else if (key === yesterday) label = 'Yesterday';
-      else label = (key.startsWith(thisYear) ? dayFmt : dayYearFmt).format(when);
-      current = { key, label, items: [] };
+      let shortLabel: string;
+      if (grouping === 'years') label = shortLabel = key;
+      else if (grouping === 'months') {
+        label = monthFmt.format(when);
+        shortLabel = monthShort.format(when);
+      } else if (key === today) label = shortLabel = 'Today';
+      else if (key === yesterday) label = shortLabel = 'Yesterday';
+      else {
+        const sameYear = key.startsWith(thisYear);
+        label = (sameYear ? dayFmt : dayYearFmt).format(when);
+        shortLabel = (sameYear ? dayShort : dayYearShort).format(when);
+      }
+      current = { key, label, short: shortLabel, items: [] };
       groups.push(current);
     }
     current.items.push(item);

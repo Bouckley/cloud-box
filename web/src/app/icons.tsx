@@ -172,3 +172,10 @@ export const CheckIcon = (p: IconProps) => (
     <path d="M5 12.5l4.5 4.5L19 7.5" />
   </Icon>
 );
+
+export const UpDownIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M8 9l4-4 4 4" />
+    <path d="M8 15l4 4 4-4" />
+  </Icon>
+);

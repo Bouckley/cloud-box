@@ -61,6 +61,18 @@ describe('groupItems', () => {
     ]);
   });
 
+  it('has a short label for narrow headings', () => {
+    const g = groupItems(items, 'days', { timeZone: TZ, now: NOW, locale: 'en-US' });
+    expect(g.map((x) => x.short)).toEqual([
+      'Today',
+      'Yesterday',
+      'Sat, Oct 31',
+      'Sun, Jun 1, 2025',
+    ]);
+    const m = groupItems(items, 'months', { timeZone: TZ, now: NOW, locale: 'en-US' });
+    expect(m.map((x) => x.short)).toEqual(['Nov 2026', 'Oct 2026', 'Jun 2025']);
+  });
+
   it('gives each group a stable key', () => {
     const g = groupItems(items, 'days', { timeZone: TZ, now: NOW, locale: 'en-US' });
     expect(g[0]!.key).toBe('2026-11-03');

@@ -1,6 +1,6 @@
 # ADR 0006: Photos timeline layout and keeping item states current
 
-Date: 2026-11-03 · Status: Accepted
+Date: 2026-11-03 · Status: Accepted (layout superseded by ADR 0007)
 
 ## Context
 

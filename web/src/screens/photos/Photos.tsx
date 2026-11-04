@@ -134,6 +134,7 @@ export function PhotosScreen() {
           selected={selected ?? undefined}
           onToggle={selected ? toggle : undefined}
           focusId={focusId}
+          onPick={toggle}
         />
       )}
     </>

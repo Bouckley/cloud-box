@@ -20,6 +20,7 @@ function show(item: ItemView, over: Partial<ViewerProps> = {}) {
     onFavourite: vi.fn(),
     onDownload: vi.fn(),
     onDelete: vi.fn(),
+    onAddToAlbum: vi.fn(),
     ...over,
   };
   render(<Viewer {...props} />);
@@ -116,6 +117,13 @@ describe('Viewer', () => {
     const p = show(photo('a', '2026-11-03T14:05:00Z'));
     fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
     expect(p.onDelete).toHaveBeenCalled();
+  });
+
+  it('Add to album opens the picker, and its result is said politely', () => {
+    const p = show(photo('a', '2026-11-03T14:05:00Z'), { said: 'Added to Garden' });
+    fireEvent.click(screen.getByRole('button', { name: 'Add to album' }));
+    expect(p.onAddToAlbum).toHaveBeenCalled();
+    expect(screen.getByRole('status')).toHaveTextContent('Added to Garden');
   });
 
   it('Esc inside an open dialog does not close the viewer', () => {

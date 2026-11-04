@@ -1,7 +1,4 @@
 import type { ReactNode } from 'react';
-import { Link } from 'react-router';
-import { ChevronIcon, TrashIcon } from '../app/icons.tsx';
-import { useLibrary } from '../app/session.tsx';
 import { useTitle } from '../app/title.ts';
 import { AddDevice } from './box/AddDevice.tsx';
 import { Devices } from './box/Devices.tsx';
@@ -30,28 +27,8 @@ function Screen({
 }
 
 export { PhotosScreen, PhotoViewerScreen } from './photos/Photos.tsx';
-/** Albums (Task 15 fills it in). For now: the way to Trash, with its count. */
-export function AlbumsScreen() {
-  const { snapshot } = useLibrary();
-  let trashed = 0;
-  for (const item of snapshot.items.values()) if (item.trashedAt) trashed++;
-  return (
-    <Screen title="Albums">
-      <nav aria-label="More" className="more-links">
-        <Link to="/trash" className="more-link">
-          <TrashIcon size={22} />
-          <span>
-            Trash · <span className="more-link__count">{trashed.toLocaleString()}</span>
-          </span>
-          <ChevronIcon size={20} />
-        </Link>
-      </nav>
-    </Screen>
-  );
-}
-export const AlbumScreen = () => <Screen title="Album" />;
-export const FavouritesScreen = () => <Screen title="Favourites" />;
-export const VideosScreen = () => <Screen title="Videos" />;
+export { AlbumsScreen } from './albums/Albums.tsx';
+export { AlbumScreen, FavouritesScreen, VideosScreen } from './albums/Album.tsx';
 export { TrashScreen } from './Trash.tsx';
 export const FilesScreen = () => <Screen title="Files" />;
 export const FolderScreen = () => <Screen title="Folder" />;

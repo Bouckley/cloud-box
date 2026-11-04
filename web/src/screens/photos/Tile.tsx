@@ -1,7 +1,8 @@
 import type { ItemView } from '@cloudbox/core';
-import type { KeyboardEvent } from 'react';
+import { createContext, useContext, type KeyboardEvent } from 'react';
 import { Link, useLocation } from 'react-router';
 import { CheckIcon, FileIcon, PlayIcon } from '../../app/icons.tsx';
+import { scopeParam, type Scope } from '../../app/albums.ts';
 import { useThumb } from '../../app/thumbs.ts';
 import { isVideo } from '../../app/timeline.ts';
 
@@ -43,6 +44,22 @@ export function TileMedia({ item }: { item: ItemView }) {
   );
 }
 
+/**
+ * Which photos the viewer walks through when a tile is opened: an album,
+ * Favourites or Videos set this around their timeline. Photos needs none.
+ */
+export const TileScope = createContext<Scope>({ kind: 'all' });
+
+/** The viewer's search string: the page's own (the grouping) plus the scope. */
+export function viewerSearch(search: string, scope: Scope): string {
+  const params = new URLSearchParams(search);
+  const v = scopeParam(scope);
+  if (v) params.set('in', v);
+  else params.delete('in');
+  const s = params.toString();
+  return s ? `?${s}` : '';
+}
+
 export type TileProps = {
   item: ItemView;
   label: string;
@@ -56,6 +73,7 @@ export type TileProps = {
 /** A photo in the timeline: a link to the viewer, or a checkbox in Select mode. */
 export function Tile({ item, label, tabIndex, onKeyDown, onFocus, select }: TileProps) {
   const { search } = useLocation();
+  const scope = useContext(TileScope);
   if (select) {
     return (
       <label className={`tile tile--select${select.checked ? ' tile--checked' : ''}`}>
@@ -79,7 +97,7 @@ export function Tile({ item, label, tabIndex, onKeyDown, onFocus, select }: Tile
   return (
     <Link
       className="tile"
-      to={`/photos/${item.id}${search}`}
+      to={`/photos/${item.id}${viewerSearch(search, scope)}`}
       aria-label={label}
       tabIndex={tabIndex}
       onKeyDown={onKeyDown}

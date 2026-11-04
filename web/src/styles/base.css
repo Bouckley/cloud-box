@@ -797,6 +797,7 @@ a.banner:hover {
 .empty svg {
   color: var(--color-ink-2);
 }
+.empty h1,
 .empty h2 {
   color: var(--color-ink);
   font-size: var(--text-xl);
@@ -1404,6 +1405,7 @@ a.banner:hover {
     max-width: none;
     margin: auto 0 0;
     padding-bottom: calc(var(--space-6) + env(safe-area-inset-bottom));
+    padding-inline: var(--space-4);
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   }
   .dialog__actions .button {
@@ -1429,7 +1431,8 @@ a.banner:hover {
 
 /* ---------- Trash ---------- */
 
-.trash__said:empty {
+.screen-said:empty,
+.viewer__said:empty {
   /* Kept in the page (a live region must exist before it speaks) but out of the flow. */
   position: absolute;
 }
@@ -1512,6 +1515,9 @@ a.banner:hover {
 .more-link:hover {
   background: var(--color-surface-sunk);
 }
+.more-link > svg {
+  flex: none;
+}
 .more-link > svg:last-child {
   margin-left: auto;
   color: var(--color-ink-2);
@@ -1524,6 +1530,321 @@ a.banner:hover {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
+}
+
+/* ---------- Albums ---------- */
+
+.albums {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.albums h2 {
+  font-size: var(--text-lg);
+}
+/* The shelf: covers in a grid, two across on phones (one when text is very
+   large), about 200 px wide on bigger screens. Each card is one link with no
+   chrome of its own. */
+.album-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 12.5rem), 1fr));
+  gap: var(--space-5) var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+@media (max-width: 720px) {
+  .album-grid {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 9rem), 1fr));
+    gap: var(--space-4) var(--space-3);
+  }
+}
+.album-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+  border-radius: var(--radius-md);
+  color: var(--color-ink);
+  text-decoration: none;
+}
+.album-card__cover {
+  position: relative;
+  display: grid;
+  place-items: center;
+  aspect-ratio: 4 / 3;
+  margin-bottom: var(--space-1);
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  /* track, not surface-sunk: an empty album's plain cover must show on the ground. */
+  background: var(--color-track);
+  color: var(--color-ink-2);
+}
+.album-card__cover .tile__img {
+  position: absolute;
+  inset: 0;
+}
+.album-card__cover .tile__video span {
+  display: none;
+}
+.album-card__name {
+  font-weight: var(--weight-semibold);
+  overflow-wrap: break-word;
+}
+.album-card__count {
+  color: var(--color-ink-2);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+@media (hover: hover) {
+  .album-card .tile__img {
+    transition: filter var(--duration-base) var(--ease-out);
+  }
+  .album-card:hover .tile__img {
+    filter: saturate(0.6) brightness(0.92);
+  }
+  .album-card:hover .album-card__name {
+    text-decoration: underline;
+    text-underline-offset: 0.15em;
+  }
+}
+
+/* An album, Favourites, Videos: the way back, then the title with its count. */
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: var(--space-1);
+  min-height: var(--target-min);
+  margin-block: calc(var(--space-2) * -1) calc(var(--space-4) * -1);
+  padding-inline-end: var(--space-2);
+  border-radius: var(--radius-sm);
+  color: var(--color-ink-2);
+  font-weight: var(--weight-semibold);
+  text-decoration: none;
+}
+.back-link:hover {
+  color: var(--color-ink);
+}
+.scope-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--space-3);
+  min-width: 0;
+}
+.scope-title h1 {
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-display);
+  overflow-wrap: anywhere;
+}
+.scope-title__count {
+  color: var(--color-ink-2);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Radio rows in a dialog: Keep the photos / Move them to Trash, or the
+   album picker's list. The words explain; the radio is the control. */
+.dialog__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.choices {
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.choice {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex: none;
+  min-height: var(--target-min);
+  padding: var(--space-3);
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+.choice:hover {
+  background: var(--color-surface-sunk);
+}
+.choice:has(input:checked) {
+  border-color: var(--color-ink);
+  box-shadow: inset 0 0 0 1px var(--color-ink);
+}
+.choice input {
+  flex: none;
+  width: 1.375rem;
+  height: 1.375rem;
+  margin: 0;
+  accent-color: var(--color-ink);
+}
+.choice__text {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+}
+.choice__label {
+  font-weight: var(--weight-semibold);
+  overflow-wrap: break-word;
+}
+.choice__detail {
+  color: var(--color-ink-2);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+.choice__cover {
+  position: relative;
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  overflow: hidden;
+  border-radius: var(--radius-xs);
+  background: var(--color-surface-sunk);
+  color: var(--color-ink-2);
+}
+.choice__cover .tile__img {
+  position: absolute;
+  inset: 0;
+}
+.choice__cover .tile__video,
+.choice__cover .tile__file span {
+  display: none;
+}
+/* Big text in a narrow dialog: the words need the room more than the covers. */
+@container (max-width: 22rem) {
+  .choice__cover {
+    display: none;
+  }
+}
+/* A long list scrolls inside the dialog; the buttons stay in reach. */
+.picker__list {
+  max-height: min(22rem, 50dvh);
+  overflow-y: auto;
+  padding: 2px;
+}
+
+/* ---------- Album move (confirm step of the picker) ----------
+   Leaving box on the ground, a brand arrow, then the Moving to row on the
+   brand tint: the photo goes from one album to the other, never both. */
+.move {
+  display: flex;
+  flex-direction: column;
+  container-type: inline-size;
+}
+.move__leaving {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3) var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--color-ground);
+}
+.move__label {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--color-ink-2);
+}
+.move__rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.move__row,
+.move__to {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.move__cover {
+  position: relative;
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-sunk);
+  color: var(--color-ink-2);
+}
+.move__cover .tile__img {
+  position: absolute;
+  inset: 0;
+}
+.move__cover .tile__video,
+.move__cover .tile__file span {
+  display: none;
+}
+.move__row .move__cover {
+  opacity: 0.6;
+}
+.move__cover--more {
+  background: var(--color-track);
+  font-weight: var(--weight-bold);
+}
+.move__text {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+}
+.move__name {
+  font-weight: var(--weight-semibold);
+  overflow-wrap: break-word;
+}
+.move__row .move__name {
+  color: var(--color-ink-2);
+}
+.move__count {
+  font-size: var(--text-sm);
+  color: var(--color-ink-2);
+}
+.move__arrow {
+  align-self: center;
+  margin: var(--space-1) 0;
+  color: var(--color-safe);
+}
+.move__to {
+  padding: var(--space-3);
+  border: 2px solid var(--color-safe);
+  border-radius: var(--radius-md);
+  background: var(--color-safe-tint);
+}
+.move__to .move__label {
+  color: var(--color-safe-strong);
+}
+.move__to .move__name {
+  font-weight: var(--weight-bold);
+  color: var(--color-ink);
+}
+.move__to .move__count {
+  color: var(--color-safe-ink);
+}
+.move__note {
+  margin: var(--space-3) 0 0;
+  font-size: var(--text-sm);
+  color: var(--color-ink-2);
+}
+/* Big text in a narrow dialog: the words need the room more than the covers. */
+@container (max-width: 22rem) {
+  .move__cover {
+    display: none;
+  }
 }
 
 /* ---------- Upload panel ---------- */
@@ -1751,9 +2072,17 @@ a.banner:hover {
   flex-basis: 100%;
   justify-content: flex-end;
 }
+.viewer__said {
+  flex-basis: 100%;
+  text-align: end;
+  font-weight: var(--weight-semibold);
+}
 @media (max-width: 720px) {
   .viewer__tools,
   .viewer__error {
     justify-content: flex-start;
+  }
+  .viewer__said {
+    text-align: start;
   }
 }

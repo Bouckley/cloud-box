@@ -3,6 +3,7 @@ import {
   useId,
   type InputHTMLAttributes,
   type ReactNode,
+  type Ref,
   type TextareaHTMLAttributes,
 } from 'react';
 import { WarningIcon } from '../app/icons.tsx';
@@ -95,7 +96,7 @@ export function Field({
   id,
   className,
   ...input
-}: Common & InputHTMLAttributes<HTMLInputElement>) {
+}: Common & InputHTMLAttributes<HTMLInputElement> & { ref?: Ref<HTMLInputElement> }) {
   const ids = useDescribed(id, error, hint);
   return (
     <Parts label={label} error={error} hint={hint} ids={ids}>
@@ -137,3 +138,57 @@ export const PLAIN = {
   autoCorrect: 'off',
   spellCheck: false,
 } as const;
+
+/**
+ * One radio in a group, with a line of explanation read out as its
+ * description, and an optional picture before the words (an album cover).
+ */
+export function Choice({
+  name,
+  value,
+  checked,
+  label,
+  detail,
+  media,
+  disabled,
+  onChoose,
+  ref,
+}: {
+  name: string;
+  value: string;
+  checked: boolean;
+  label: string;
+  detail?: string | undefined;
+  media?: ReactNode;
+  disabled?: boolean | undefined;
+  onChoose(): void;
+  ref?: Ref<HTMLInputElement> | undefined;
+}) {
+  const id = useId();
+  return (
+    <label className="choice">
+      <input
+        ref={ref}
+        type="radio"
+        name={name}
+        value={value}
+        checked={checked}
+        disabled={disabled}
+        aria-labelledby={`${id}-label`}
+        aria-describedby={detail ? `${id}-detail` : undefined}
+        onChange={onChoose}
+      />
+      {media}
+      <span className="choice__text">
+        <span className="choice__label" id={`${id}-label`}>
+          {label}
+        </span>
+        {detail && (
+          <span className="choice__detail" id={`${id}-detail`}>
+            {detail}
+          </span>
+        )}
+      </span>
+    </label>
+  );
+}

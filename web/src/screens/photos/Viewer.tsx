@@ -2,6 +2,7 @@ import type { ItemView } from '@cloudbox/core';
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { bytesText } from '../../app/format.ts';
 import {
+  AlbumsIcon,
   ChevronIcon,
   ChevronLeftIcon,
   CloseIcon,
@@ -37,6 +38,10 @@ export type ViewerProps = {
   onDownload(): Promise<void>;
   /** Opens the delete sheet for this photo. */
   onDelete(): void;
+  /** Opens the album picker for this photo. */
+  onAddToAlbum(): void;
+  /** A polite status line, e.g. "Added to Garden". */
+  said?: string | undefined;
 };
 
 type Media =
@@ -192,6 +197,10 @@ export function Viewer(p: ViewerProps) {
           <HeartIcon size={18} />
           Favourite
         </button>
+        <button type="button" className="button" onClick={p.onAddToAlbum}>
+          <AlbumsIcon size={18} />
+          Add to album
+        </button>
         <button
           type="button"
           className="button"
@@ -210,6 +219,9 @@ export function Viewer(p: ViewerProps) {
           <TrashIcon size={18} />
           Delete
         </button>
+        <p className="viewer__said" role="status">
+          {p.said}
+        </p>
         {downloadFailed && (
           <p className="form-error viewer__error" role="alert">
             <WarningIcon size={18} />

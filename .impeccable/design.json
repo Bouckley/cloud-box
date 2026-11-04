@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-04T12:00:00Z",
+  "generatedAt": "2026-11-04T18:00:00Z",
   "title": "Design System: Cloud Box",
   "extensions": {
     "colorMeta": {
@@ -216,6 +216,11 @@
         "name": "dialog-backdrop",
         "value": "::backdrop { background: rgb(22 24 27 / 45%) }",
         "purpose": "Dims the page behind a modal dialog (ink at 45%)."
+      },
+      {
+        "name": "choice-checked",
+        "value": "inset 0 0 0 1px var(--color-ink)",
+        "purpose": "With an ink border, the chosen radio choice row's 2px ink edge."
       }
     ],
     "motion": [
@@ -232,7 +237,7 @@
       {
         "name": "duration-base",
         "value": "220ms",
-        "purpose": "Safety banner material change; a checked tile's photo shrinking to 88%; the tile hover lift and greying; dialog-in; the phone scrubber handle fading; 0ms under reduced motion."
+        "purpose": "Safety banner material change; a checked tile's photo shrinking to 88%; the tile hover lift and greying; dialog-in; the phone scrubber handle fading; an album cover greying on hover; 0ms under reduced motion."
       },
       {
         "name": "dialog-in",
@@ -249,7 +254,7 @@
       {
         "name": "sidebar",
         "value": "720.02px",
-        "purpose": "Above: sticky 264px sidebar. At or below 720px: four fixed bottom tabs, 72px tall plus safe-area inset. Photos: tile sizes aim for 180/120/80px above, 110/80/56px at or below; the scrubber is a 3.5rem column above and a lone fixed handle at or below; select bar sticky only above; viewer puts the photo first at or below; dialogs become bottom sheets at or below."
+        "purpose": "Above: sticky 264px sidebar. At or below 720px: four fixed bottom tabs, 72px tall plus safe-area inset. Photos: tile sizes aim for 180/120/80px above, 110/80/56px at or below; the scrubber is a 3.5rem column above and a lone fixed handle at or below; select bar sticky only above; viewer puts the photo first at or below; dialogs become bottom sheets at or below. Albums: shelf columns of at least 12.5rem above, min(100%, 9rem) at or below (two across, one at 200% text). Dialogs take 16px inline padding at or below."
       },
       {
         "name": "viewer-details",
@@ -265,6 +270,11 @@
         "name": "print",
         "value": "@media print",
         "purpose": "Prints the recovery key card alone on one sheet (18mm margins, 3 columns); everything else display: none."
+      },
+      {
+        "name": "dialog-cover-hide",
+        "value": "@container (max-width: 22rem)",
+        "purpose": "Album picker rows and the move confirm: covers hide so the words keep the room at large text in a narrow dialog."
       }
     ],
     "sizes": [
@@ -315,6 +325,30 @@
       {
         "name": "viewer-details-width",
         "value": "20rem"
+      },
+      {
+        "name": "album-grid-min",
+        "value": "12.5rem above 720px; min(100%, 9rem) at or below"
+      },
+      {
+        "name": "album-cover",
+        "value": "aspect-ratio 4 / 3"
+      },
+      {
+        "name": "choice-cover",
+        "value": "40px"
+      },
+      {
+        "name": "move-cover",
+        "value": "52px"
+      },
+      {
+        "name": "picker-list-max",
+        "value": "min(22rem, 50dvh)"
+      },
+      {
+        "name": "more-links-max",
+        "value": "28rem"
       }
     ]
   },
@@ -518,6 +552,38 @@
       "description": "In the white Trash list card: a 64px thumbnail, the name over days left, then Restore and the quiet-danger Delete forever.",
       "html": "<ul class=\"ds-tr\"><li class=\"ds-tr-row\"><span class=\"ds-tr-thumb\"></span><span class=\"ds-tr-text\"><span class=\"ds-tr-name\">IMG_2041.HEIC</span><span class=\"ds-tr-left\">12 days left</span></span><span class=\"ds-tr-actions\"><button class=\"ds-tr-btn\" aria-label=\"Restore IMG_2041.HEIC\">Restore</button><button class=\"ds-tr-btn ds-tr-qd\" aria-label=\"Delete forever IMG_2041.HEIC\">Delete forever</button></span></li><li class=\"ds-tr-row\"><span class=\"ds-tr-thumb\"></span><span class=\"ds-tr-text\"><span class=\"ds-tr-name\">Sat, Oct 31</span><span class=\"ds-tr-left\">1 day left</span></span><span class=\"ds-tr-actions\"><button class=\"ds-tr-btn\">Restore</button><button class=\"ds-tr-btn ds-tr-qd\">Delete forever</button></span></li></ul>",
       "css": ".ds-tr { width: 560px; margin: 0; padding: 8px 20px; list-style: none; border-radius: 18px; background: #fff; color: var(--color-ink, #16181b); font-family: var(--font-sans, Inter, system-ui, sans-serif); font-size: 17px; line-height: 1.5; } .ds-tr-row { display: flex; flex-wrap: wrap; align-items: center; column-gap: 16px; row-gap: 12px; padding-block: 12px; } .ds-tr-row + .ds-tr-row { border-top: 1px solid var(--color-line, #e4e4e0); } .ds-tr-thumb { flex: none; width: 64px; height: 64px; border-radius: 6px; background: linear-gradient(135deg, #c9d3c4, #8fa39a); } .ds-tr-text { display: flex; flex: 1 1 12rem; flex-direction: column; min-width: 0; } .ds-tr-name { font-weight: 600; overflow-wrap: anywhere; } .ds-tr-left { font-size: 15px; color: var(--color-ink-2, #5c6066); font-variant-numeric: tabular-nums; } .ds-tr-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-left: auto; } .ds-tr-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 0 20px; border-radius: 999px; font-family: var(--font-sans, Inter, system-ui, sans-serif); font-size: 15px; font-weight: 600; cursor: pointer; transition: background-color 120ms cubic-bezier(0.16, 1, 0.3, 1); border: 1px solid var(--color-line-strong, #d5d6d2); background: #fff; color: var(--color-ink, #16181b); } .ds-tr-btn:hover { background: var(--color-surface-sunk, #f2f2ef); } .ds-tr-qd { color: var(--color-danger, #b3261e); } .ds-tr-btn:focus-visible { outline: none; box-shadow: 0 0 0 2px #fff, 0 0 0 5px #1f5a41; }"
+    },
+    {
+      "name": "Album Card",
+      "kind": "card",
+      "refersTo": "album-cover",
+      "description": "Albums shelf: one link, a 4:3 cover (newest photo, or the album icon on track when empty), the name wrapping between words, the count. Hover greys the cover and underlines the name; no lift.",
+      "html": "<ul class=\"ds-shelf\"><li><a class=\"ds-album\" href=\"#\"><span class=\"ds-album-cover ds-album-photo\"></span><span class=\"ds-album-name\">Garden</span><span class=\"ds-album-count\">3 photos</span></a></li><li><a class=\"ds-album\" href=\"#\"><span class=\"ds-album-cover\"><svg width=\"32\" height=\"32\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"4\" y=\"8\" width=\"16\" height=\"12\" rx=\"2\"/><path d=\"M7 5h10\"/></svg></span><span class=\"ds-album-name\">Summer at the lake house with Grandma</span><span class=\"ds-album-count\">0 photos</span></a></li></ul>",
+      "css": ".ds-shelf { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 12.5rem), 1fr)); gap: 20px 16px; width: 440px; margin: 0; padding: 0; list-style: none; font-family: var(--font-sans, Inter, system-ui, sans-serif); } .ds-album { display: flex; flex-direction: column; gap: 4px; min-width: 0; border-radius: 14px; color: var(--color-ink, #16181b); text-decoration: none; } .ds-album-cover { display: grid; place-items: center; aspect-ratio: 4 / 3; margin-bottom: 4px; overflow: hidden; border-radius: 14px; background: var(--color-track, #e2e2de); color: var(--color-ink-2, #5c6066); transition: filter 220ms cubic-bezier(0.16, 1, 0.3, 1); } .ds-album-photo { background: linear-gradient(135deg, #c9d3c4, #8fa39a); } .ds-album-name { font-size: 17px; font-weight: 600; overflow-wrap: break-word; } .ds-album-count { font-size: 15px; color: var(--color-ink-2, #5c6066); font-variant-numeric: tabular-nums; } .ds-album:hover .ds-album-photo { filter: saturate(0.6) brightness(0.92); } .ds-album:hover .ds-album-name { text-decoration: underline; text-underline-offset: 0.15em; } .ds-album:focus-visible { outline: none; box-shadow: 0 0 0 2px #fff, 0 0 0 5px #1f5a41; }"
+    },
+    {
+      "name": "More Link",
+      "kind": "nav",
+      "refersTo": "more-link",
+      "description": "Albums > More: white rows to Favourites, Videos and Trash (with its count); the icons never shrink.",
+      "html": "<nav class=\"ds-more\" aria-label=\"More\"><a class=\"ds-more-link\" href=\"#\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M4 7h16\"/><path d=\"M10 11v6\"/><path d=\"M14 11v6\"/><path d=\"M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12\"/><path d=\"M9 7V4h6v3\"/></svg><span>Trash · <span class=\"ds-more-count\">3</span></span><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"m9 6 6 6-6 6\"/></svg></a></nav>",
+      "css": ".ds-more { display: flex; flex-direction: column; gap: 8px; width: 360px; max-width: 28rem; font-family: var(--font-sans, Inter, system-ui, sans-serif); } .ds-more-link { display: flex; align-items: center; gap: 12px; min-height: 48px; box-sizing: border-box; padding: 12px 16px; border-radius: 14px; background: var(--color-surface, #fff); color: var(--color-ink, #16181b); font-size: 17px; font-weight: 600; text-decoration: none; transition: background-color 120ms cubic-bezier(0.16, 1, 0.3, 1); } .ds-more-link:hover { background: var(--color-surface-sunk, #f2f2ef); } .ds-more-link > svg { flex: none; } .ds-more-link > svg:last-child { margin-left: auto; color: var(--color-ink-2, #5c6066); } .ds-more-count { font-variant-numeric: tabular-nums; } .ds-more-link:focus-visible { outline: none; box-shadow: 0 0 0 2px #fff, 0 0 0 5px #1f5a41; }"
+    },
+    {
+      "name": "Radio Choice Rows",
+      "kind": "custom",
+      "refersTo": "choice",
+      "description": "Delete album and the album picker: bordered rows, the whole row the target; chosen draws a 2px ink edge and an ink radio. Picker covers (40px, 6px radius) hide under a 22rem container.",
+      "html": "<fieldset class=\"ds-choices\"><legend class=\"ds-vh\">Albums</legend><label class=\"ds-choice\"><input type=\"radio\" name=\"ds-c\" checked><span class=\"ds-choice-cover\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"4\" y=\"8\" width=\"16\" height=\"12\" rx=\"2\"/><path d=\"M7 5h10\"/></svg></span><span class=\"ds-choice-text\"><span class=\"ds-choice-label\">Garden</span><span class=\"ds-choice-detail\">3 photos</span></span></label><label class=\"ds-choice\"><input type=\"radio\" name=\"ds-c\"><span class=\"ds-choice-cover\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"4\" y=\"8\" width=\"16\" height=\"12\" rx=\"2\"/><path d=\"M7 5h10\"/></svg></span><span class=\"ds-choice-text\"><span class=\"ds-choice-label\">New album</span></span></label></fieldset>",
+      "css": ".ds-choices { container-type: inline-size; display: flex; flex-direction: column; gap: 8px; width: 400px; margin: 0; padding: 0; border: 0; font-family: var(--font-sans, Inter, system-ui, sans-serif); color: var(--color-ink, #16181b); } .ds-vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); } .ds-choice { display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 12px; border: 1px solid var(--color-line-strong, #d5d6d2); border-radius: 14px; cursor: pointer; } .ds-choice:hover { background: var(--color-surface-sunk, #f2f2ef); } .ds-choice:has(input:checked) { border-color: var(--color-ink, #16181b); box-shadow: inset 0 0 0 1px var(--color-ink, #16181b); } .ds-choice input { flex: none; width: 22px; height: 22px; margin: 0; accent-color: var(--color-ink, #16181b); } .ds-choice input:focus-visible { outline: none; box-shadow: 0 0 0 2px #fff, 0 0 0 5px #1f5a41; } .ds-choice-cover { display: grid; flex: none; place-items: center; width: 40px; height: 40px; border-radius: 6px; background: var(--color-surface-sunk, #f2f2ef); color: var(--color-ink-2, #5c6066); } .ds-choice-text { display: flex; flex-direction: column; min-width: 0; } .ds-choice-label { font-size: 17px; font-weight: 600; overflow-wrap: break-word; } .ds-choice-detail { font-size: 15px; color: var(--color-ink-2, #5c6066); font-variant-numeric: tabular-nums; } @container (max-width: 22rem) { .ds-choice-cover { display: none; } }"
+    },
+    {
+      "name": "Move Confirm",
+      "kind": "custom",
+      "refersTo": "move-to",
+      "description": "Signature. The album picker's confirm step: a grey Leaving box (one faded row per album, at most four), a green down arrow, and the Moving to row on safe-tint with a 2px safe border. The green here is an open question against The One Green Rule (see DESIGN.md Colors).",
+      "html": "<div class=\"ds-move\"><section class=\"ds-move-leaving\"><h3 class=\"ds-move-label\">Leaving</h3><ul class=\"ds-move-rows\"><li class=\"ds-move-row\"><span class=\"ds-move-cover ds-move-photo\"></span><span class=\"ds-move-text\"><span class=\"ds-move-name\">Garden</span><span class=\"ds-move-count\">3 photos</span></span></li><li class=\"ds-move-row\"><span class=\"ds-move-cover ds-move-more\">+2</span><span class=\"ds-move-text\"><span class=\"ds-move-name\">2 more albums</span><span class=\"ds-move-count\">2 photos</span></span></li></ul></section><svg class=\"ds-move-arrow\" width=\"30\" height=\"30\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 4v15M6 13l6 6 6-6\"/></svg><section class=\"ds-move-to\"><span class=\"ds-move-cover\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"4\" y=\"8\" width=\"16\" height=\"12\" rx=\"2\"/><path d=\"M7 5h10\"/></svg></span><div class=\"ds-move-text\"><h3 class=\"ds-move-label\">Moving to</h3><span class=\"ds-move-name\">Recipes</span><span class=\"ds-move-count\">5 photos</span></div></section><p class=\"ds-move-note\">1 photo from Photos is added too.</p></div>",
+      "css": ".ds-move { container-type: inline-size; display: flex; flex-direction: column; width: 420px; font-family: var(--font-sans, Inter, system-ui, sans-serif); font-size: 17px; line-height: 1.5; color: var(--color-ink, #16181b); } .ds-move-leaving { display: flex; flex-direction: column; gap: 8px; padding: 8px 12px 12px; border-radius: 14px; background: var(--color-ground, #f4f4f1); } .ds-move-label { margin: 0; font-size: 15px; font-weight: 600; color: var(--color-ink-2, #5c6066); } .ds-move-rows { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; list-style: none; } .ds-move-row, .ds-move-to { display: flex; align-items: center; gap: 12px; } .ds-move-cover { display: grid; flex: none; place-items: center; width: 52px; height: 52px; border-radius: 14px; background: var(--color-surface-sunk, #f2f2ef); color: var(--color-ink-2, #5c6066); } .ds-move-photo { background: linear-gradient(135deg, #e9e3b8, #b9b07a); } .ds-move-row .ds-move-cover { opacity: 0.6; } .ds-move-more { background: var(--color-track, #e2e2de); font-weight: 700; } .ds-move-text { display: flex; flex-direction: column; min-width: 0; } .ds-move-name { font-weight: 600; overflow-wrap: break-word; } .ds-move-row .ds-move-name { color: var(--color-ink-2, #5c6066); } .ds-move-count { font-size: 15px; color: var(--color-ink-2, #5c6066); } .ds-move-arrow { align-self: center; margin: 4px 0; color: var(--color-safe, #2e7d5b); } .ds-move-to { padding: 12px; border: 2px solid var(--color-safe, #2e7d5b); border-radius: 14px; background: var(--color-safe-tint, #e6f1eb); } .ds-move-to .ds-move-label { color: var(--color-safe-strong, #1f5a41); } .ds-move-to .ds-move-name { font-weight: 700; color: var(--color-ink, #16181b); } .ds-move-to .ds-move-count { color: var(--color-safe-ink, #1f4a38); } .ds-move-note { margin: 12px 0 0; font-size: 15px; color: var(--color-ink-2, #5c6066); } @container (max-width: 22rem) { .ds-move-cover { display: none; } }"
     }
   ],
   "narrative": {
@@ -587,7 +653,8 @@
       "Do make the photo grid one tab stop, with arrows, Home, End and Page Up / Page Down inside it.",
       "Do use the ink button for Move to Trash, and put red only on permanent deletion: red words where it is offered, a red fill only on the final confirm.",
       "Do start every dialog's focus on Cancel, close it on Esc, and return focus to its opener.",
-      "Do keep hover-only affordances (the tile lift, the select circle) behind hover: hover, with a keyboard route to the same action."
+      "Do keep hover-only affordances (the tile lift, the select circle) behind hover: hover, with a keyboard route to the same action.",
+      "Do let words win over pictures in a narrow dialog: decorative covers hide under a 22rem container, and names wrap between words."
     ],
     "donts": [
       "Don't use green for anything but \"safe\" or the primary action.",

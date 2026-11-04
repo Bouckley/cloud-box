@@ -267,6 +267,41 @@ components:
     height: "48px"
   more-link-hover:
     backgroundColor: "{colors.surface-sunk}"
+  album-cover:
+    backgroundColor: "{colors.track}"
+    textColor: "{colors.ink-2}"
+    rounded: "{rounded.md}"
+  back-link:
+    textColor: "{colors.ink-2}"
+    rounded: "{rounded.sm}"
+    height: "48px"
+  choice:
+    textColor: "{colors.ink}"
+    rounded: "{rounded.md}"
+    padding: "12px"
+    height: "48px"
+  choice-hover:
+    backgroundColor: "{colors.surface-sunk}"
+  choice-cover:
+    backgroundColor: "{colors.surface-sunk}"
+    textColor: "{colors.ink-2}"
+    rounded: "{rounded.xs}"
+    size: "40px"
+  move-leaving:
+    backgroundColor: "{colors.ground}"
+    textColor: "{colors.ink-2}"
+    rounded: "{rounded.md}"
+    padding: "8px 12px 12px"
+  move-to:
+    backgroundColor: "{colors.safe-tint}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.md}"
+    padding: "12px"
+  move-cover:
+    backgroundColor: "{colors.surface-sunk}"
+    textColor: "{colors.ink-2}"
+    rounded: "{rounded.md}"
+    size: "52px"
 ---
 
 # Design System: Cloud Box
@@ -296,6 +331,7 @@ A warm neutral ground with three semantic hues, each reserved for one meaning.
 
 ### Primary
 - **Safe Green** (`safe`): the only accent. Its fill means "safe" or marks the primary action (primary buttons, form `accent-color`). Its family supports it: **Deep Safe Green** (`safe-strong`) for primary hover, active nav text, links and caret; **Safe Mist** (`safe-tint`) for the safe banner, active nav pill and text selection; **Safe Ink** / **Safe Ink Soft** (`safe-ink`, `safe-ink-2`) for text on the tint, and `safe-ink` for the viewer's "Safe" line on white.
+- **Open question (M2 Task 15):** the album move confirm (Components, Move Confirm) puts the green family on something that is neither safety nor a button: a `safe` down arrow, and the Moving to row on `safe-tint` with a 2px `safe` border, a `safe-strong` label and a `safe-ink` count. The move spec (`docs/superpowers/specs/2026-11-04-album-move-confirm-design.md`, agreed in conversation) asks for it, reading the row as where the primary green Move button sends the photos, but The One Green Rule below has not been amended. It awaits the owner's decision; until then, don't extend green to any other destination, selection or highlight.
 
 ### Secondary
 - **Attention Amber** (`attention`) on **Amber Wash** (`attention-tint`), text in **Amber Ink** (`attention-ink`, `attention-ink-2`): only for "backup copy paused", "almost full" and "can't reach your box". Used as the attention card's 2px border and the Box tab's dot. `attention-strong` is reserved, not yet used.
@@ -304,12 +340,12 @@ A warm neutral ground with three semantic hues, each reserved for one meaning.
 - **Delete Red** (`danger`): permanent deletion, in two strengths. Red words on a white quiet button where permanent deletion is offered (Delete forever on a Trash row, Empty Trash in the Trash header); a red fill only on the final confirm inside the confirm dialog ("Delete forever"). `danger-tint` is reserved, not yet used. **Open question (M2 Task 12):** the shipped entry pages also set field error text and the invalid input's border in `danger`, including the "Can't reach your box" message, and the Trash screen's failure lines ("Couldn't restore…", "This list may be out of date") reuse the same red field error. That is a second meaning for red and conflicts with The One Meaning Per Hue Rule below; it awaits the owner's decision. Until then, don't extend red to any other new use.
 
 ### Neutral
-- **Warm Paper** (`ground`): page background and sidebar. Also the backing behind the scrubber's year marks and the ring round its grip, so a mark under the handle never peeks out.
+- **Warm Paper** (`ground`): page background and sidebar; inside a white dialog, the move confirm's grey Leaving box. Also the backing behind the scrubber's year marks and the ring round its grip, so a mark under the handle never peeks out.
 - **White** (`surface`): cards (Box sections, the recovery key card, the Trash list), notices, banner strips in copying and checking states, bottom tab bar, inputs, secondary and quiet-danger buttons, dialogs, the Albums "More" link rows. On Photos: the upload panel, the select bar, the viewer's details card, the chosen segment of the segmented control and the scrubber's date pill.
-- **Sunk Paper** (`surface-sunk`): hover fill for buttons, sidebar items and More links; the "This browser" badge; the pairing code panel; code output; the delete sheet's option panel; a photo tile or Trash thumbnail while its thumbnail decrypts, and the file tile (no picture). No spinner.
+- **Sunk Paper** (`surface-sunk`): hover fill for buttons, sidebar items and More links; the "This browser" badge; the pairing code panel; code output; the delete sheet's option panel; a photo tile or Trash thumbnail while its thumbnail decrypts, and the file tile (no picture); the hover fill of a radio choice row; the backing of the small album covers in the picker and the move confirm. No spinner.
 - **Hairline** (`line`), **Firm Line** (`line-strong`): tab bar top border and dividers between device rows, upload rows and Trash rows; button, input and notice borders. `line` is also the backing a checked tile's photo shrinks onto; `line-strong` is the thin page scrollbar.
-- **Meter Track** (`track`): unfilled storage meter and upload progress bar; the ground of the segmented control; the scrubber's 2px rail.
-- **Ink** (`ink`): primary text. Also the fill of the Move to Trash button, the scrubber's grip, a checked tile's select check, and the hover select circle. **Ink Soft** (`ink-2`, 5.9:1 on ground): secondary text, ledes, field hints, the "Step n of 5" line, recovery word numbers, "Last seen" and "Valid until" lines, a Trash row's "{n} days left", the empty state, inactive tabs, checking banner, scrubber year marks, the More link's chevron. **Ink Meta** (`ink-3`): table and meta text. On Photos: inactive segmented options, the uploading file's name, the upload progress fill and the viewer's "Backup copy pending" line. Also the Move to Trash button's hover fill.
+- **Meter Track** (`track`): unfilled storage meter and upload progress bar; the ground of the segmented control; the scrubber's 2px rail; the plain cover of an empty album on the Albums shelf (it must show on the ground, which `surface-sunk` doesn't), and the move confirm's "+k" cover.
+- **Ink** (`ink`): primary text. Also the fill of the Move to Trash and Delete album buttons, the scrubber's grip, a checked tile's select check, and the hover select circle; the border and radio (`accent-color`) of a chosen radio choice row. **Ink Soft** (`ink-2`, 5.9:1 on ground): secondary text, ledes, field hints, the "Step n of 5" line, recovery word numbers, "Last seen" and "Valid until" lines, a Trash row's "{n} days left", the empty state, inactive tabs, checking banner, scrubber year marks, the More link's chevron. On Albums: an album's count, the back link, the empty album cover's icon, the Leaving label and the names of the albums being left. **Ink Meta** (`ink-3`): table and meta text. On Photos: inactive segmented options, the uploading file's name, the upload progress fill and the viewer's "Backup copy pending" line. Also the Move to Trash button's hover fill.
 - **Focus Green** (`focus`): the focus ring colour.
 
 ### Named Rules
@@ -339,6 +375,7 @@ A warm neutral ground with three semantic hues, each reserved for one meaning.
 - **Photos:** a group heading (day, month or year) is 19px semibold (600, not bold), with its count in 15px `ink-2` tabular figures beside it, wrapping under it when the space runs out. A group packed one tile wide uses its short date ("Sat, Oct 31"). The upload panel heading is 19px with tabular figures. The viewer title is 22px bold with -0.01em tracking. Segmented options are 15px semibold. A file tile's type ("HEIC") and a video's duration are 13px semibold, the type tracked 0.04em, the duration tabular. Scrubber year marks are 13px semibold `ink-2` tabular; its date pill is 15px semibold.
 - **Dialogs:** the title is 22px bold with -0.01em tracking, like the viewer title; it breaks anywhere so a long file name never overflows.
 - **Trash rows:** the name is 17px semibold (breaks anywhere); "{n} days left" is 15px `ink-2` tabular.
+- **Albums:** section headings ("My albums", "More") are 19px bold. An album card's name is 17px semibold and wraps between words (never mid-word); its count is 15px `ink-2` tabular. On an album, Favourites or Videos, the `h1` is the 30px headline (breaks anywhere) with its count ("{n} photos", "{n} videos") beside it in 17px `ink-2` tabular, baseline-aligned. The back link is 17px semibold `ink-2`. A radio choice row's label is 17px semibold over a 15px `ink-2` detail. In the move confirm, "Leaving" and "Moving to" are 15px semibold in sentence case (`ink-2`, `safe-strong`); names are 17px semibold (`ink-2` when leaving, bold `ink` for the destination) over 15px counts.
 - 15px (`text-sm`) carries field labels (600), hints and error text, the step line, and secondary lines in lists; 22px (`text-xl`) is the empty state's `h2`.
 
 ### Named Rules
@@ -364,9 +401,11 @@ The select bar stays in view (sticky, 12px from the top) only above 720px, with 
 
 The viewer is a grid. At or below 720px the order is bar (Close and the title), the photo, then the tools, then details: photo first on phones, in reading and focus order. Above 720px the tools sit beside the title and the photo spans the width below (at least `min(60dvh, 32rem)` tall). From 1100px with Details open, details become a 20rem column beside the photo. The photo's height is capped in viewport units only (`max(60dvh, 100dvh - 240px)`), so large text never shrinks it.
 
-Trash uses the standard header (`Trash` `h1`, Empty Trash right, only when Trash has items), then a polite status line (out of the flow while empty), any failure line, then the list as one white card (8px 20px padding). Each row is a 64px thumbnail, the name over "{n} days left", and the row's actions (Restore, Delete forever) pushed to the end, wrapping under the text when narrow; rows are 12px in block padding with a `line` hairline between them. Albums currently holds a "More" column of link rows, at most 28rem wide, 8px apart, the way to Trash.
+Trash uses the standard header (`Trash` `h1`, Empty Trash right, only when Trash has items), then a polite status line (out of the flow while empty), any failure line, then the list as one white card (8px 20px padding). Each row is a 64px thumbnail, the name over "{n} days left", and the row's actions (Restore, Delete forever) pushed to the end, wrapping under the text when narrow; rows are 12px in block padding with a `line` hairline between them. Albums uses the standard header (`Albums` `h1`, the green New album right), then "My albums" (once there is one) and "More", each a 19px heading 12px above its content. The shelf is a grid of album cards: columns of at least 12.5rem (about 200px) above 720px with 20px row and 16px column gaps; at or below 720px columns of at least `min(100%, 9rem)` with 16px / 12px gaps, so two across at normal text and one at 200%. With no albums, the empty state stands in for the shelf. "More" is a column of link rows (Favourites, Videos, Trash · n), at most 28rem wide, 8px apart.
 
-Dialogs are modal: centred, at most 30rem wide (and 32px narrower than the screen), at most the viewport height less 32px and scrolling inside past that. At or below 720px a dialog becomes a sheet from the bottom: full width, square bottom corners, extra bottom padding for the safe-area inset, and its action buttons share the row's width. Contents stack 16px apart; the action row is right-aligned, Cancel first, 12px apart, 8px further from what precedes it.
+An album, Favourites and Videos put a back link ("‹ Albums", 48px tall, pulled up 8px and 16px into the gaps around it) above the Photos-style header: the title with its count left, then the tools (Days / Months / Years when there are photos, and on an album Rename and Delete album), wrapping. The timeline below is the Photos timeline.
+
+Dialogs are modal: centred, at most 30rem wide (and 32px narrower than the screen), at most the viewport height less 32px and scrolling inside past that. At or below 720px a dialog becomes a sheet from the bottom: full width, square bottom corners, 16px inline padding (24px elsewhere), extra bottom padding for the safe-area inset, and its action buttons share the row's width. Contents stack 16px apart; the action row is right-aligned, Cancel first, 12px apart, 8px further from what precedes it. Radio choice rows stack 8px apart; a long album list scrolls inside the dialog (at most `min(22rem, 50dvh)` tall) so the buttons stay in reach, and its rows keep their height. Inside a dialog, decorative covers hide when their container is 22rem wide or less (large text in a narrow dialog): the words need the room more than the pictures.
 
 Widths 320 to 2560px are supported.
 
@@ -375,14 +414,14 @@ Widths 320 to 2560px are supported.
 
 ## Elevation & Depth
 
-Flat. Depth is tonal: white surfaces on a warm ground, tints for state, hairline borders where a surface meets the ground edge (tab bar). Box-shadow is used for the focus ring, the attention card's inset 2px amber border and the notice's inset 1px `line-strong` border. The soft `shadow-raised` token (sidecar) is kept for what genuinely floats or lifts: the Photos select bar while sticky above 720px; dialogs; the scrubber's date pill, and its grip on phones where it floats over the photos; and a photo tile while a mouse hovers it. A dialog also dims the page behind it with an `ink` backdrop at 45%. At rest, tiles, the upload panel, the viewer stage, the details card and every card stay flat.
+Flat. Depth is tonal: white surfaces on a warm ground, tints for state, hairline borders where a surface meets the ground edge (tab bar). Box-shadow is used for the focus ring, the attention card's inset 2px amber border, the notice's inset 1px `line-strong` border and the inset 1px `ink` that doubles a chosen choice row's border. Album cards, choice rows and the move confirm's boxes stay flat. The soft `shadow-raised` token (sidecar) is kept for what genuinely floats or lifts: the Photos select bar while sticky above 720px; dialogs; the scrubber's date pill, and its grip on phones where it floats over the photos; and a photo tile while a mouse hovers it. A dialog also dims the page behind it with an `ink` backdrop at 45%. At rest, tiles, the upload panel, the viewer stage, the details card and every card stay flat.
 
 ### Named Rules
 **The Flat Panel Rule.** Surfaces separate by tone, not by shadow. Introduce `shadow-raised` only for a surface that genuinely floats (a dialog, a sheet, the sticky select bar, the scrubber's pill) or as a hover response on a photo tile; never for a card at rest.
 
 ## Shapes
 
-Soft, friendly rounding in four steps: 6px (`rounded.xs`) for photos only (timeline tiles, a checked tile's shrunk photo, the viewer photo, Trash thumbnails), so pictures read as pictures and not as cards; 10px for small chips and the default focus outline, 14px for the banner strip, sidebar cards, sidebar nav rows, inputs, notices, the pairing code panel, the delete sheet's option panel and the More link rows, 18px for content cards, the recovery key card, the attention card, the upload panel, the viewer stage, the details card, the Trash list card and dialogs (on phones only the sheet's top corners). Buttons, the skip link, meter, upload progress bar, tab icon pill, attention dot, video chip, the "This browser" badge, the scrubber's rail and date pill are full pills. The segmented control and the select bar are pills on one line that become rounded boxes (24px and 32px radius) when large text wraps them; a tile's select check, the hover select circle and the scrubber's grip are circles. Borders are 1px; the attention card's 2px amber border is the heaviest stroke. Icons are line icons on a 24-unit grid, 2px stroke, rounded caps and joins.
+Soft, friendly rounding in four steps: 6px (`rounded.xs`) for photos only (timeline tiles, a checked tile's shrunk photo, the viewer photo, Trash thumbnails), so pictures read as pictures and not as cards; 10px for small chips and the default focus outline, 14px for the banner strip, sidebar cards, sidebar nav rows, inputs, notices, the pairing code panel, the delete sheet's option panel, the More link rows, radio choice rows, the move confirm's Leaving box, Moving to row and its 52px covers, and the Albums shelf's 4:3 album covers, 18px for content cards, the recovery key card, the attention card, the upload panel, the viewer stage, the details card, the Trash list card and dialogs (on phones only the sheet's top corners). Buttons, the skip link, meter, upload progress bar, tab icon pill, attention dot, video chip, the "This browser" badge, the scrubber's rail and date pill are full pills. The segmented control and the select bar are pills on one line that become rounded boxes (24px and 32px radius) when large text wraps them; a tile's select check, the hover select circle and the scrubber's grip are circles. The picker's 40px album covers are 6px. Borders are 1px; the heaviest strokes are 2px: the attention card's amber border and the Moving to row's green border. A chosen choice row draws a 2px `ink` edge (1px border plus a 1px inset shadow). **Open question (M2 Task 15):** album covers on the shelf and in the move confirm are photos at 14px, against "6px for photos only"; they read as the album's face, not as a picture in the timeline, but the owner has not ruled. Don't extend 14px to any other photo. Icons are line icons on a 24-unit grid, 2px stroke, rounded caps and joins.
 
 ## Components
 
@@ -390,11 +429,12 @@ Soft, friendly rounding in four steps: 6px (`rounded.xs`) for photos only (timel
 - **Shape:** full pill (`rounded.pill`), at least 48px tall, 20px side padding.
 - **Primary:** safe green fill, white bold label; hover deepens to `safe-strong`. One per screen header.
 - **Secondary:** white with a `line-strong` border, ink label; hover fills `surface-sunk`.
-- **Ink:** `ink` fill and border, white semibold label; hover `ink-3`. For Move to Trash: firm, reversible, not red.
+- **Ink:** `ink` fill and border, white semibold label; hover `ink-3`. For Move to Trash and Delete album (its photos are kept, or go to Trash for 30 days): firm, reversible, not red.
 - **Quiet danger:** the secondary button with its label in `danger`. Where permanent deletion is offered: Delete forever on a Trash row, Empty Trash (with its trash icon) in the Trash header. It always opens a confirm dialog; it never deletes by itself.
 - **Danger:** red fill, white label; only the final confirm of a permanent deletion ("Delete forever" in the confirm dialog).
 - **Disabled:** 55% opacity, not-allowed cursor.
 - **Busy:** the button that started the work is disabled and says what is happening ("Moving to Trash…", "Deleting…", "Restoring…").
+- **Back link:** a 48px text link, a 18px chevron-left and the word ("Albums") in `ink-2` semibold, `ink` on hover; above the header of a sub-page.
 - **Pressed / expanded:** a secondary button that toggles (Select, Favourite, Details) shows its state with an `ink` border via `aria-pressed` or `aria-expanded`; Favourite also fills its heart.
 - **Icons:** always beside a word (the viewer's Previous and Next keep their words on every width); 18px in buttons.
 
@@ -431,7 +471,7 @@ The one white card in setup: 18px radius, 24px padding (16px and tighter gaps at
 - **Print:** printing shows only this card, on one sheet with 18mm margins: "Cloud Box recovery key" (18pt bold), the 24 words in 3 columns (13pt numbers, 15pt words), a "Made on {date}. Kept at: ____" line and a line saying anyone holding the sheet can open the photos. The on-screen heading and keep note are hidden in print; the print-only lines are hidden on screen. Everything else is `display: none`, so there is no blank second page.
 
 ### Empty State
-A 40px line icon and the text in `ink-2`, a 22px `ink` heading ("No photos yet", "Trash is empty") and one sentence saying what happens next. The screen's primary action stays in the header row, not inside the empty state.
+A 40px line icon and the text in `ink-2`, a 22px `ink` heading ("No photos yet", "Trash is empty") and one sentence saying what happens next. The screen's primary action stays in the header row, not inside the empty state. Albums: "No albums yet", "No photos in this album yet", "No favourites yet", "No videos yet", each with its own icon (albums, heart, video). Where the page has nothing else, such as a missing album ("This album isn't here", under the back link), the empty state's heading is the page's `h1`, still 22px `ink`.
 
 ### Device List
 Inside a Box section card (19px heading). One row per device: semibold name (breaks anywhere rather than overflowing), an optional "This browser" badge (13px semibold pill on `surface-sunk`), and a 15px `ink-2` "Last seen …" line on its own line. Rows have 12px block padding and are divided by a 1px `line` hairline; the first row has none.
@@ -476,7 +516,29 @@ The dialog for moving to Trash, from the viewer and the select bar. Title "Delet
 - **Status:** a polite status line says "Restored {name}". After a row goes, focus moves to the row that took its place, or to the `h1`.
 
 ### More Links (Albums)
-A white row (14px radius, at least 48px, 12px 16px padding, 12px gap): a 22px line icon, a semibold label with a tabular count ("Trash · 3"), and a 20px `ink-2` chevron at the end. Hover `surface-sunk`. Grouped in a `nav` labelled "More".
+A white row (14px radius, at least 48px, 12px 16px padding, 12px gap): a 22px line icon, a semibold label (Favourites, Videos, and Trash with a tabular count, "Trash · 3"), and a 20px `ink-2` chevron at the end. The icons never shrink. Hover `surface-sunk`. Grouped in a `nav` labelled by the "More" heading.
+
+### Album Shelf
+- **Card:** one link with no chrome of its own: a 4:3 cover (14px radius, the album's newest photo `object-fit: cover`; an empty album shows a 32px album icon in `ink-2` on `track`), then the name (17px semibold, wrapping between words) and the count (15px `ink-2`, "{n} photos"). A video cover shows its picture only, no chip.
+- **Hover (`hover: hover`):** the cover greys like a tile (`saturate(0.6) brightness(0.92)`, 220ms) and the name underlines; no lift, no shadow. Focus draws the standard ring round the card.
+
+### Radio Choice Rows
+Used in the delete-album dialog and the album picker. A row (14px radius, 1px `line-strong` border, 12px padding, 12px gap, at least 48px) holds a 22px native radio (`accent-color` `ink`), optional media, and a semibold label over an optional 15px `ink-2` detail. The whole row is the target; hover `surface-sunk`. Chosen: the border turns `ink` and doubles to 2px. Grouped in a `fieldset` with a visually hidden legend. The words explain; the radio is the control.
+
+### Album Picker
+The dialog behind Add to album (select bar and viewer, secondary buttons with the album icon). Title "Add to album"; one choice row per album with a 40px cover (6px radius, on `surface-sunk`, the album icon when empty; video chips and file labels hidden) and its count, then a "New album" row with the album icon; choosing it shows an "Album name" field below the list. Focus starts on the first album (or the name field when there are none). Cancel and the green Add ("Adding…"). Success closes it and says "Added to {album}" in a polite status line on the page.
+
+### Move Confirm (signature)
+The picker's second step, only when some chosen photos already sit in another album (a photo lives in one album). Title "Move this photo?" / "Move {n} photos?", the line "A photo lives in one album, so it will only be in the new one." (several: "…so these will only be in the new one."), then:
+- **Leaving:** a grey box on `ground` (14px radius, 8px 12px 12px padding, 8px gaps), its "Leaving" label, then one row per album the photos leave, most first: a 52px cover at 60% opacity, the name in `ink-2` semibold and its count. At most four rows; past that three and a "+k" row on `track` ("{k} more albums" with their photo count).
+- **Arrow:** a 30px down arrow in `safe`, 4px above and below.
+- **Moving to:** a row on `safe-tint` with a 2px `safe` border (14px radius, 12px padding): the target's 52px cover (the album icon for a new album), the "Moving to" label in `safe-strong`, the name in bold `ink`, and for several photos the count in `safe-ink` ("{n} photos", or "{n} photos in all" when some come from Photos). See the open question under Colors.
+- **Note:** when some photos are only in Photos, a 15px `ink-2` line under the box ("1 photo from Photos is added too.").
+- **Buttons:** at the end like any dialog: Cancel (back to the list, the choice kept; focus returns to the chosen radio) and the green Move photo / Move photos ("Moving…"). Entering the step focuses Cancel. Covers hide under a 22rem container.
+
+### Album Dialogs
+- **New album / Rename album:** a sheet with one "Name" field (focus starts in it), Cancel and the green Create / Rename ("Creating…", "Renaming…"). An empty name says "Give the album a name." under the field.
+- **Delete album:** title `Delete "{name}"?`; with photos in it, two choice rows: "Keep the photos" (chosen by default, "They move back to Photos.") and "Move the photos to Trash" ("You can restore them from Trash for 30 days."); with none, "There are no photos in it." Focus starts on Cancel; the confirm is the ink Delete album ("Deleting…"), never red, because nothing here deletes a photo for good.
 
 ### Navigation
 - **Sidebar (above 720px):** rows 48px tall, 22px icon then 17px label, 14px radius. Hover `surface-sunk`; active (`aria-current`) `safe-tint` fill with `safe-strong` bold text.
@@ -515,6 +577,7 @@ A shield-marked strip that changes material with the box's truth. Icon (22px; 28
 - **Do** use the ink button for Move to Trash, and put red only on permanent deletion: red words where it is offered, a red fill only on the final confirm.
 - **Do** start every dialog's focus on Cancel, close it on Esc, and return focus to its opener.
 - **Do** keep hover-only affordances (the tile lift, the select circle) behind `hover: hover`, with a keyboard route to the same action.
+- **Do** let words win over pictures in a narrow dialog: decorative covers hide under a 22rem container, and names wrap between words.
 
 ### Don't:
 - **Don't** use green for anything but "safe" or the primary action.

@@ -110,7 +110,7 @@ export function TrashList({ items, onRestore, onDeleteForever, stale }: TrashLis
           </button>
         )}
       </header>
-      <p className="trash__said" role="status">
+      <p className="screen-said" role="status">
         {said}
       </p>
       {failed && <FieldError>{failed}</FieldError>}

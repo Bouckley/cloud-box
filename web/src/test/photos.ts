@@ -1,6 +1,10 @@
 import type { CollectionView, ItemView, LibrarySnapshot } from '@cloudbox/core';
 
-const coll = (id: string, kind: 'album' | 'folder'): CollectionView => ({
+export const coll = (
+  id: string,
+  kind: 'album' | 'folder',
+  over: Partial<CollectionView> = {},
+): CollectionView => ({
   id,
   kind,
   parentId: null,
@@ -8,6 +12,7 @@ const coll = (id: string, kind: 'album' | 'folder'): CollectionView => ({
   role: null,
   deletedAt: null,
   key: new Uint8Array(32),
+  ...over,
 });
 
 /** A photo item for tests; dates are RFC 3339 strings. */

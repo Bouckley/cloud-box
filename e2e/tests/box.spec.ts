@@ -46,8 +46,12 @@ test('box: storage, copies, add a device, change password, lock, revoke', async 
   await expectAccessible(page);
   await expectNoSidewaysScroll(page);
 
-  // Add a device: the code in groups of four, a QR of it, and how long it lasts.
+  // Add a device: before a code, the words point at where it will come from;
+  // then the code in groups of four, a QR of it, and how long it lasts.
+  const addCard = page.getByRole('region', { name: 'Add a device' });
+  await expect(addCard).toContainText('Then type the code you get here.');
   const code = await addDeviceCode(page);
+  await expect(addCard).toContainText('Then type this code.');
   await expect(page.getByRole('img', { name: 'QR code for the pairing code' })).toBeVisible();
   await expect(page.getByText(/^Valid until /)).toBeVisible();
   await expect(page.getByRole('button', { name: 'Make a new code' })).toBeVisible();

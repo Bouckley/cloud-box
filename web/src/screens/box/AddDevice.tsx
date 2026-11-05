@@ -36,7 +36,8 @@ export function AddDevice() {
     <section className="card box-section" aria-labelledby="add-device-title">
       <h2 id="add-device-title">Add a device</h2>
       <p className="lede">
-        On the new browser, open this box&apos;s address and choose Connect. Then type this code.
+        On the new browser, open this box&apos;s address and choose Connect.{' '}
+        {pairing ? 'Then type this code.' : 'Then type the code you get here.'}
       </p>
       {pairing && (
         <div className="pair">

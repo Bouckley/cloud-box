@@ -126,6 +126,14 @@ describe('Viewer', () => {
     expect(screen.getByRole('status')).toHaveTextContent('Added to Garden');
   });
 
+  it('opened inside an album, the button says Move to album', () => {
+    const p = show(photo('a', '2026-11-03T14:05:00Z'), { inAlbum: true, said: 'Moved to Trips' });
+    expect(screen.queryByRole('button', { name: 'Add to album' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Move to album' }));
+    expect(p.onAddToAlbum).toHaveBeenCalled();
+    expect(screen.getByRole('status')).toHaveTextContent('Moved to Trips');
+  });
+
   it('Esc inside an open dialog does not close the viewer', () => {
     const p = show(photo('a', '2026-11-03T14:05:00Z'));
     const d = document.createElement('dialog');

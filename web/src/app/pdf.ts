@@ -9,8 +9,11 @@ export type PdfPage = {
   /** Size at 100%, in CSS pixels (PDF points). */
   width: number;
   height: number;
-  /** Paints the page at this zoom; rejects if cancelled by a newer render. */
-  render(canvas: HTMLCanvasElement, scale: number): Promise<void>;
+  /**
+   * Paints the page at this zoom: true once drawn, false if a newer render
+   * (a zoom) took its place. Rejects only when the page can't be drawn.
+   */
+  render(canvas: HTMLCanvasElement, scale: number): Promise<boolean>;
   /** The page's words, for screen readers. */
   text(): Promise<string>;
 };
@@ -65,7 +68,14 @@ export async function openPdf(bytes: Uint8Array): Promise<PdfDoc> {
             annotationMode: pdfjs.AnnotationMode.ENABLE,
           });
           drawing = t;
-          await t.promise;
+          try {
+            await t.promise;
+            return true;
+          } catch (e) {
+            if ((e as { name?: string } | null)?.name === 'RenderingCancelledException')
+              return false;
+            throw e;
+          }
         },
         async text() {
           const content = await page.getTextContent();

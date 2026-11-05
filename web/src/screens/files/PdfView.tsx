@@ -181,6 +181,7 @@ function Page({
   const [near, setNear] = useState(typeof IntersectionObserver === 'undefined');
   const [page, setPage] = useState<PdfPage | null>(null);
   const [words, setWords] = useState('');
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     if (near || !box.current) return;
@@ -208,7 +209,15 @@ function Page({
   }, [near, doc, n]);
 
   useEffect(() => {
-    if (page && canvas.current) page.render(canvas.current, zoom).catch(() => {});
+    if (!page || !canvas.current) return;
+    let live = true;
+    page.render(canvas.current, zoom).then(
+      (drawn) => live && drawn && setFailed(false),
+      () => live && setFailed(true),
+    );
+    return () => {
+      live = false;
+    };
   }, [page, zoom]);
 
   const size = page ?? guess;
@@ -222,6 +231,11 @@ function Page({
       style={{ width: `${size.width * zoom}px`, height: `${size.height * zoom}px` }}
     >
       {page && <canvas ref={canvas} aria-hidden="true" />}
+      {failed && (
+        <p className="pdf__failed">
+          This page couldn&apos;t be shown. Download the file to see it.
+        </p>
+      )}
       <p className="visually-hidden">{words}</p>
     </div>
   );

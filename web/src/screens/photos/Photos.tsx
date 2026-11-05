@@ -213,6 +213,7 @@ export function PhotoViewerScreen() {
             void library.setFavourite(item.id, on).catch(() => {});
           }
         }}
+        inAlbum={scope.kind === 'album'}
         onAddToAlbum={() => {
           setSaid('');
           setAdding(true);
@@ -226,7 +227,10 @@ export function PhotoViewerScreen() {
       {adding && (
         <AddToAlbum
           ids={[item.id]}
-          onAdded={(album) => setSaid(`Added to ${album.name}`)}
+          from={scope.kind === 'album' ? scope.id : undefined}
+          onAdded={(album) =>
+            setSaid(`${scope.kind === 'album' ? 'Moved' : 'Added'} to ${album.name}`)
+          }
           onClose={() => setAdding(false)}
           around={(run) =>
             leaving(async () => {

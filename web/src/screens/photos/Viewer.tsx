@@ -40,6 +40,8 @@ export type ViewerProps = {
   onDelete(): void;
   /** Opens the album picker for this photo. */
   onAddToAlbum(): void;
+  /** Opened inside an album: the photo moves out of it, so the button says Move. */
+  inAlbum?: boolean | undefined;
   /** A polite status line, e.g. "Added to Garden". */
   said?: string | undefined;
 };
@@ -199,7 +201,7 @@ export function Viewer(p: ViewerProps) {
         </button>
         <button type="button" className="button" onClick={p.onAddToAlbum}>
           <AlbumsIcon size={18} />
-          Add to album
+          {p.inAlbum ? 'Move to album' : 'Add to album'}
         </button>
         <button
           type="button"

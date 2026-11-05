@@ -1,16 +1,16 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { PdfDoc } from '../../app/pdf.ts';
 import { PdfView } from './PdfView.tsx';
 
-function fakeDoc(pages = 3): PdfDoc {
+function fakeDoc(pages = 3, draw: () => Promise<boolean> = () => Promise.resolve(true)): PdfDoc {
   return {
     pages,
     page: vi.fn((n: number) =>
       Promise.resolve({
         width: 595,
         height: 842,
-        render: vi.fn(() => Promise.resolve()),
+        render: vi.fn(draw),
         text: () => Promise.resolve(`Words on page ${n}`),
       }),
     ),
@@ -57,5 +57,22 @@ describe('PdfView', () => {
     const page = await screen.findByRole('group', { name: 'Page 1 of 1' });
     expect(await screen.findByText('Words on page 1')).toBeInTheDocument();
     expect(page.querySelector('canvas')).toHaveAttribute('aria-hidden', 'true');
+  });
+
+  it("a page that can't be drawn says so, and how to see it", async () => {
+    render(
+      <PdfView doc={fakeDoc(1, () => Promise.reject(new Error('bad font')))} name="Will.pdf" />,
+    );
+    const page = await screen.findByRole('group', { name: 'Page 1 of 1' });
+    expect(
+      await within(page).findByText("This page couldn't be shown. Download the file to see it."),
+    ).toBeVisible();
+  });
+
+  it('a draw replaced by a newer one (zoom) is not a failure', async () => {
+    render(<PdfView doc={fakeDoc(1, () => Promise.resolve(false))} name="Will.pdf" />);
+    const page = await screen.findByRole('group', { name: 'Page 1 of 1' });
+    await within(page).findByText('Words on page 1');
+    expect(within(page).queryByText(/couldn't be shown/)).toBeNull();
   });
 });

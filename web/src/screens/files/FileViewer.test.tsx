@@ -49,7 +49,7 @@ describe('FileViewer', () => {
         Promise.resolve({
           width: 595,
           height: 842,
-          render: vi.fn(() => Promise.resolve()),
+          render: vi.fn(() => Promise.resolve(true)),
           text: () => Promise.resolve(''),
         }),
       ),

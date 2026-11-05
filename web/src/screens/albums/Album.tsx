@@ -42,7 +42,7 @@ function ScopedTimeline({
   const select = useSelecting(
     items,
     ready && items.length > 0,
-    scope.kind === 'album' ? 'move' : 'add',
+    scope.kind === 'album' ? scope.id : undefined,
   );
   return (
     <>

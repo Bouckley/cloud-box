@@ -90,33 +90,49 @@ test('albums: make Garden, add two photos, favourite one, delete it keeping them
   await expect(page.getByRole('heading', { level: 1, name: 'Videos' })).toBeVisible();
   await expect(page.getByText('0 videos')).toBeVisible();
 
-  // From inside Garden, select a photo and move it to a new album: the move is
-  // shown first, Cancel goes back.
-  await nav(page, 'Albums').click();
-  await page.getByRole('link', { name: /^Garden/ }).click();
+  // From Photos, "Add to album" on a Garden photo would move it: the move is
+  // shown first, and Cancel goes back to the list.
+  await nav(page, 'Photos').click();
   await page.getByRole('button', { name: 'Select', exact: true }).click();
-  await expect(page.getByRole('region', { name: 'Selection' })).toContainText('Choose photos');
   await page.getByRole('checkbox').nth(0).check();
-  // Inside an album the photos move, so the button says so.
-  await expect(
-    page.locator('.select-bar').getByRole('button', { name: 'Add to album' }),
-  ).toHaveCount(0);
-  await page.locator('.select-bar').getByRole('button', { name: 'Move to album' }).click();
-  const pick = page.getByRole('dialog', { name: 'Add to album' });
-  await expect(pick.getByRole('radio', { name: 'New album' })).toBeChecked();
-  await pick.getByRole('textbox', { name: 'Album name' }).fill('Trips');
-  await pick.getByRole('button', { name: 'Add' }).click();
+  await page.locator('.select-bar').getByRole('button', { name: 'Add to album' }).click();
+  const add = page.getByRole('dialog', { name: 'Add to album' });
+  await add.getByRole('radio', { name: 'New album' }).check();
+  await add.getByRole('textbox', { name: 'Album name' }).fill('Trips');
+  await add.getByRole('button', { name: 'Add' }).click();
   const confirm = page.getByRole('dialog', { name: 'Move this photo?' });
   await expect(confirm.getByRole('region', { name: 'Leaving' })).toContainText('Garden');
   await expect(confirm.getByRole('region', { name: 'Moving to' })).toContainText('Trips');
   await expect(confirm.getByRole('button', { name: 'Cancel' })).toBeFocused();
   await expectAccessible(page);
   await confirm.getByRole('button', { name: 'Cancel' }).click();
-  await expect(pick).toBeVisible();
-  await expect(pick.getByRole('textbox', { name: 'Album name' })).toHaveValue('Trips');
-  await pick.getByRole('button', { name: 'Add' }).click();
-  await confirm.getByRole('button', { name: 'Move photo' }).click();
-  await expect(confirm).toBeHidden({ timeout: 30_000 });
+  await expect(add).toBeVisible();
+  await expect(add.getByRole('textbox', { name: 'Album name' })).toHaveValue('Trips');
+  await add.getByRole('button', { name: 'Cancel' }).click();
+  await expect(add).toBeHidden();
+
+  // Inside Garden the photos move, so it says Move all the way, Garden itself
+  // is greyed out, and it moves without asking again.
+  await nav(page, 'Albums').click();
+  await page.getByRole('link', { name: /^Garden/ }).click();
+  await page.getByRole('button', { name: 'Select', exact: true }).click();
+  await expect(page.getByRole('region', { name: 'Selection' })).toContainText('Choose photos');
+  await page.getByRole('checkbox').nth(0).check();
+  await expect(
+    page.locator('.select-bar').getByRole('button', { name: 'Add to album' }),
+  ).toHaveCount(0);
+  await page.locator('.select-bar').getByRole('button', { name: 'Move to album' }).click();
+  const pick = page.getByRole('dialog', { name: 'Move to album' });
+  await expect(pick.getByRole('radio', { name: 'Garden' })).toBeDisabled();
+  await expect(pick.getByRole('radio', { name: 'Garden' })).toHaveAccessibleDescription(
+    "It's here now",
+  );
+  await expect(pick.getByRole('radio', { name: 'New album' })).toBeChecked();
+  await expectAccessible(page);
+  await pick.getByRole('textbox', { name: 'Album name' }).fill('Trips');
+  await pick.getByRole('button', { name: 'Move' }).click();
+  await expect(pick).toBeHidden({ timeout: 30_000 });
+  await expect(page.getByRole('dialog', { name: 'Move this photo?' })).toHaveCount(0);
   await expect(page.getByRole('status').filter({ hasText: 'Moved to Trips' })).toBeVisible();
   // It left Garden, and Select mode ended.
   await expect(tiles(page)).toHaveCount(1);

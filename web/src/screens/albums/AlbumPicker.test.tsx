@@ -189,4 +189,55 @@ describe('AlbumPicker', () => {
     );
     expect(p.onClose).not.toHaveBeenCalled();
   });
+
+  describe('opened inside an album (from)', () => {
+    const inFamily = () =>
+      open({ count: 2, homes: [{ entry: family, count: 2 }], onlyInPhotos: 0, from: 'family' });
+
+    it('says Move, and the album they are in is greyed out as "It\'s here now"', () => {
+      inFamily();
+      expect(screen.getByRole('dialog', { name: 'Move to album' })).toBeInTheDocument();
+      const here = screen.getByRole('radio', { name: 'Family' });
+      expect(here).toBeDisabled();
+      expect(here).toHaveAccessibleDescription("It's here now");
+      const garden = screen.getByRole('radio', { name: 'Garden' });
+      expect(garden).toBeChecked();
+      expect(garden).toHaveFocus();
+      expect(screen.getByRole('button', { name: 'Move' })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Add' })).toBeNull();
+    });
+
+    it('moves straight away, without asking again', async () => {
+      const p = inFamily();
+      fireEvent.click(screen.getByRole('button', { name: 'Move' }));
+      expect(p.onAdd).toHaveBeenCalledWith({ id: 'garden', name: 'Garden' });
+      expect(screen.queryByRole('region', { name: 'Leaving' })).toBeNull();
+      await vi.waitFor(() => expect(p.onClose).toHaveBeenCalled());
+    });
+
+    it('with no other album, New album is chosen', () => {
+      open({
+        albums: [family],
+        homes: [{ entry: family, count: 1 }],
+        count: 1,
+        onlyInPhotos: 0,
+        from: 'family',
+      });
+      expect(screen.getByRole('radio', { name: 'New album' })).toBeChecked();
+    });
+
+    it('a failed move says so, in Move words', async () => {
+      open({
+        count: 2,
+        homes: [{ entry: family, count: 2 }],
+        onlyInPhotos: 0,
+        from: 'family',
+        onAdd: vi.fn(() => Promise.reject(new Error('offline'))),
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'Move' }));
+      expect(await screen.findByRole('alert')).toHaveTextContent(
+        "Couldn't move them to the album. Try again.",
+      );
+    });
+  });
 });

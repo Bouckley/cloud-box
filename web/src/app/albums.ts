@@ -100,6 +100,8 @@ export type AlbumHome = { entry: AlbumEntry; count: number };
 export function pickerChoices(
   snapshot: LibrarySnapshot,
   ids: readonly string[],
+  /** The album being shown: kept in the list even when they're all in it (greyed out there). */
+  keep?: string,
 ): { albums: AlbumEntry[]; homes: AlbumHome[]; onlyInPhotos: number; unmovable: number } {
   const list = albumList(snapshot);
   const order = new Map(list.map((a, i) => [a.album.id, i]));
@@ -126,7 +128,9 @@ export function pickerChoices(
     );
   const [only] = where.size === 1 ? where : [null];
   return {
-    albums: list.filter((a) => a.album.id !== only && a.album.key !== null),
+    albums: list.filter(
+      (a) => (a.album.id !== only || a.album.id === keep) && a.album.key !== null,
+    ),
     homes,
     onlyInPhotos,
     unmovable,

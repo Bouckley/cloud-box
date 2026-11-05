@@ -12,9 +12,12 @@ export function AddToAlbum({
   onAdded,
   onClose,
   returnFocus,
+  from,
   around = (run) => run().then(() => {}),
 }: {
   ids: string[];
+  /** The album they're moved out of, when opened inside it (the picker says Move). */
+  from?: string | undefined;
   onAdded(album: { id: string; name: string }): void;
   onClose(): void;
   returnFocus?: (() => HTMLElement | null) | undefined;
@@ -23,7 +26,7 @@ export function AddToAlbum({
 }) {
   const { library, snapshot } = useLibrary();
   // Read once when it opens: the list should not shift under the pointer.
-  const [choices] = useState(() => pickerChoices(snapshot, ids));
+  const [choices] = useState(() => pickerChoices(snapshot, ids, from));
   // One adder per picker, so a retry reuses an album it already made.
   const [add] = useState(() => (library ? albumAdder(library) : null));
   return (
@@ -33,6 +36,7 @@ export function AddToAlbum({
       homes={choices.homes}
       onlyInPhotos={choices.onlyInPhotos}
       unmovable={choices.unmovable}
+      from={from}
       onAdd={async (target: AlbumTarget) => {
         if (!add) throw new Error('locked');
         await around(async () => {
@@ -68,9 +72,10 @@ export type Selecting = {
 export function useSelecting(
   items: ItemView[],
   show = true,
-  /** Inside an album its photos move out (a photo is in one album), so say Move. */
-  verb: 'add' | 'move' = 'add',
+  /** The album being shown: its photos move out (a photo is in one album), so say Move. */
+  from?: string,
 ): Selecting {
+  const verb = from === undefined ? 'add' : 'move';
   const [selected, setSelected] = useState<Set<string> | null>(null);
   const [deleting, setDeleting] = useState<string[] | null>(null);
   const [adding, setAdding] = useState<string[] | null>(null);
@@ -153,6 +158,7 @@ export function useSelecting(
       {adding && (
         <AddToAlbum
           ids={adding}
+          from={from}
           onAdded={(album) => {
             setSelected(null);
             setSaid(`${verb === 'move' ? 'Moved' : 'Added'} to ${album.name}`);

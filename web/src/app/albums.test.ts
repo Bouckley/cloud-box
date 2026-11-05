@@ -124,6 +124,12 @@ describe('pickerChoices', () => {
     expect(c.onlyInPhotos).toBe(0);
   });
 
+  it('all in the album being shown: it stays in the list, in its place, to show where they are', () => {
+    const c = pickerChoices(library(), ['g1', 'g2'], 'garden');
+    expect(c.albums.map((a) => a.album.id)).toEqual(['empty', 'family', 'garden', 'secret']);
+    expect(homes(c)).toEqual([['garden', 2]]);
+  });
+
   it('a photo in an album whose key cannot be read cannot move, and is said apart', () => {
     const c = pickerChoices(library(), ['g1', 'l1']);
     expect(homes(c)).toEqual([['garden', 1]]);

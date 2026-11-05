@@ -24,6 +24,12 @@ export type AlbumPickerProps = {
   onlyInPhotos: number;
   /** How many of them sit in an album whose key can't be read: they stay put. */
   unmovable?: number | undefined;
+  /**
+   * The album they're being moved out of, when opened inside it: the picker
+   * says Move, that album is greyed out ("It's here now"), and it moves
+   * without asking again (the button already said Move).
+   */
+  from?: string | undefined;
   /** Adds them; the picker closes when it resolves. */
   onAdd(target: AlbumTarget): Promise<void>;
   onClose(): void;
@@ -42,7 +48,8 @@ function Cover({ entry }: { entry: AlbumEntry }) {
 }
 
 /**
- * `Add to album`: the user's albums plus `New album`. An item lives in one
+ * `Add to album` (or `Move to album` inside an album, see `from`): the
+ * user's albums plus `New album`. An item lives in one
  * album, so when a photo would leave another album the picker first shows the
  * move (Leaving → Moving to) and asks; Cancel goes back to the list.
  */
@@ -52,12 +59,15 @@ export function AlbumPicker({
   homes,
   onlyInPhotos,
   unmovable = 0,
+  from,
   onAdd,
   onClose,
   returnFocus,
 }: AlbumPickerProps) {
   const group = useId();
-  const [chosen, setChosen] = useState(albums[0]?.album.id ?? NEW);
+  const moveOut = from !== undefined;
+  const choosable = albums.filter((a) => a.album.id !== from);
+  const [chosen, setChosen] = useState(choosable[0]?.album.id ?? NEW);
   const [name, setName] = useState('');
   const [problem, setProblem] = useState('');
   const [failed, setFailed] = useState(false);
@@ -112,7 +122,7 @@ export function AlbumPicker({
       target = { id: chosen, name: albumName(entry.album) };
     }
     const leaving = homes.filter((h) => h.entry.album.id !== chosen);
-    if (leaving.length) setMove({ target, leaving });
+    if (leaving.length && !moveOut) setMove({ target, leaving });
     else await run(target);
   };
 
@@ -122,12 +132,14 @@ export function AlbumPicker({
     <Dialog
       title={
         !move
-          ? 'Add to album'
+          ? moveOut
+            ? 'Move to album'
+            : 'Add to album'
           : moving === 1
             ? 'Move this photo?'
             : `Move ${moving.toLocaleString()} photos?`
       }
-      initialFocus={albums.length ? first : field}
+      initialFocus={choosable.length ? first : field}
       onClose={onClose}
       busy={busy}
       returnFocus={returnFocus}
@@ -166,20 +178,23 @@ export function AlbumPicker({
             )}
             <fieldset ref={radios} className="choices picker__list">
               <legend className="visually-hidden">Albums</legend>
-              {albums.map((entry, i) => (
-                <Choice
-                  key={entry.album.id}
-                  ref={i === 0 ? first : undefined}
-                  name={group}
-                  value={entry.album.id}
-                  checked={chosen === entry.album.id}
-                  label={albumName(entry.album)}
-                  detail={countText(entry.count)}
-                  media={<Cover entry={entry} />}
-                  disabled={busy}
-                  onChoose={() => setChosen(entry.album.id)}
-                />
-              ))}
+              {albums.map((entry) => {
+                const here = entry.album.id === from;
+                return (
+                  <Choice
+                    key={entry.album.id}
+                    ref={entry === choosable[0] ? first : undefined}
+                    name={group}
+                    value={entry.album.id}
+                    checked={chosen === entry.album.id}
+                    label={albumName(entry.album)}
+                    detail={here ? "It's here now" : countText(entry.count)}
+                    media={<Cover entry={entry} />}
+                    disabled={busy || here}
+                    onChoose={() => setChosen(entry.album.id)}
+                  />
+                );
+              })}
               <Choice
                 name={group}
                 value="new"
@@ -215,7 +230,11 @@ export function AlbumPicker({
             )}
           </>
         )}
-        {failed && <FieldError>Couldn&apos;t add {them} to the album. Try again.</FieldError>}
+        {failed && (
+          <FieldError>
+            Couldn&apos;t {moveOut ? 'move' : 'add'} {them} to the album. Try again.
+          </FieldError>
+        )}
         <div className="dialog__actions">
           <button
             ref={cancel}
@@ -231,15 +250,19 @@ export function AlbumPicker({
             Cancel
           </button>
           <button type="submit" className="button button--primary" disabled={busy}>
-            {!move
+            {moveOut
               ? busy
-                ? 'Adding…'
-                : 'Add'
-              : busy
                 ? 'Moving…'
-                : moving === 1
-                  ? 'Move photo'
-                  : 'Move photos'}
+                : 'Move'
+              : !move
+                ? busy
+                  ? 'Adding…'
+                  : 'Add'
+                : busy
+                  ? 'Moving…'
+                  : moving === 1
+                    ? 'Move photo'
+                    : 'Move photos'}
           </button>
         </div>
       </form>

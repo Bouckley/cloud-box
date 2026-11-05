@@ -1,4 +1,4 @@
-import type { Status, Unlocked } from '@cloudbox/core';
+import { BoxError, ClientError, type Status, type Unlocked } from '@cloudbox/core';
 import { act, render } from '@testing-library/react';
 import { useEffect } from 'react';
 
@@ -71,5 +71,52 @@ describe('status poll', () => {
     expect(status).toHaveBeenCalledTimes(1);
     await act(async () => answer());
     expect(status).toHaveBeenCalledTimes(2);
+  });
+
+  function Show() {
+    const { banner, status } = useStatus();
+    const { unlocked } = useUnlocked();
+    return (
+      <p data-testid="state">
+        {banner.kind}/{status ? 'status' : 'none'}/{unlocked ? 'unlocked' : 'locked'}
+      </p>
+    );
+  }
+
+  async function pollThenFail(err: unknown) {
+    vi.useFakeTimers();
+    const u = fakeUnlocked();
+    let fail = false;
+    Object.assign(u, {
+      status: vi.fn(async () => {
+        if (fail) throw err;
+        return STATUS as unknown as Status;
+      }),
+    });
+    Object.assign(u.library, { sync: vi.fn(async () => {}) });
+    const view = render(
+      <SessionProvider box={{ info: vi.fn(() => new Promise(() => {})) } as never}>
+        <UnlockWith u={u} />
+        <Show />
+      </SessionProvider>,
+    );
+    await act(async () => {});
+    expect(view.getByTestId('state').textContent).toBe('status/status/unlocked');
+    fail = true;
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(STATUS_POLL_MS);
+    });
+    return { text: view.getByTestId('state').textContent, u };
+  }
+
+  // Final review I1: "Everything is safe" must not outlive a failed check.
+  it('a failed status check stops showing the last safe answer', async () => {
+    const { text } = await pollThenFail(new BoxError(500, { code: 'internal', message: 'x' }));
+    expect(text).toBe('checking/none/unlocked');
+  });
+
+  it('a revoked device locks', async () => {
+    const { u } = await pollThenFail(new ClientError('revoked'));
+    expect(u.lock).toHaveBeenCalled();
   });
 });

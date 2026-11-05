@@ -68,28 +68,28 @@ func NewRouter(d Deps) http.Handler {
 		mux.HandleFunc("POST /v1/devices/pairing-codes", h.requireOwner(h.createPairingCode))
 		mux.HandleFunc("POST /v1/devices/pair", h.pairDevice)
 		mux.HandleFunc("DELETE /v1/devices/{id}", h.requireOwner(h.revokeDevice))
-		mux.HandleFunc("PATCH /v1/devices/{id}", h.requireSession(h.renameDevice))
+		mux.HandleFunc("PATCH /v1/devices/{id}", h.requireOwner(h.renameDevice))
 	}
 	if d.Auth != nil && d.Blobs != nil {
-		mux.HandleFunc("POST /v1/uploads", h.requireSession(h.createUpload))
+		mux.HandleFunc("POST /v1/uploads", h.requireOwner(h.createUpload))
 		mux.HandleFunc("GET /v1/uploads/{id}", h.requireSession(h.getUpload))
-		mux.HandleFunc("PUT /v1/uploads/{id}/parts/{n}", h.requireSession(h.putUploadPart))
-		mux.HandleFunc("POST /v1/uploads/{id}/complete", h.requireSession(h.completeUpload))
+		mux.HandleFunc("PUT /v1/uploads/{id}/parts/{n}", h.requireOwner(h.putUploadPart))
+		mux.HandleFunc("POST /v1/uploads/{id}/complete", h.requireOwner(h.completeUpload))
 		mux.HandleFunc("GET /v1/blobs/{id}", h.requireSession(h.getBlob))
 	}
 	if d.Auth != nil && d.Library != nil {
 		mux.HandleFunc("GET /v1/collections", h.requireSession(h.listCollections))
-		mux.HandleFunc("POST /v1/collections", h.requireSession(h.createCollection))
-		mux.HandleFunc("PATCH /v1/collections/{id}", h.requireSession(h.updateCollection))
-		mux.HandleFunc("DELETE /v1/collections/{id}", h.requireSession(h.deleteCollection))
+		mux.HandleFunc("POST /v1/collections", h.requireOwner(h.createCollection))
+		mux.HandleFunc("PATCH /v1/collections/{id}", h.requireOwner(h.updateCollection))
+		mux.HandleFunc("DELETE /v1/collections/{id}", h.requireOwner(h.deleteCollection))
 		mux.HandleFunc("GET /v1/items", h.requireSession(h.listItemChanges))
-		mux.HandleFunc("POST /v1/items", h.requireSession(h.createItem))
+		mux.HandleFunc("POST /v1/items", h.requireOwner(h.createItem))
 		mux.HandleFunc("POST /v1/items/lookup", h.requireSession(h.lookupItems))
-		mux.HandleFunc("PATCH /v1/items/{id}", h.requireSession(h.updateItem))
+		mux.HandleFunc("PATCH /v1/items/{id}", h.requireOwner(h.updateItem))
 	}
 	if d.Auth != nil && d.Library != nil && d.Trash != nil {
-		mux.HandleFunc("DELETE /v1/items/{id}", h.requireSession(itemIDHandler(h.trashItem)))
-		mux.HandleFunc("POST /v1/items/{id}/restore", h.requireSession(itemIDHandler(h.restoreItem)))
+		mux.HandleFunc("DELETE /v1/items/{id}", h.requireOwner(itemIDHandler(h.trashItem)))
+		mux.HandleFunc("POST /v1/items/{id}/restore", h.requireOwner(itemIDHandler(h.restoreItem)))
 		mux.HandleFunc("GET /v1/trash", h.requireSession(h.listTrash))
 		mux.HandleFunc("DELETE /v1/trash/{id}", h.requireOwner(itemIDHandler(h.deleteFromTrash)))
 	}

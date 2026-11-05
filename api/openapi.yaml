@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Cloud Box API
-  version: 0.4.0
+  version: 0.5.0
   description: >
     The box stores ciphertext only. Request and response bodies never carry
     plaintext file contents, names, dates, locations or keys. Conventions
@@ -11,6 +11,9 @@ info:
     request body must be sent as `Content-Type: application/json`; anything
     else is 415 `unsupported_media_type`, so a web page elsewhere cannot post
     to the box without a CORS preflight, which the box never answers.
+    Every request that changes something needs an owner session (ADR 0010);
+    else 403 `owner_required`. An ordinary session (device key only) can
+    read - the GET routes and POST /v1/items/lookup - and end itself.
 servers:
   - url: https://localhost:8443
 security:

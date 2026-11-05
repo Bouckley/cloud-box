@@ -126,8 +126,8 @@ the exact shapes; `docs/plans/M2.md` holds the full scope rulings.
   cross-site page cannot send without a CORS preflight (M2 Task 18).
 
 - **The device key alone could act, not only an unlocked device** (found in
-  M2 Task 18, fixed by [ADR 0010](0010-owner-sessions.md): those actions now
-  need an owner session). Logging in needs only the device key, which a locked browser,
+  M2 Task 18, fixed by [ADR 0010](0010-owner-sessions.md): every write now
+  needs an owner session). Logging in needs only the device key, which a locked browser,
   a freshly paired device or a copied profile still holds (devtools on the
   box's page can sign with it). With it someone can set a new password wrap,
   or move everything to Trash and delete it forever. The recovery key still

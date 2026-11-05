@@ -28,11 +28,16 @@ from something only a holder of the master key can make.
   challenge as the device signature. If it verifies, the session is an
   *owner session* (`sessions.owner = 1`). A bad owner signature fails the
   whole login with the same `401`. Without one the session is ordinary.
-- **What needs an owner session** (else `403 owner_required`):
-  `PUT /v1/account/password`, `DELETE /v1/devices/{id}` (revoke),
-  `POST /v1/devices/pairing-codes`, `DELETE /v1/trash/{id}` (delete forever).
-  Everything else, including moving items to Trash (30 days to restore),
-  works with an ordinary session.
+- **What needs an owner session** (else `403 owner_required`): every request
+  that changes something. An ordinary session can only read (the `GET`
+  routes and `POST /v1/items/lookup`) and end itself
+  (`DELETE /v1/auth/session`). Setup, login, pairing and recovery take no
+  session. *Amended 2026-11-05 (final M2 review):* the first version guarded
+  only the password, revoke, pairing codes and delete forever, but
+  `PATCH /v1/items/{id}` with a junk `fileKeyEnc` makes a photo unreadable
+  for good just as surely, and collection and device writes were open the
+  same way. A locked client never writes, so nothing legitimate needs a
+  write from an ordinary session.
 - **The client** signs as owner whenever it holds the master key: right after
   unlock, setup, forgot password and recovery reset it logs in again as owner,
   and a re-login after the hourly session expiry does the same while
@@ -42,9 +47,9 @@ from something only a holder of the master key can make.
 
 ## Consequences
 
-- Someone holding only a device key can read ciphertext and move items to
-  Trash, but cannot change the password, delete anything for good, remove
-  devices or add new ones. The owner can restore from Trash and revoke them.
+- Someone holding only a device key can read ciphertext and nothing else:
+  no uploads, edits, moves to Trash, password changes, deletes or device
+  changes. The owner can revoke that device.
 - Accounts made before migration 0003 have no owner key, so they can never
   get an owner session. Only dev boxes exist; `make reset-dev` starts again.
 - A stolen *unlocked* browser (master key in memory) still has full power,

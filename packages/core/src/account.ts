@@ -168,7 +168,17 @@ export class Box {
         },
       });
       if (v.response.status === 401 && attempt === 0) continue;
-      this.#token = must(v).token;
+      const { token } = must(v);
+      if (this.#owner !== owner) {
+        // Unlocked or locked while this login was in flight: its session has
+        // the wrong power (ADR 0010). End it and log in again as things are now.
+        void this.#public
+          .DELETE('/v1/auth/session', { headers: { Authorization: `Bearer ${token}` } })
+          .catch(() => {});
+        attempt = -1;
+        continue;
+      }
+      this.#token = token;
       return 'ok';
     }
   }

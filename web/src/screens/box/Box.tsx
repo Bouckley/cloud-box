@@ -1,13 +1,15 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { KeyIcon, LockIcon } from '../../app/icons.tsx';
+import { KeyIcon } from '../../app/icons.tsx';
 import { useLibrary, useStatus, useUnlocked } from '../../app/session.tsx';
 import { useNow } from '../../app/Shell.tsx';
 import { useTitle } from '../../app/title.ts';
+import { useUploads } from '../../app/uploads.ts';
 import { AddDevice } from './AddDevice.tsx';
 import { ChangePassword } from './ChangePassword.tsx';
 import { Copies } from './Copies.tsx';
 import { Devices } from './Devices.tsx';
+import { LockButton } from './LockButton.tsx';
 import { Storage, storageParts } from './Storage.tsx';
 
 /**
@@ -22,6 +24,7 @@ export function BoxScreen() {
   const { snapshot } = useLibrary();
   const { unlocked, setUnlocked } = useUnlocked();
   const navigate = useNavigate();
+  const { state: uploads } = useUploads();
   const [changing, setChanging] = useState(false);
   const [said, setSaid] = useState('');
   const parts = useMemo(() => storageParts(snapshot), [snapshot]);
@@ -44,18 +47,14 @@ export function BoxScreen() {
             <KeyIcon size={18} />
             Change password
           </button>
-          <button
-            type="button"
-            className="button"
-            onClick={() => {
+          <LockButton
+            uploading={uploads.queued + (uploads.current ? 1 : 0)}
+            onLock={() => {
               // Wipes the keys from memory; the app asks for the password again.
               setUnlocked(null);
               void navigate('/', { replace: true });
             }}
-          >
-            <LockIcon size={18} />
-            Lock
-          </button>
+          />
         </div>
       </header>
       <p className="screen-said" role="status">

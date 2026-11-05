@@ -47,10 +47,17 @@ export function newRecoveryKey(): RecoveryKey {
 
 /**
  * Reads 24 words as typed: any case, any whitespace, and each word either in
- * full or as its first 4 letters (unique in the BIP39 English list).
+ * full or as its first 4 letters (unique in the BIP39 English list). Numbers
+ * ("1." or "1)") and punctuation between words are ignored, so the key can be
+ * copied as shown.
  */
 export function parseRecoveryKey(text: string): RecoveryKey {
-  const tokens = text.normalize('NFKD').toLowerCase().split(/\s+/).filter(Boolean);
+  const tokens = text
+    .normalize('NFKD')
+    .toLowerCase()
+    .replace(/[.,;:()]/g, ' ')
+    .split(/\s+/)
+    .filter((t) => t !== '' && !/^\d+$/.test(t));
   if (tokens.length !== WORD_COUNT) throw new RecoveryWordsError('count');
   const words = tokens.map((t, i) => {
     const word = resolveWord(t);

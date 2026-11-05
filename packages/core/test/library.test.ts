@@ -243,6 +243,34 @@ describe('library', () => {
     await expect(me.library.sync()).rejects.toThrow();
   });
 
+  // Final review I2: a sync that re-reads an item while its blob downloads
+  // used to zero the very key the download was about to decrypt with.
+  it('a sync during a download does not break it', async () => {
+    const hook: { fn: Hook | null } = { fn: null };
+    const { me } = await hookedOwner(box, hook);
+    const plaintext = new Uint8Array([9, 8, 7, 6]);
+    const id = await createItem(me, me.library.roots().photos, meta('a.jpg'), plaintext);
+    await me.library.sync();
+    let release!: () => void;
+    const held = new Promise<void>((r) => (release = r));
+    let holding!: () => void;
+    const isHeld = new Promise<void>((r) => (holding = r));
+    hook.fn = async (req) => {
+      if (!new URL(req.url).pathname.startsWith('/v1/blobs/')) return undefined;
+      holding();
+      await held;
+      return undefined;
+    };
+    const reading = me.library.readBlob(me.library.snapshot().items.get(id)!, 'original');
+    await isHeld;
+    // The item changes on the box (copied to the backup) and a sync picks it up.
+    await box.runJob('replicate');
+    await me.library.sync();
+    expect(me.library.snapshot().items.get(id)?.state).toBe('replicated');
+    release();
+    expect(await reading).toEqual(plaintext);
+  });
+
   it('a sync that fails part-way loses nothing', async () => {
     const hook: { fn: Hook | null } = { fn: null };
     const { me } = await hookedOwner(box, hook);

@@ -50,10 +50,10 @@ Recovery key (24 words) ───┤
 
 - The box stores the master key **only wrapped** (by the KEK and by the recovery key).
 - Each paired device gets an Ed25519 device key for logging in to the box.
-  On its own it gives an ordinary session: read ciphertext, upload, move to
-  Trash. Changing the password, pairing or revoking devices and deleting
-  forever also need the **owner key**, an Ed25519 key derived from the
-  master key (`cbowner1`), which signs the same login
+  On its own it gives an ordinary session, which can only read ciphertext.
+  Every change (uploads, edits, moves, Trash, the password, devices) also
+  needs the **owner key**, an Ed25519 key derived from the master key
+  (`cbowner1`), which signs the same login
   ([ADR 0010](decisions/0010-owner-sessions.md)). Lock ends the session on
   the box.
   A browser's is a non-extractable WebCrypto key in IndexedDB; it is the only

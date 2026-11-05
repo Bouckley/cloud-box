@@ -41,6 +41,19 @@ describe('recovery key', () => {
     expect(parseRecoveryKey(prefixes).words).toEqual(ZERO_WORDS);
   });
 
+  // Final review I3: people copy the key as it is shown, numbered, or type
+  // commas between words.
+  it('accepts numbered words and punctuation between them', () => {
+    const numbered = ZERO_WORDS.map((w, i) => `${i + 1}. ${w}`).join('\n');
+    expect(parseRecoveryKey(numbered).words).toEqual(ZERO_WORDS);
+    const tight = ZERO_WORDS.map((w, i) => `${i + 1}.${w}`).join(' ');
+    expect(parseRecoveryKey(tight).words).toEqual(ZERO_WORDS);
+    const other = ZERO_WORDS.map((w, i) => `${i + 1}) ${w}`).join('  ');
+    expect(parseRecoveryKey(other).words).toEqual(ZERO_WORDS);
+    expect(parseRecoveryKey(ZERO_WORDS.join(', ') + '.').words).toEqual(ZERO_WORDS);
+    expect(parseRecoveryKey(ZERO_WORDS.join(';')).words).toEqual(ZERO_WORDS);
+  });
+
   it('counts the words', () => {
     const e = reason(() => parseRecoveryKey(ZERO_WORDS.slice(0, 23).join(' ')));
     expect(e.reason).toBe('count');

@@ -76,9 +76,12 @@ Endpoints marked *(Mn)* are not built yet; they arrive in that milestone.
 - Every item response includes `state`: `uploading`, `stored`, `verified`, `replicated`.
   Apps show "safe" only for `replicated`.
 - Errors use one JSON shape: `{ "code": "storage_full", "message": "...", "action": "..." }`.
-- The four actions marked *owner session* need a session whose login also
-  carried the owner key's signature, which only a device holding the master
-  key can make; otherwise `403 owner_required` (ADR 0010).
+- Every request that changes something needs an *owner session*: one whose
+  login also carried the owner key's signature, which only a device holding
+  the master key can make; otherwise `403 owner_required` (ADR 0010). A
+  session from the device key alone can only read (the `GET` routes and
+  `POST /v1/items/lookup`) and end itself (`DELETE /v1/auth/session`).
+  Logging in, setup, pairing and recovery need no session at all.
 - JSON request bodies must say `Content-Type: application/json`, or the box
   answers 415 `unsupported_media_type`. A web page on another site then
   cannot post to the box (for example to claim it during setup) without a

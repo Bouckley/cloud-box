@@ -89,7 +89,7 @@ export function SessionProvider({ children, box }: { children: ReactNode; box?: 
     [recheck],
   );
 
-  const { banner, status, refresh } = useStatusPoll(unlocked);
+  const { banner, status, refresh } = useStatusPoll(unlocked, setUnlocked);
 
   const value = useMemo<SessionValue>(
     () => ({
@@ -125,7 +125,7 @@ const CHECKING: BannerInput = { kind: 'checking' };
 
 type Polled = { for: Unlocked; banner: BannerInput; status: Status | null };
 
-function useStatusPoll(unlocked: Unlocked | null) {
+function useStatusPoll(unlocked: Unlocked | null, setUnlocked: (u: Unlocked | null) => void) {
   // Each answer remembers which account asked, so after a lock or a new
   // unlock an old answer is never shown: the banner says "checking" instead.
   const [polled, setPolled] = useState<Polled | null>(null);
@@ -151,11 +151,22 @@ function useStatusPoll(unlocked: Unlocked | null) {
             if (sync) unlocked.library.sync().catch(() => {});
           })
           .catch((e: unknown) => {
-            // Only a box we cannot reach changes the banner; other errors keep
-            // the last truthful state rather than guessing.
-            if (e instanceof ClientError && e.code === 'box_unreachable') {
-              setPolled({ for: unlocked, banner: { kind: 'unreachable' }, status: null });
+            const code = e instanceof ClientError ? e.code : null;
+            // Locked meanwhile: this answer is stale and is never shown.
+            if (code === 'locked') return;
+            // This browser was revoked (or lost its key): lock, and the entry
+            // check shows why.
+            if (code === 'revoked' || code === 'not_paired') {
+              setUnlocked(null);
+              return;
             }
+            // Any other failure: an old "safe" answer is no longer known to
+            // be true, so the banner goes back to checking.
+            setPolled({
+              for: unlocked,
+              banner: code === 'box_unreachable' ? { kind: 'unreachable' } : CHECKING,
+              status: null,
+            });
           })
           .finally(() => {
             inFlight.current = false;
@@ -166,7 +177,7 @@ function useStatusPoll(unlocked: Unlocked | null) {
       };
       run(o.sync ?? true);
     },
-    [unlocked],
+    [unlocked, setUnlocked],
   );
 
   useEffect(() => {

@@ -273,15 +273,23 @@ export class Library {
     const blob = item.blobs[role];
     const fileKey = this.#fileKeys.get(item.id);
     if (!blob || !fileKey) throw new ClientError('not_found');
-    signal?.throwIfAborted();
-    const res = await this.#api.GET('/v1/blobs/{id}', {
-      params: { path: { id: blob.id } },
-      parseAs: 'arrayBuffer',
-      ...(signal ? { signal } : {}),
-    });
-    const bytes = new Uint8Array(must(res) as unknown as ArrayBuffer);
-    signal?.throwIfAborted();
-    return decryptFile(fileKey, bytes, ad.itemBlob(item.id, role));
+    // A copy: a sync during the download may re-read the item and zero the
+    // stored key.
+    const key = fileKey.slice();
+    try {
+      signal?.throwIfAborted();
+      const res = await this.#api.GET('/v1/blobs/{id}', {
+        params: { path: { id: blob.id } },
+        parseAs: 'arrayBuffer',
+        ...(signal ? { signal } : {}),
+      });
+      const bytes = new Uint8Array(must(res) as unknown as ArrayBuffer);
+      signal?.throwIfAborted();
+      this.#open();
+      return decryptFile(key, bytes, ad.itemBlob(item.id, role));
+    } finally {
+      key.fill(0);
+    }
   }
 
   /**

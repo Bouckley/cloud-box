@@ -4,6 +4,7 @@ import (
 	"crypto/ed25519"
 	"crypto/rand"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/Bouckley/cloud-box/box/internal/boxcrypto"
@@ -50,18 +51,55 @@ func TestOwnerRequired(t *testing.T) {
 	}
 }
 
-// Everyday actions still work with an ordinary session.
-func TestOrdinarySessionReadsAndTrashes(t *testing.T) {
+// An ordinary session can only read. Every write needs the owner: a device
+// key alone could otherwise overwrite fileKeyEnc with junk and make photos
+// unreadable for good (final review C1).
+func TestOrdinarySessionIsReadOnly(t *testing.T) {
 	e := newEnv(t)
 	o := e.setUpOwner()
-	for _, p := range []string{"/v1/account", "/v1/devices", "/v1/items", "/v1/trash"} {
+	for _, p := range []string{"/v1/account", "/v1/devices", "/v1/items", "/v1/trash", "/v1/collections"} {
 		if rec := e.call(http.MethodGet, p, o.plain, nil); rec.Code != http.StatusOK {
 			t.Fatalf("GET %s = %d", p, rec.Code)
 		}
 	}
-	item := e.trashedItem(o.plain)
-	if rec := e.call(http.MethodPost, "/v1/items/"+item+"/restore", o.plain, nil); rec.Code/100 != 2 {
-		t.Fatalf("restore = %d %s", rec.Code, rec.Body)
+	lookup := map[string]any{"dedupeHashes": []string{newID() + newID()}}
+	if rec := e.call(http.MethodPost, "/v1/items/lookup", o.plain, lookup); rec.Code != http.StatusOK {
+		t.Fatalf("lookup = %d %s", rec.Code, rec.Body)
+	}
+
+	album := e.createCollection(o.token, newCollectionBody("album", nil))
+	blob := e.uploadBlob(o.token, randBytes(80))
+	it := e.createItem(o.token, newItemBody(album.ID, map[string]string{"original": e.uploadBlob(o.token, randBytes(80))}))
+	trashed := e.trashedItem(o.token)
+	cases := []struct {
+		method, path string
+		body         any
+	}{
+		{http.MethodPatch, "/v1/items/" + it.ID, map[string]any{"fileKeyEnc": randBytes(72)}},
+		{http.MethodPatch, "/v1/items/" + it.ID, map[string]any{"metadataEnc": randBytes(72)}},
+		{http.MethodPost, "/v1/items", newItemBody(album.ID, map[string]string{"original": blob})},
+		{http.MethodDelete, "/v1/items/" + it.ID, nil},
+		{http.MethodPost, "/v1/items/" + trashed + "/restore", nil},
+		{http.MethodPost, "/v1/collections", newCollectionBody("album", nil)},
+		{http.MethodPatch, "/v1/collections/" + album.ID, map[string]any{"nameEnc": randBytes(40)}},
+		{http.MethodDelete, "/v1/collections/" + album.ID, nil},
+		{http.MethodPatch, "/v1/devices/" + o.deviceID, map[string]any{"nameEnc": randBytes(40)}},
+		{http.MethodPost, "/v1/uploads", map[string]any{"size": 10}},
+		{http.MethodPut, "/v1/uploads/x/parts/0", nil},
+		{http.MethodPost, "/v1/uploads/x/complete", nil},
+	}
+	for _, c := range cases {
+		rec := e.call(c.method, c.path, o.plain, c.body)
+		if rec.Code != http.StatusForbidden || !strings.Contains(rec.Body.String(), "owner_required") {
+			t.Errorf("%s %s as ordinary = %d %s, want 403 owner_required", c.method, c.path, rec.Code, rec.Body)
+		}
+	}
+	// Nothing changed.
+	if n := e.count("items WHERE trashed_at IS NULL"); n != 1 {
+		t.Fatalf("live items = %d, want 1", n)
+	}
+	if n := e.count("collections WHERE deleted_at IS NULL"); n != 2 {
+		t.Fatalf("collections = %d, want 2", n)
 	}
 }
 

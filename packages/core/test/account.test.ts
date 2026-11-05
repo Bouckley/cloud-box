@@ -337,6 +337,75 @@ describe('accounts on a real box', () => {
     await expect(again.createPairingCode()).resolves.toBeDefined();
   });
 
+  // Every write needs the owner (ADR 0010). A login that started before
+  // unlock (and so without the owner key) must not leave its ordinary token
+  // behind once the device is unlocked.
+  it('a login in flight during unlock still ends up as owner', async () => {
+    const { p } = await setUp();
+    const hook: { fn: Hook | null } = { fn: null };
+    const q = hooked(hook);
+    q.store = p.store;
+    let release!: () => void;
+    const held = new Promise<void>((r) => (release = r));
+    const derive = q.deriveKek;
+    q.deriveKek = async (...a) => {
+      const kek = await derive(...a);
+      setTimeout(release, 50);
+      return kek;
+    };
+    const b = Box.connect(box.baseUrl, q);
+    expect(await b.login()).toBe('ok');
+    let holding!: () => void;
+    const isHeld = new Promise<void>((r) => (holding = r));
+    once(hook, '/v1/auth/verify', async () => {
+      holding();
+      await held;
+      return undefined;
+    });
+    const inFlight = b.login();
+    await isHeld;
+    const me = await b.unlock(PASSWORD);
+    expect(await inFlight).toBe('ok');
+    await expect(me.createPairingCode()).resolves.toBeDefined();
+  });
+
+  // The other way round: a lock while an owner login is in flight must not
+  // leave an owner session behind.
+  it('a lock during an owner login leaves no owner session', async () => {
+    const tokens: string[] = [];
+    let gate: Promise<void> | null = null;
+    let holding!: () => void;
+    const isHeld = new Promise<void>((r) => (holding = r));
+    const p = nodePlatform(box.fetch);
+    p.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const req = new Request(input, init);
+      const verify = new URL(req.url).pathname === '/v1/auth/verify';
+      if (verify && gate) {
+        holding();
+        await gate;
+      }
+      const res = await box.fetch(req);
+      if (verify && res.ok) tokens.push(((await res.clone().json()) as { token: string }).token);
+      return res;
+    }) as typeof fetch;
+    const { me } = await setUp(p);
+    await box.advanceClock(61 * 60);
+    let open!: () => void;
+    gate = new Promise<void>((r) => (open = r));
+    const pending = me.createPairingCode().catch(() => undefined);
+    await isHeld;
+    me.lock();
+    open();
+    await pending;
+    for (const token of tokens) {
+      const res = await box.fetch(`${box.baseUrl}/v1/devices/pairing-codes`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      expect(res.status).not.toBe(201);
+    }
+  });
+
   it('after the hourly expiry an unlocked device logs in as owner again', async () => {
     const { me } = await setUp();
     await box.advanceClock(61 * 60);

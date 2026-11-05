@@ -6,7 +6,7 @@ export const NAME_NEEDED = 'Give the album a name.';
 
 export type NewAlbumDialogProps = {
   /** What is being named; the words follow it. */
-  noun?: 'album' | 'folder' | undefined;
+  noun?: 'album' | 'folder' | 'browser' | undefined;
   /** Set to rename an album: the dialog starts with this name. */
   current?: string | undefined;
   /** Creates or renames; the dialog closes when it resolves. */

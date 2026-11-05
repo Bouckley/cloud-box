@@ -99,13 +99,15 @@ export type SafetyBannerProps = {
   photoCount?: number | null;
   /** The whole banner links to Box, except on Box itself. */
   linkToBox: boolean;
+  /** On Box it is the screen's status card: the same states, larger. */
+  large?: boolean | undefined;
 };
 
-export function SafetyBanner({ input, now, photoCount, linkToBox }: SafetyBannerProps) {
+export function SafetyBanner({ input, now, photoCount, linkToBox, large }: SafetyBannerProps) {
   const m = bannerModel(input, now, photoCount);
   const body = (
     <>
-      <m.icon size={m.tone === 'attention' ? 28 : 22} />
+      <m.icon size={large ? 34 : m.tone === 'attention' ? 28 : 22} />
       <span className="banner__text">
         <span className="banner__title">{m.title}</span>
         {m.detail && <span className="banner__detail">{m.detail}</span>}
@@ -113,7 +115,7 @@ export function SafetyBanner({ input, now, photoCount, linkToBox }: SafetyBanner
       {linkToBox && <ChevronIcon size={20} className="banner__chevron" />}
     </>
   );
-  const className = `banner banner--${m.tone}`;
+  const className = `banner banner--${m.tone}${large ? ' banner--large' : ''}`;
   // The live region wraps the banner so its words are announced when they
   // change; the link inside stays an ordinary link.
   return (

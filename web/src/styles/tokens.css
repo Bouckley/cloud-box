@@ -14,6 +14,10 @@
   --color-line: #e4e4e0;
   --color-line-strong: #d5d6d2;
   --color-track: #e2e2de;
+  /* Storage meter parts (Box): green is the meter's approved exception, in two
+     lightnesses; Files and Other are greys a step apart from the track. */
+  --color-usage-videos: #7fb89b;
+  --color-usage-other: #9a9d98;
 
   /* Text */
   --color-ink: #16181b;

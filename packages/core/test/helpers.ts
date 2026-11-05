@@ -72,7 +72,9 @@ export async function createItem(
   me: Unlocked,
   collectionId: string,
   m: ItemMeta,
-  plaintext: Uint8Array = crypto.getRandomValues(new Uint8Array(3)),
+  // 16 random bytes: with 3, a 1,200-item test had a ~4% chance of two equal
+  // files, and the box rightly refused the duplicate (409).
+  plaintext: Uint8Array = crypto.getRandomValues(new Uint8Array(16)),
 ): Promise<string> {
   const col = me.library.snapshot().collections.get(collectionId);
   if (!col?.key) throw new Error(`no collection ${collectionId}`);

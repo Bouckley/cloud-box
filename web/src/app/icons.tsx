@@ -252,3 +252,25 @@ export const FitWidthIcon = (p: IconProps) => (
     <path d="m10.5 9.5-2.5 2.5 2.5 2.5M13.5 9.5l2.5 2.5-2.5 2.5" />
   </Icon>
 );
+
+/** A drive, from the Box canvas's Copies rows. */
+export const DriveIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <rect x="3" y="6" width="18" height="12" rx="2" />
+    <path d="M7 12h6" />
+  </Icon>
+);
+
+export const LockIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <rect x="5" y="11" width="14" height="10" rx="2" />
+    <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+  </Icon>
+);
+
+export const KeyIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <circle cx="8" cy="15" r="4" />
+    <path d="M11 12l9-9M17 6l3 3M15 8l2 2" />
+  </Icon>
+);

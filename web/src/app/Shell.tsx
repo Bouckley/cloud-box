@@ -47,6 +47,7 @@ export function Shell({ banner, storage, photoCount }: ShellProps) {
           now={now}
           photoCount={onPhotos ? photoCount : null}
           linkToBox={!onBox}
+          large={onBox}
         />
         <Outlet />
       </main>
@@ -82,7 +83,7 @@ function MeterFill({ pct }: { pct: number }) {
 }
 
 /** The current time, refreshed each minute so "5 min ago" stays true. */
-function useNow(): Date {
+export function useNow(): Date {
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 60_000);

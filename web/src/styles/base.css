@@ -468,6 +468,44 @@ a {
   color: var(--color-attention-ink);
 }
 
+/* On Box the banner is the screen's status card: same states, larger. */
+.banner--large {
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  border-radius: var(--radius-lg);
+}
+.banner--large .banner__text {
+  flex-direction: column;
+  font-size: var(--text-sm);
+}
+.banner--large .banner__title {
+  font-size: var(--text-lg);
+}
+/* The banner's holder is measured in rem, so large text counts too: when the
+   card is narrow (320 px at 200% text) the icon goes above the words, which
+   then keep the whole width and break only at spaces. */
+[data-banner] {
+  container-type: inline-size;
+}
+@container (max-width: 20rem) {
+  .banner--large {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+    padding: var(--space-4);
+  }
+}
+/* Safe on Box is the canvas's solid green card. White carries the detail too:
+   the lighter tint would fall under 4.5:1 on this green. */
+.banner--large.banner--safe {
+  background: var(--color-safe);
+  color: var(--color-surface);
+}
+.banner--large.banner--safe .banner__detail {
+  color: var(--color-surface);
+}
+
 a.banner:hover {
   filter: saturate(1.15) brightness(0.98);
 }
@@ -806,7 +844,12 @@ a.banner:hover {
 .box-sections {
   display: grid;
   gap: var(--space-4);
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+  /* Two columns at most, so the sections pair (Storage with Copies, Devices
+     with Add a device); one column below 2 × 22rem. */
+  grid-template-columns: repeat(
+    auto-fit,
+    minmax(min(100%, max(22rem, calc((100% - var(--space-4)) / 2))), 1fr)
+  );
   align-items: start;
   margin-block-start: var(--space-5);
 }
@@ -879,6 +922,140 @@ a.banner:hover {
 .pair__valid {
   color: var(--color-ink-2);
   font-size: var(--text-sm);
+}
+
+/* Box: header tools, the waiting line, Storage, Copies, Devices actions, QR */
+.screen-header__tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+.box-section__waiting {
+  color: var(--color-ink-2);
+}
+.storage-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-1) var(--space-3);
+}
+.storage-head__used {
+  color: var(--color-ink-3);
+  font-size: var(--text-sm);
+}
+.storage-head__used strong {
+  color: var(--color-ink);
+  font-weight: var(--weight-bold);
+}
+.usage {
+  display: flex;
+  gap: 2px;
+  height: 0.875rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-track);
+  overflow: hidden;
+}
+.usage__part {
+  flex: none;
+  min-width: 0;
+}
+.usage__part--photos {
+  background: var(--color-safe);
+}
+.usage__part--videos {
+  background: var(--color-usage-videos);
+}
+.usage__part--files {
+  background: var(--color-ink-3);
+}
+.usage__part--other {
+  background: var(--color-usage-other);
+}
+.usage-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--color-ink-3);
+  font-size: var(--text-sm);
+}
+.usage-legend li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.usage-legend__swatch {
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: var(--radius-pill);
+}
+.copies {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.copy {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
+  min-height: var(--target-min);
+  padding-block: var(--space-2);
+  border-block-start: 1px solid var(--color-line);
+}
+.copy:first-child {
+  border-block-start: 0;
+}
+.copy__icon {
+  display: flex;
+  color: var(--color-safe);
+}
+.copy__label {
+  flex: 1;
+  min-width: 8rem;
+}
+.copy__value {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--color-safe-ink);
+}
+.copy--quiet .copy__icon,
+.copy--quiet .copy__value {
+  color: var(--color-ink-2);
+}
+.copy--attention .copy__icon {
+  color: var(--color-attention-strong);
+}
+.copy--attention .copy__value {
+  color: var(--color-attention-ink);
+}
+.device__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-3);
+  min-width: 0;
+}
+.device__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  flex-basis: 100%;
+}
+.devices__why {
+  color: var(--color-ink-2);
+  font-size: var(--text-sm);
+}
+.qr {
+  width: min(100%, 11rem);
+  height: auto;
+  fill: var(--color-ink);
+}
+.qr__ground {
+  fill: var(--color-surface);
 }
 
 /* ---------- Photos: header tools, timeline rows, tiles ---------- */

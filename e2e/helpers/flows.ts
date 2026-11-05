@@ -83,7 +83,7 @@ export async function setUpThroughUi(
 export async function addDeviceCode(page: Page, eachStep?: Step): Promise<string> {
   await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: /^Box/ }).click();
   await page.getByRole('button', { name: 'Add a device' }).click();
-  const code = page.getByLabel('Pairing code');
+  const code = page.getByLabel('Pairing code', { exact: true });
   await expect(code).toBeVisible();
   if (eachStep) await eachStep(page);
   return ((await code.textContent()) ?? '').replace(/\s+/g, '');

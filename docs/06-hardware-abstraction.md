@@ -100,7 +100,7 @@ Playwright and Go integration tests can drive failure cases:
 | POST | `/dev/sim/clock/advance` | `{"seconds": n}` | Move the clock forward |
 | POST | `/dev/sim/jobs/{name}` | | Run `replicate`, `purge`, `cleanup` or `light` now |
 
-The HTML page arrives with the web app in M2; M1 has the API only.
+The web app's dev build has a page for it at `/sim` (see doc 07).
 
 ## Open question: ATECC608 from Go
 

@@ -50,6 +50,9 @@ Recovery key (24 words) ───┤
 
 - The box stores the master key **only wrapped** (by the KEK and by the recovery key).
 - Each paired device gets an Ed25519 device key for logging in to the box.
+  A browser's is a non-extractable WebCrypto key in IndexedDB; it is the only
+  thing the web app keeps. The master key lives in memory and every page load
+  asks for the password again ([ADR 0005](decisions/0005-web-app-and-recovery.md)).
 - Sharing an album wraps its collection key to each member's X25519 public key.
 - Removing a member rotates the collection key for new items.
 
@@ -66,14 +69,27 @@ Recovery key (24 words) ───┤
 
 - HTTPS on the home network with a self-signed certificate.
 - The pairing QR code carries the certificate fingerprint; apps pin it, so
-  no certificate warnings and no man-in-the-middle.
+  no certificate warnings and no man-in-the-middle (phone app, M3).
+- Browsers cannot pin it, so the web app shows a certificate warning once.
+  Real certificates need a domain (M8). The web app is served by the box
+  itself with a strict Content Security Policy.
 - Later, the relay forwards this same encrypted connection and sees nothing.
 
 ## Recovery
 
+- Setup needs a short press of the box's power button (within 10 minutes),
+  so nobody else on the network can claim a new box first.
 - Setup requires saving the 24-word recovery key (print or write down) and
   confirming two random words before continuing.
-- Forgotten password: recovery key unwraps the master key; user sets a new password.
+- The recovery key is 32 random bytes shown as 24 BIP39 English words.
+  `crypto_kdf_derive_from_key` with context `cbrecov1` derives subkey 1, which
+  wraps the master key, and subkey 2, the seed of an Ed25519 recovery signing
+  key whose public half the box stores.
+- **Forgot password** (on a paired browser): the words unwrap the master key
+  and the user sets a new password. Nothing is revoked.
+- **Recovery reset** (no device left): the recovery signing key signs a
+  single-use challenge; the box revokes every device and adds this one.
+  Details in [ADR 0005](decisions/0005-web-app-and-recovery.md).
 - Lost recovery key and password: data can't be recovered. Say this plainly at setup.
 
 ## Threat model (short)
@@ -82,7 +98,7 @@ Recovery key (24 words) ───┤
 |--------|---------|
 | Box stolen | Blobs and metadata encrypted; disks also encrypted at rest (LUKS) later |
 | Someone on home Wi-Fi | Pinned TLS, device-key login, rate limits |
-| Lost phone | Revoke the device from another device; app has biometric lock. If a thief revokes your other devices first, the recovery key resets all devices (M2, see ADR 0004) |
+| Lost phone | Revoke the device from another device; app has biometric lock. If a thief revokes your other devices first, the recovery key resets all devices (ADR 0004, ADR 0005) |
 | Malicious update | Updates signed with an offline key; box verifies before installing |
 | Company compelled to hand over data | Company never holds keys or data |
 

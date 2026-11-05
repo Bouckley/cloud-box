@@ -1,7 +1,10 @@
 package api
 
 import (
+	"bytes"
+	"encoding/json"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 )
 
@@ -80,3 +83,35 @@ func TestSetupValidates(t *testing.T) {
 func user(b map[string]any) map[string]any   { return b["user"].(map[string]any) }
 func device(b map[string]any) map[string]any { return b["device"].(map[string]any) }
 func kdf(b map[string]any) map[string]any    { return user(b)["kdf"].(map[string]any) }
+
+// A page on another site can post text/plain with no CORS preflight; the box
+// must not read such a body, or that page could claim the box during setup.
+func TestSetupRefusesNonJSONContentType(t *testing.T) {
+	for _, ct := range []string{"", "text/plain", "text/plain;charset=UTF-8", "application/x-www-form-urlencoded", "multipart/form-data; boundary=x"} {
+		e := newEnv(t)
+		raw, _ := json.Marshal(setupBody(randBytes(32)))
+		req := httptest.NewRequest(http.MethodPost, "/v1/setup", bytes.NewReader(raw))
+		if ct != "" {
+			req.Header.Set("Content-Type", ct)
+		}
+		rec := httptest.NewRecorder()
+		e.router.ServeHTTP(rec, req)
+		if rec.Code != http.StatusUnsupportedMediaType {
+			t.Fatalf("Content-Type %q: status = %d, want 415", ct, rec.Code)
+		}
+		assertError(t, decode(t, rec), "unsupported_media_type")
+		if n := e.count("users"); n != 0 {
+			t.Fatalf("Content-Type %q: %d users created", ct, n)
+		}
+	}
+	// application/json with parameters is still JSON.
+	e := newEnv(t)
+	raw, _ := json.Marshal(setupBody(randBytes(32)))
+	req := httptest.NewRequest(http.MethodPost, "/v1/setup", bytes.NewReader(raw))
+	req.Header.Set("Content-Type", "application/json; charset=utf-8")
+	rec := httptest.NewRecorder()
+	e.router.ServeHTTP(rec, req)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("application/json; charset=utf-8: status = %d", rec.Code)
+	}
+}

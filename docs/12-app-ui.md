@@ -14,18 +14,27 @@ every main screen. Simple mode shows Photos and Albums only, with larger text.
 
 ## Screens and the milestone that builds them
 
-| Screen | Web (M2) | Phone (M3) |
+| Screen | Web (M2, shipped) | Phone (M3) |
 |--------|----------|------------|
-| Photos timeline + safety banner | ✓ | ✓ |
+| Setup (button press, password, recovery key), Unlock, Forgot password, Connect a browser, recovery reset | ✓ | ✓ |
+| Photos timeline (Days / Months / Years) + safety banner | ✓ | ✓ |
 | Photo viewer | ✓ | ✓ |
-| Safe delete sheet | ✓ | ✓ |
+| Safe delete sheet (web form: Move to Trash or Cancel) | ✓ | ✓ |
+| Trash (restore, delete forever) | ✓ | ✓ |
 | Free up phone space | | ✓ |
-| Albums | ✓ | ✓ |
-| Files + upload sheet | ✓ | ✓ |
-| Box: status, storage, copies | ✓ | ✓ |
+| Albums, Favourites, Videos; Add / Move to album | ✓ | ✓ |
+| Files + upload sheet, folders, PDF viewer | ✓ | ✓ |
+| Box: status, storage, copies, devices, add a device, change password, lock | ✓ | ✓ |
 | Backup paused state | ✓ | ✓ |
 | Simple mode | | ✓ |
 | Cleanup assistant | M10 | M10 |
+
+On the web the four tabs become a sidebar above 720 px. Deferred from the web
+app (docs/plans/M2.md, scope ruling S7): live updates over `/v1/events` (the
+app polls status every 30 s), photo search and the date scrubber, map and
+people, edits, sharing and links (M7), "years of space left" and drive health
+beyond plugged in or not (M4), streaming video playback, and a shorter
+pairing code ([ADR 0009](decisions/0009-pairing-code-length.md)).
 
 ## Design tokens
 

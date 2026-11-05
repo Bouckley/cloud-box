@@ -53,8 +53,14 @@ the exact shapes; `docs/plans/M2.md` holds the full scope rulings.
   the request (for example after the one-time certificate warning) cannot
   swap in their own key. In one transaction the box
   revokes every device of the user, deletes their sessions and pairing codes,
-  and adds the new device. Every failure is the same `401`, and any attempt
-  uses up the challenge.
+  and adds the new device. Any failure of key, challenge or signature is the
+  same `401`, and any attempt that reaches those checks uses up the challenge.
+  A malformed request is `400` before that (the challenge survives), and a
+  device id already in use is `409 id_taken` (challenge used, nothing
+  revoked); both tell an attacker nothing. The box keeps at most 64 pending
+  challenges and drops the oldest. The client retries once with a fresh
+  challenge after a `401` (it may have expired), then says the words don't
+  match. (Wording aligned with `api/openapi.yaml`, M2 Task 18.)
 
 **Password change**
 - `PUT /v1/account/password {kdf, masterKeyByPassword}`. The box cannot check
@@ -114,13 +120,24 @@ the exact shapes; `docs/plans/M2.md` holds the full scope rulings.
   Mitigations to decide in M5: a long-press factory reset, and the setup
   screen showing a short code the box confirms on its light before it
   accepts setup.
+  A web page elsewhere can no longer try this from the owner's own browser:
+  the box reads only `application/json` bodies (415 otherwise), which a
+  cross-site page cannot send without a CORS preflight (M2 Task 18).
 
-- **Password wrap replaceable by any signed-in device.** A stolen unlocked
-  device can set a new password. The recovery key still unwraps the master
-  key, and the owner can revoke the device.
+- **The device key alone can act, not only an unlocked device** (corrected,
+  M2 Task 18). Logging in needs only the device key, which a locked browser,
+  a freshly paired device or a copied profile still holds (devtools on the
+  box's page can sign with it). With it someone can set a new password wrap,
+  or move everything to Trash and delete it forever. The recovery key still
+  unwraps the master key and the owner can revoke the device, but deleted
+  data does not come back. Fix to decide with the owner: a master-key proof
+  (an Ed25519 key derived from the master key, like the recovery signing key)
+  required for password change, delete forever and revoke, plus a
+  server-side session end on Lock.
 - **A copied browser profile may carry the device key.** Non-extractable keys
   resist theft by scripts, not by someone copying the profile from disk. The
-  attacker would still need the password to unwrap the master key.
+  attacker would still need the password to read anything, but see above for
+  what the key alone can change.
 - **The web app trusts the box that serves it.** A malicious or compromised
   box could serve a malicious web app that captures the password. The phone
   app ships through the app stores and does not have this risk.

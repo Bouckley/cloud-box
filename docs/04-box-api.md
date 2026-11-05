@@ -75,6 +75,10 @@ Endpoints marked *(Mn)* are not built yet; they arrive in that milestone.
 - Every item response includes `state`: `uploading`, `stored`, `verified`, `replicated`.
   Apps show "safe" only for `replicated`.
 - Errors use one JSON shape: `{ "code": "storage_full", "message": "...", "action": "..." }`.
+- JSON request bodies must say `Content-Type: application/json`, or the box
+  answers 415 `unsupported_media_type`. A web page on another site then
+  cannot post to the box (for example to claim it during setup) without a
+  CORS preflight, which the box never answers.
   `action` is plain-language text the app can show.
 - Another user's object is always `404`, never `403`.
 - Request rate limiting arrives with remote access *(M8)*.

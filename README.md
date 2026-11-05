@@ -3,8 +3,13 @@
 A private cloud you own: a small box at home that stores photos and files,
 encrypted on your devices before they leave, with no monthly fee.
 
-This folder holds the plan for the software. Build and test everything on a
+This repo holds the plan and the software. Build and test everything on a
 laptop first, then move it to a Raspberry Pi 5.
+
+So far (M2): the box server and the web app run on a laptop with simulated
+hardware. `make dev`, then open http://localhost:5173 to set up a box, back up
+photos and files, and see whether they are safe. See
+[Dev setup](docs/07-dev-setup.md).
 
 ## Read in this order
 
@@ -30,7 +35,8 @@ Decisions are recorded in [docs/decisions](docs/decisions/).
 - **Box server:** Go, one binary, SQLite, runs on Linux arm64 (Pi) and amd64 (laptop)
 - **Web app:** React + Vite + TypeScript, served by the box
 - **Phone app:** Expo (React Native) + TypeScript
-- **Shared code:** TypeScript packages for encryption and the API client
+- **Shared code:** TypeScript packages for encryption, the API client and the
+  client core (keys, sessions, sync, encrypted upload)
 - **Encryption:** libsodium primitives on every platform
 
 ## Golden rules

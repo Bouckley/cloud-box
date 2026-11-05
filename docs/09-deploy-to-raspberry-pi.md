@@ -30,6 +30,11 @@ The web app is built first and embedded into the binary.
 - enables the hardware watchdog
 - starts the service and prints the setup URL
 
+Open the setup URL (`https://cloudbox.local:8443`) in a browser. The box's
+certificate is self-signed, so the browser warns once; check the address and
+continue. Real certificates need a domain (M8). Setup then asks for a short
+press of the box's power button.
+
 ```
 [Unit]
 Description=Cloud Box

@@ -1,4 +1,4 @@
-import { BoxError, ClientError } from '@cloudbox/core';
+import { BoxError, ClientError, MIN_PASSWORD } from '@cloudbox/core';
 import {
   useId,
   type InputHTMLAttributes,
@@ -8,13 +8,14 @@ import {
 } from 'react';
 import { WarningIcon } from '../app/icons.tsx';
 
-export const MIN_PASSWORD = 10;
+export { MIN_PASSWORD };
 
 /** The plan's only password rules: at least 10 characters, typed the same twice. */
 export type PasswordErrors = { first?: string | undefined; second?: string | undefined };
 
 export function passwordProblems(first: string, second: string): PasswordErrors {
-  if ([...first].length < MIN_PASSWORD) return { first: 'Use at least 10 characters.' };
+  if ([...first].length < MIN_PASSWORD)
+    return { first: `Use at least ${MIN_PASSWORD} characters.` };
   if (first !== second) return { second: "The passwords don't match." };
   return {};
 }

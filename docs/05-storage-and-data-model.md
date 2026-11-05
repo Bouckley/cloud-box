@@ -21,21 +21,22 @@ On a laptop the same layout lives under `./.data/` in the repo (git-ignored).
 
 ## Tables
 
-Schema: `box/migrations/0001_init.sql`. Times are Unix milliseconds (UTC).
+Schema: `box/migrations/0001_init.sql`, then `0002_m2.sql` (M2). Times are
+Unix milliseconds (UTC).
 
 | Table | Key columns | Notes |
 |-------|-------------|-------|
-| `users` | id, role, kdf_salt, kdf_ops, kdf_mem, master_key_password, master_key_recovery, identity_public_key, identity_key_enc, dedupe_key_enc | Wrapped keys only |
+| `users` | id, role, kdf_salt, kdf_ops, kdf_mem, master_key_password, master_key_recovery, recovery_public_key, identity_public_key, identity_key_enc, dedupe_key_enc | Wrapped keys only; `recovery_public_key` (unique, M2) checks recovery resets (ADR 0005) |
 | `devices` | id, user_id, name_enc, sign_public_key, last_seen, revoked_at | |
 | `sessions` | token_hash, user_id, device_id, expires_at | Token stored only as SHA-256 |
 | `pairing_codes` | code_hash, user_id, created_by, expires_at, used_at | Single use, stored hashed |
-| `collections` | id, owner_id, kind (album/folder), parent_id, name_enc, seq | |
+| `collections` | id, owner_id, kind (album/folder), parent_id, name_enc, seq, deleted_at | `deleted_at` (M2): soft delete; the row stays because trashed items still need its key |
 | `collection_keys` | collection_id, user_id, wrapped_key | One row per member |
 | `items` | id, owner_id, device_id, collection_id, file_key_enc, metadata_enc, dedupe_hash, seq, trashed_at | `seq` drives sync; no stored state (see below) |
 | `blobs` | id, owner_id, size, sha256 (of the ciphertext), stored_at, verified_at | |
 | `item_blobs` | item_id, blob_id, role (original/preview/thumb) | A blob belongs to one item |
 | `replicas` | blob_id, target (backup), copied_at, verified_at | Feeds "safe" status |
-| `uploads` | id, user_id, device_id, size, sha256, part_count, expires_at, blob_id | `blob_id` set once complete, so a retried complete returns the same blob |
+| `uploads` | id, user_id, device_id, size, sha256, part_count, created_at, expires_at, blob_id | `sha256` may be null until complete (M2: streaming clients send it then); `blob_id` set once complete, so a retried complete returns the same blob |
 | `upload_parts` | upload_id, n, size | Which parts arrived |
 | `tombstones` | item_id, owner_id, seq | Permanently deleted items, so sync can tell apps |
 | `counters` | name, value | The global `seq` |

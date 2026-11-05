@@ -163,7 +163,12 @@ func (s *Server) watchButton(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			return
-		case p := <-presses:
+		case p, ok := <-presses:
+			if !ok {
+				// The button's driver went away: no more presses, and an empty
+				// event must not count as a short one.
+				return
+			}
 			if p.Kind == hal.ShortPress {
 				s.auth.OpenSetupWindow(s.hal.Clock.Now())
 				s.logger.Info("setup window opened by button press")

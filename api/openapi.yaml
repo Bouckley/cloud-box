@@ -7,7 +7,10 @@ info:
     plaintext file contents, names, dates, locations or keys. Conventions
     (encodings, sessions, the auth message, upload parts, item state, sync)
     are in docs/decisions/0004-box-api-conventions.md. Every error uses the
-    Error shape; `action` is plain-language text the app can show.
+    Error shape; `action` is plain-language text the app can show. Every JSON
+    request body must be sent as `Content-Type: application/json`; anything
+    else is 415 `unsupported_media_type`, so a web page elsewhere cannot post
+    to the box without a CORS preflight, which the box never answers.
 servers:
   - url: https://localhost:8443
 security:

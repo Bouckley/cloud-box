@@ -28,6 +28,7 @@ Read `README.md`, then the doc in `docs/` that matches the task.
 make dev            # box (sim hardware) + web app with hot reload
 make test           # all unit + integration tests
 make test-e2e       # Playwright web tests (includes axe accessibility checks)
+make web            # build the web app into box/web/dist (boxd embeds it)
 make test-arm64     # run the box test suite under linux/arm64 emulation
 make build-pi       # cross-compile the box for the Pi
 cd app && npx expo start   # phone app

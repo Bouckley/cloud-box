@@ -9,7 +9,7 @@ export {
   type Unlocked,
 } from './account.ts';
 export { DeviceKeys, type DeviceRecord } from './device.ts';
-export { BoxError, ClientError, type ClientErrorCode } from './errors.ts';
+export { BoxError, ClientError, MIN_PASSWORD, type ClientErrorCode } from './errors.ts';
 export type { KeyValueStore, Platform } from './platform.ts';
 export type { AuthedClient } from './transport.ts';
 export {

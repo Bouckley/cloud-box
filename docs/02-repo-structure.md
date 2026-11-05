@@ -7,13 +7,13 @@ workspaces.
 cloud-box/
 ├── CLAUDE.md                 Instructions for Claude Code
 ├── README.md
-├── Makefile                  dev, test, test-e2e, test-arm64, build-pi, reset-dev, lint, generate
+├── Makefile                  dev, web, test, test-e2e, test-arm64, build-pi, reset-dev, lint, generate
 ├── package.json              Root scripts: lint, typecheck, test
 ├── pnpm-workspace.yaml
 ├── tsconfig.base.json        Strict TS settings shared by every package
 ├── eslint.config.js
 ├── .github/workflows/ci.yml  Lint, Go race tests (with and without -tags sim), Vitest,
-│                             generated-client check, TS contract test
+│                             generated-client check, TS contract test, Playwright E2E
 ├── .claude/
 │   ├── settings.json         Enabled plugins, attribution
 │   └── skills/               Project skills (see docs/11-skills.md)
@@ -43,13 +43,17 @@ cloud-box/
 │   │   │   └── pi/           Raspberry Pi drivers (GPIO, I2C, smartctl)      [M5]
 │   │   └── update/           Signed update agent                             [M11]
 │   ├── migrations/           SQL migration files (embedded)
-│   └── web/                  Built web app embedded with go:embed            [M2]
+│   └── web/                  go:embed of the built web app (dist/, made by `make web`)
 ├── packages/
 │   ├── crypto/               @cloudbox/crypto (libsodium)
 │   │   └── scripts/          gen-vectors.ts (run once; --force to regenerate)
-│   └── api-client/           @cloudbox/api-client (generated); test/contract/ runs
-│                             a real boxd for the contract and zero-knowledge test
-├── web/                      React + Vite web app                            [M2]
+│   ├── api-client/           @cloudbox/api-client (generated); test/contract/ runs
+│   │                         a real boxd for the contract and zero-knowledge test
+│   ├── core/                 @cloudbox/core: device keys, sessions, unlock, recovery,
+│   │                         library sync, encrypted upload/download (web and phone)
+│   └── testbox/              @cloudbox/testbox: starts a real sim boxd for tests
+├── web/                      React + Vite web app (src/app shell, src/screens,
+│                             src/dev/SimPage for /sim in dev only)
 ├── app/                      Expo phone app                                  [M3]
 ├── relay/                    Remote-access relay                             [M8]
 ├── testdata/
@@ -58,7 +62,8 @@ cloud-box/
 │   ├── docker/               test-arm64.sh (M0); Dockerfile, compose.yaml    [M5]
 │   ├── systemd/              cloudbox.service                                [M5]
 │   └── pi/                   install.sh, first-boot setup                    [M5]
-├── e2e/                      Playwright tests (web) and Maestro flows (phone) [M2, M3]
+├── e2e/                      Playwright + axe web tests (tests/, helpers/);
+│                             Maestro phone flows                             [M3]
 └── docs/
     ├── decisions/            Architecture decision records
     └── plans/                One implementation plan per milestone

@@ -1,7 +1,7 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { newRecoveryKey, ready } from '@cloudbox/crypto';
 import { startBoxd, type RunningBox } from '@cloudbox/testbox';
-import { Box, ClientError, type Platform, type Unlocked } from '../src/index.ts';
+import { Box, ClientError, MIN_PASSWORD, type Platform, type Unlocked } from '../src/index.ts';
 import { nodePlatform } from '../src/testing.ts';
 
 const FAST_KDF = { opsLimit: 2, memLimitBytes: 67108864 };
@@ -375,6 +375,34 @@ describe('accounts on a real box', () => {
     await me.changePassword('changed after expiry');
     const named = (await me.devices()).find((d) => d.isThis);
     expect(named?.name).toBe('Renamed after expiry');
+  });
+
+  // The box can't check a password (zero knowledge), so every client goes
+  // through core's rule; the web form only words it.
+  it('a password under 10 characters is refused everywhere, before anything is sent', async () => {
+    expect(MIN_PASSWORD).toBe(10);
+    const weak = (e: unknown) => e instanceof ClientError && e.code === 'weak_password';
+    const short = '123456789'; // 9
+    await box.pressButton();
+    const p = platform();
+    const fresh = Box.connect(box.baseUrl, p);
+    await expect(fresh.prepareSetup({ password: short, kdf: FAST_KDF })).rejects.toSatisfy(weak);
+    await expect(fresh.prepareSetup({ password: '', kdf: FAST_KDF })).rejects.toSatisfy(weak);
+    // 10 characters counted as people see them (one emoji is one).
+    const first = 'ab😀defghij';
+    const prepared = await fresh.prepareSetup({ password: first, kdf: FAST_KDF });
+    await expect(prepared.setPassword(short)).rejects.toSatisfy(weak);
+    const me = await prepared.commit('Laptop');
+    await expect(me.changePassword(short)).rejects.toSatisfy(weak);
+    const words = prepared.recoveryWords.join(' ');
+    me.lock();
+    const box2 = Box.connect(box.baseUrl, p);
+    await expect(box2.unlockWithRecovery(words, short)).rejects.toSatisfy(weak);
+    await expect(
+      Box.connect(box.baseUrl, platform()).resetWithRecovery(words, short, 'Phone'),
+    ).rejects.toSatisfy(weak);
+    // Nothing reached the box: the first password still unlocks this device.
+    await expect(Box.connect(box.baseUrl, p).unlock(first)).resolves.toBeDefined();
   });
 
   it('never stores a plaintext device name', async () => {

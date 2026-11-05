@@ -14,7 +14,9 @@ func TestReadJSON(t *testing.T) {
 	run := func(raw string) (*httptest.ResponseRecorder, bool, body) {
 		var v body
 		rec := httptest.NewRecorder()
-		ok := readJSON(rec, httptest.NewRequest(http.MethodPost, "/", strings.NewReader(raw)), &v)
+		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(raw))
+		req.Header.Set("Content-Type", "application/json")
+		ok := readJSON(rec, req, &v)
 		return rec, ok, v
 	}
 

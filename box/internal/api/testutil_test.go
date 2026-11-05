@@ -80,6 +80,9 @@ func (e *env) call(method, path, token string, body any) *httptest.ResponseRecor
 		}
 	}
 	req := httptest.NewRequest(method, path, &buf)
+	if body != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
 	if token != "" {
 		req.Header.Set("Authorization", "Bearer "+token)
 	}

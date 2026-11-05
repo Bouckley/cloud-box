@@ -86,6 +86,11 @@ production build): buttons for the dev API below, inside the app's frame.
 The box serves the production build itself on https://localhost:8443 after
 `make web` (the browser warns once about the self-signed certificate).
 
+Setting up a fresh box waits for a short press of the power button (it
+proves someone is next to the box). In dev, press **Short press** on `/sim`,
+or `curl -sk -X POST https://localhost:8443/dev/sim/button -H 'Content-Type: application/json' -d '{"kind":"short"}'`;
+the press counts for 10 minutes.
+
 The `sim` tag adds a dev API for driving the simulated hardware. It has no
 auth, is not in `api/openapi.yaml`, and a Pi build (`make build-pi`) never
 contains it.
@@ -106,7 +111,8 @@ Phone app:
 cd app && npx expo start
 ```
 
-Scan the box's pairing QR (shown in the web app's setup screen) from the app.
+Scan the pairing QR from the web app's Box › Add a device (the phone app
+arrives in M3).
 
 ## Test
 

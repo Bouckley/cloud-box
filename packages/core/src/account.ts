@@ -28,7 +28,7 @@ import {
 } from '@cloudbox/crypto';
 import { DeviceKeys, type DeviceRecord } from './device.ts';
 import { Library } from './library.ts';
-import { BoxError, ClientError } from './errors.ts';
+import { BoxError, ClientError, checkPassword } from './errors.ts';
 import type { Platform } from './platform.ts';
 import {
   authedFetch,
@@ -172,6 +172,7 @@ export class Box {
     const identity = generateBoxKeyPair();
     const dedupe = randomKey();
     const byPassword = async (password: string) => {
+      checkPassword(password);
       const salt = newSalt();
       const kek = await this.#platform.deriveKek(password, salt, kdf);
       try {
@@ -278,6 +279,7 @@ export class Box {
 
   /** Forgot password on a paired device: the words unwrap the master key; a new password is set. */
   async unlockWithRecovery(words: string, newPassword: string): Promise<Unlocked> {
+    checkPassword(newPassword);
     const rk = parseWords(words);
     const { account, deviceId } = await this.#account();
     const master = unwrapWithRecovery(rk, account);
@@ -309,6 +311,7 @@ export class Box {
     newPassword: string,
     deviceName: string,
   ): Promise<Unlocked> {
+    checkPassword(newPassword);
     const rk = parseWords(words);
     const signer = recoverySigningKeyPair(rk);
     const recoveryPublicKey = b64(signer.publicKey);
@@ -401,6 +404,7 @@ export class Box {
       api,
       library,
       async changePassword(p) {
+        checkPassword(p);
         open();
         const salt = newSalt();
         const kek = await platform.deriveKek(p, salt, kdf);

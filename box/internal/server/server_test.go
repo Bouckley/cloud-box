@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/Bouckley/cloud-box/box/internal/config"
+	"github.com/Bouckley/cloud-box/box/internal/hal"
 )
 
 func newServer(t *testing.T) (*Server, string) {
@@ -140,5 +141,30 @@ func TestNewOpensStoreAndServesAPI(t *testing.T) {
 	resp.Body.Close()
 	if resp.StatusCode != http.StatusUnauthorized {
 		t.Errorf("GET /v1/status = %d, want 401", resp.StatusCode)
+	}
+}
+
+// closedButton is a power button whose driver has gone away.
+type closedButton struct{ ch chan hal.PressEvent }
+
+func (b closedButton) Presses() <-chan hal.PressEvent { return b.ch }
+
+// A closed press channel is not a stream of short presses: the watcher stops
+// and the setup window stays shut (a zero PressEvent's Kind is ShortPress).
+func TestClosedButtonDoesNotOpenSetup(t *testing.T) {
+	srv, _ := newServer(t)
+	t.Cleanup(func() { srv.db.Close() })
+	ch := make(chan hal.PressEvent)
+	close(ch)
+	srv.hal.Button = closedButton{ch}
+	done := make(chan struct{})
+	go func() { srv.watchButton(context.Background()); close(done) }()
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("watchButton kept running on a closed channel")
+	}
+	if srv.auth.SetupOpen(srv.hal.Clock.Now()) {
+		t.Fatal("setup window opened without a press")
 	}
 }

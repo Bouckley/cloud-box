@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Cloud Box API
-  version: 0.3.0
+  version: 0.4.0
   description: >
     The box stores ciphertext only. Request and response bodies never carry
     plaintext file contents, names, dates, locations or keys. Conventions
@@ -97,9 +97,10 @@ paths:
       operationId: changePassword
       summary: Replace the password wrap of the master key
       description: >
-        The box cannot check the old password (zero knowledge); any signed-in
-        device may replace the wrap. The recovery wrap is unchanged. Same KDF
-        bounds as setup. Errors: 400 `invalid_request`, 401 `unauthorized`.
+        The box cannot check the old password (zero knowledge). Needs an owner
+        session (ADR 0010), so only a device holding the master key may replace
+        the wrap. The recovery wrap is unchanged. Same KDF bounds as setup.
+        Errors: 400 `invalid_request`, 401 `unauthorized`, 403 `owner_required`.
       requestBody:
         required: true
         content:
@@ -220,7 +221,11 @@ paths:
       summary: Send the Ed25519 signature of the auth message; get a session token
       description: >
         The device signs UTF-8 `cloudbox/v1/auth/<deviceId>/<challenge>` with its
-        signing key. Any failure is 401 `unauthorized`.
+        signing key. A client holding the master key also sends
+        `ownerSignature`: the owner key's signature of UTF-8
+        `cloudbox/v1/owner/<deviceId>/<challenge>` (ADR 0010); the session is
+        then an owner session. Any failure, including a bad owner signature,
+        is 401 `unauthorized`.
       security: []
       requestBody:
         required: true
@@ -237,6 +242,8 @@ paths:
                   $ref: '#/components/schemas/Hex32'
                 signature:
                   $ref: '#/components/schemas/Signature'
+                ownerSignature:
+                  $ref: '#/components/schemas/Signature'
       responses:
         '200':
           description: A session (valid 1 hour).
@@ -244,6 +251,17 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Session'
+        default:
+          $ref: '#/components/responses/Error'
+
+  /v1/auth/session:
+    delete:
+      operationId: endSession
+      summary: End this session (Lock)
+      description: The token stops working at once. Errors 401 `unauthorized`.
+      responses:
+        '204':
+          description: Ended.
         default:
           $ref: '#/components/responses/Error'
 
@@ -272,6 +290,7 @@ paths:
     post:
       operationId: createPairingCode
       summary: Create a single-use pairing code (valid 10 minutes) for the QR
+      description: Needs an owner session (ADR 0010); else 403 `owner_required`.
       responses:
         '201':
           description: A pairing code.
@@ -328,7 +347,9 @@ paths:
     delete:
       operationId: revokeDevice
       summary: Revoke a device; its sessions end at once
-      description: Revoking the user's last active device is 409 `last_device`.
+      description: >
+        Needs an owner session (ADR 0010); else 403 `owner_required`. Revoking
+        the user's last active device is 409 `last_device`.
       responses:
         '204':
           description: Revoked.
@@ -788,7 +809,9 @@ paths:
     delete:
       operationId: deleteFromTrash
       summary: Delete an item for good (only from Trash)
-      description: An item not in Trash is 409 `not_in_trash`.
+      description: >
+        Needs an owner session (ADR 0010); else 403 `owner_required`. An item
+        not in Trash is 409 `not_in_trash`.
       responses:
         '204':
           description: Deleted for good.
@@ -958,6 +981,7 @@ components:
           masterKeyByPassword,
           masterKeyByRecovery,
           recoveryPublicKey,
+          ownerPublicKey,
           identityPublicKey,
           identityKeyEnc,
           dedupeKeyEnc,
@@ -972,6 +996,11 @@ components:
         masterKeyByRecovery:
           $ref: '#/components/schemas/WrappedKey'
         recoveryPublicKey:
+          $ref: '#/components/schemas/PublicKey'
+        ownerPublicKey:
+          description: >
+            Public half of the owner key (ADR 0010), derived from the master
+            key; owner sessions are signed with it.
           $ref: '#/components/schemas/PublicKey'
         identityPublicKey:
           $ref: '#/components/schemas/PublicKey'

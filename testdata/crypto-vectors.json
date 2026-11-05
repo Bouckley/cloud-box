@@ -344,5 +344,23 @@
       "wrapKey": "9b8b628feca1f8c4a2cd13161bb3aa1e9e15c0ea9dcaa979e34bdd38264d7243",
       "signPublicKey": "49b9590e715533a2087ac2e777c0ae317a403d851feb49cc8ca5816a71dc16ae"
     }
+  ],
+  "owner": [
+    {
+      "master": "8c8d8e8f909192939495969798999a9b9c9d9e9fa0a1a2a3a4a5a6a7a8a9aaab",
+      "publicKey": "9c0da34b5ae27206506549a215068fd94450bd6aff9b1dcb49a8dd768edf1ee6",
+      "deviceId": "00112233445566778899aabbccddeeff",
+      "challenge": "404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f",
+      "message": "cloudbox/v1/owner/00112233445566778899aabbccddeeff/404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f",
+      "signature": "9d9d3e4d1be84646b88aa36c9fea557655d1812ba29097be3c7e97a8431ee431c9c62a61d7bd0386a97197f30b11292f2474c13df8de7c43a9c31288cd910009"
+    },
+    {
+      "master": "b4b5b6b7b8b9babbbcbdbebfc0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2d3",
+      "publicKey": "7e632bfdee1171adaa1d92603815da9815d86d03fcedbf44ba8c889dba315312",
+      "deviceId": "ffeeddccbbaa99887766554433221100",
+      "challenge": "c0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+      "message": "cloudbox/v1/owner/ffeeddccbbaa99887766554433221100/c0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+      "signature": "fe88b9ce18ae381cac245244f8e88ca90112906299c0b00182b27ddb3e67fc7f0ad97aa27455ae3f95ab37740d52eda7759fb6d993485607447dda20bc8f900e"
+    }
   ]
 }

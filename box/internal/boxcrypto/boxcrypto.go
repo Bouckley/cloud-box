@@ -42,3 +42,13 @@ func AuthMessage(deviceID, challengeHex string) []byte {
 func RecoverMessage(deviceID string, signPublicKey []byte, challengeHex string) []byte {
 	return []byte("cloudbox/v1/recover/" + deviceID + "/" + hex.EncodeToString(signPublicKey) + "/" + challengeHex)
 }
+
+// OwnerMessage is what the owner key signs at login, over the same challenge
+// as the device signature (ADR 0010): UTF-8
+// "cloudbox/v1/owner/<deviceID>/<challengeHex>". A session whose login
+// carries a valid one is an owner session. It must match ownerMessage in
+// @cloudbox/crypto; testdata/crypto-vectors.json checks both. Callers
+// validate the inputs first.
+func OwnerMessage(deviceID, challengeHex string) []byte {
+	return []byte("cloudbox/v1/owner/" + deviceID + "/" + challengeHex)
+}

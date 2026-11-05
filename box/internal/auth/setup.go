@@ -29,6 +29,8 @@ type NewUser struct {
 	// RecoveryPublicKey is required at setup but never returned in Account
 	// (the API's Account shape does not carry it), hence omitempty.
 	RecoveryPublicKey []byte `json:"recoveryPublicKey,omitempty"`
+	// OwnerPublicKey (ADR 0010) likewise: required at setup, never returned.
+	OwnerPublicKey    []byte `json:"ownerPublicKey,omitempty"`
 	IdentityPublicKey []byte `json:"identityPublicKey"`
 	IdentityKeyEnc    []byte `json:"identityKeyEnc"`
 	DedupeKeyEnc      []byte `json:"dedupeKeyEnc"`
@@ -65,10 +67,12 @@ func (s *Service) Setup(ctx context.Context, u NewUser, d NewDevice) (Account, e
 			return ErrPressButton
 		}
 		if _, err := tx.ExecContext(ctx, `INSERT INTO users (id, role, kdf_salt, kdf_ops, kdf_mem,
-			master_key_password, master_key_recovery, recovery_public_key, identity_public_key,
-			identity_key_enc, dedupe_key_enc, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			master_key_password, master_key_recovery, recovery_public_key, owner_public_key,
+			identity_public_key, identity_key_enc, dedupe_key_enc, created_at)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 			u.ID, RoleOwner, u.KDF.Salt, u.KDF.OpsLimit, u.KDF.MemLimitBytes,
-			u.MasterKeyByPassword, u.MasterKeyByRecovery, u.RecoveryPublicKey, u.IdentityPublicKey,
+			u.MasterKeyByPassword, u.MasterKeyByRecovery, u.RecoveryPublicKey, u.OwnerPublicKey,
+			u.IdentityPublicKey,
 			u.IdentityKeyEnc, u.DedupeKeyEnc, now); err != nil {
 			return err
 		}
@@ -82,6 +86,7 @@ func (s *Service) Setup(ctx context.Context, u NewUser, d NewDevice) (Account, e
 	}
 	s.closeSetupWindow()
 	u.RecoveryPublicKey = nil
+	u.OwnerPublicKey = nil
 	return Account{Role: RoleOwner, NewUser: u}, nil
 }
 

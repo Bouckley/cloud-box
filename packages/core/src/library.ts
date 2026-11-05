@@ -379,6 +379,11 @@ export class Library {
       );
       if (r.kind === 'uploaded') await this.sync();
       return r;
+    } catch (e) {
+      // Locked meanwhile: the step in flight may have failed only because
+      // Lock ended the session on the box (ADR 0010). Say locked.
+      this.#open();
+      throw e;
     } finally {
       collectionKey.fill(0);
       dedupeKey.fill(0);

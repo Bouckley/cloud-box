@@ -18,6 +18,7 @@ import (
 type device struct {
 	userID, id string
 	key        ed25519.PrivateKey
+	owner      ed25519.PrivateKey // the owner key (ADR 0010); nil for paired devices
 }
 
 func setUp(t *testing.T, svc *Service) device {
@@ -26,11 +27,13 @@ func setUp(t *testing.T, svc *Service) device {
 	if err != nil {
 		t.Fatal(err)
 	}
+	opub, opriv, _ := ed25519.GenerateKey(rand.Reader)
 	u, d := testUser(), testDevice(pub)
+	u.OwnerPublicKey = opub
 	if _, err := svc.Setup(context.Background(), u, d); err != nil {
 		t.Fatal(err)
 	}
-	return device{userID: u.ID, id: d.ID, key: priv}
+	return device{userID: u.ID, id: d.ID, key: priv, owner: opriv}
 }
 
 func login(t *testing.T, svc *Service, d device) (string, error) {
@@ -40,7 +43,20 @@ func login(t *testing.T, svc *Service, d device) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	token, _, err := svc.Verify(ctx, d.id, ch, ed25519.Sign(d.key, boxcrypto.AuthMessage(d.id, ch)))
+	token, _, err := svc.Verify(ctx, d.id, ch, ed25519.Sign(d.key, boxcrypto.AuthMessage(d.id, ch)), nil)
+	return token, err
+}
+
+// loginOwner logs in with the device key and the owner key (ADR 0010).
+func loginOwner(t *testing.T, svc *Service, d device, ownerKey ed25519.PrivateKey) (string, error) {
+	t.Helper()
+	ctx := context.Background()
+	ch, _, err := svc.Challenge(ctx, d.id)
+	if err != nil {
+		return "", err
+	}
+	token, _, err := svc.Verify(ctx, d.id, ch, ed25519.Sign(d.key, boxcrypto.AuthMessage(d.id, ch)),
+		ed25519.Sign(ownerKey, boxcrypto.OwnerMessage(d.id, ch)))
 	return token, err
 }
 
@@ -60,7 +76,7 @@ func TestLoginHappyPath(t *testing.T) {
 		t.Errorf("challenge valid for %v, want %v", got, ChallengeTTL)
 	}
 
-	token, tokenExpires, err := svc.Verify(ctx, d.id, ch, ed25519.Sign(d.key, boxcrypto.AuthMessage(d.id, ch)))
+	token, tokenExpires, err := svc.Verify(ctx, d.id, ch, ed25519.Sign(d.key, boxcrypto.AuthMessage(d.id, ch)), nil)
 	if err != nil {
 		t.Fatalf("Verify: %v", err)
 	}
@@ -72,7 +88,7 @@ func TestLoginHappyPath(t *testing.T) {
 	}
 
 	sess, err := svc.Authenticate(ctx, token)
-	if err != nil || sess != (Session{UserID: d.userID, DeviceID: d.id}) {
+	if err != nil || sess.UserID != d.userID || sess.DeviceID != d.id || sess.Owner {
 		t.Fatalf("Authenticate = %+v, %v", sess, err)
 	}
 
@@ -91,10 +107,10 @@ func TestChallengeSingleUse(t *testing.T) {
 	ctx := context.Background()
 	ch, _, _ := svc.Challenge(ctx, d.id)
 	sig := ed25519.Sign(d.key, boxcrypto.AuthMessage(d.id, ch))
-	if _, _, err := svc.Verify(ctx, d.id, ch, sig); err != nil {
+	if _, _, err := svc.Verify(ctx, d.id, ch, sig, nil); err != nil {
 		t.Fatal(err)
 	}
-	if _, _, err := svc.Verify(ctx, d.id, ch, sig); !errors.Is(err, ErrUnauthorized) {
+	if _, _, err := svc.Verify(ctx, d.id, ch, sig, nil); !errors.Is(err, ErrUnauthorized) {
 		t.Fatalf("replayed challenge: %v, want ErrUnauthorized", err)
 	}
 }
@@ -104,10 +120,10 @@ func TestFailedVerifyUsesUpChallenge(t *testing.T) {
 	d := setUp(t, svc)
 	ctx := context.Background()
 	ch, _, _ := svc.Challenge(ctx, d.id)
-	if _, _, err := svc.Verify(ctx, d.id, ch, make([]byte, 64)); !errors.Is(err, ErrUnauthorized) {
+	if _, _, err := svc.Verify(ctx, d.id, ch, make([]byte, 64), nil); !errors.Is(err, ErrUnauthorized) {
 		t.Fatalf("bad signature: %v", err)
 	}
-	if _, _, err := svc.Verify(ctx, d.id, ch, ed25519.Sign(d.key, boxcrypto.AuthMessage(d.id, ch))); !errors.Is(err, ErrUnauthorized) {
+	if _, _, err := svc.Verify(ctx, d.id, ch, ed25519.Sign(d.key, boxcrypto.AuthMessage(d.id, ch)), nil); !errors.Is(err, ErrUnauthorized) {
 		t.Fatalf("challenge reusable after a failed attempt: %v", err)
 	}
 }
@@ -118,7 +134,7 @@ func TestChallengeExpires(t *testing.T) {
 	ctx := context.Background()
 	ch, _, _ := svc.Challenge(ctx, d.id)
 	sim.Advance(61 * time.Second)
-	if _, _, err := svc.Verify(ctx, d.id, ch, ed25519.Sign(d.key, boxcrypto.AuthMessage(d.id, ch))); !errors.Is(err, ErrUnauthorized) {
+	if _, _, err := svc.Verify(ctx, d.id, ch, ed25519.Sign(d.key, boxcrypto.AuthMessage(d.id, ch)), nil); !errors.Is(err, ErrUnauthorized) {
 		t.Fatalf("expired challenge: %v, want ErrUnauthorized", err)
 	}
 }
@@ -149,14 +165,14 @@ func TestWrongSignatureOrDevice(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if _, _, err := svc.Verify(ctx, a.id, ch, sign(ch)); !errors.Is(err, ErrUnauthorized) {
+		if _, _, err := svc.Verify(ctx, a.id, ch, sign(ch), nil); !errors.Is(err, ErrUnauthorized) {
 			t.Errorf("%s: %v, want ErrUnauthorized", name, err)
 		}
 	}
 
 	// A challenge issued for device A cannot be used by device B.
 	ch, _, _ := svc.Challenge(ctx, a.id)
-	if _, _, err := svc.Verify(ctx, b.id, ch, ed25519.Sign(b.key, boxcrypto.AuthMessage(b.id, ch))); !errors.Is(err, ErrUnauthorized) {
+	if _, _, err := svc.Verify(ctx, b.id, ch, ed25519.Sign(b.key, boxcrypto.AuthMessage(b.id, ch)), nil); !errors.Is(err, ErrUnauthorized) {
 		t.Errorf("A's challenge used by B: %v", err)
 	}
 
@@ -180,7 +196,7 @@ func TestRevokedBetweenChallengeAndVerify(t *testing.T) {
 	if _, err := db.DB().Exec("UPDATE devices SET revoked_at = 1 WHERE id = ?", d.id); err != nil {
 		t.Fatal(err)
 	}
-	if _, _, err := svc.Verify(ctx, d.id, ch, ed25519.Sign(d.key, boxcrypto.AuthMessage(d.id, ch))); !errors.Is(err, ErrUnauthorized) {
+	if _, _, err := svc.Verify(ctx, d.id, ch, ed25519.Sign(d.key, boxcrypto.AuthMessage(d.id, ch)), nil); !errors.Is(err, ErrUnauthorized) {
 		t.Fatalf("revoked device verified: %v", err)
 	}
 }
@@ -236,7 +252,7 @@ func TestPendingChallengesCapped(t *testing.T) {
 		t.Errorf("pending = %d, want %d", n, maxPendingChallenges)
 	}
 	// The oldest was evicted.
-	if _, _, err := svc.Verify(ctx, d.id, first, ed25519.Sign(d.key, boxcrypto.AuthMessage(d.id, first))); !errors.Is(err, ErrUnauthorized) {
+	if _, _, err := svc.Verify(ctx, d.id, first, ed25519.Sign(d.key, boxcrypto.AuthMessage(d.id, first)), nil); !errors.Is(err, ErrUnauthorized) {
 		t.Errorf("evicted challenge still works: %v", err)
 	}
 }

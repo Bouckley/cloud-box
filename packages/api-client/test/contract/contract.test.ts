@@ -17,6 +17,8 @@ import {
   recoverySigningKeyPair,
   recoveryWrapKey,
   newSalt,
+  ownerMessage,
+  ownerSigningKeyPair,
   randomKey,
   ready,
   sha256,
@@ -71,6 +73,7 @@ describe('a real box', () => {
     // Keys, all wrapped with ADR 0003 associated data.
     const userId = newId();
     const master = randomKey();
+    const owner = ownerSigningKeyPair(master);
     const salt = newSalt();
     const kek = deriveKek(PASSWORD, salt, FAST_KDF);
     const recoveryKey = newRecoveryKey();
@@ -97,6 +100,7 @@ describe('a real box', () => {
           masterKeyByPassword: b64(wrapped.masterKeyByPassword),
           masterKeyByRecovery: b64(wrapped.masterKeyByRecovery),
           recoveryPublicKey: b64(recoverySigning.publicKey),
+          ownerPublicKey: b64(owner.publicKey),
           identityPublicKey: b64(identity.publicKey),
           identityKeyEnc: b64(wrapped.identityKeyEnc),
           dedupeKeyEnc: b64(wrapped.dedupeKeyEnc),
@@ -120,6 +124,8 @@ describe('a real box', () => {
         deviceId,
         challenge,
         signature: b64(sign(signing.privateKey, authMessage(deviceId, challenge))),
+        // An owner session (ADR 0010): the owner key, from the master key.
+        ownerSignature: b64(sign(owner.privateKey, ownerMessage(deviceId, challenge))),
       },
     });
     expect(verified.error).toBeUndefined();
@@ -237,6 +243,7 @@ describe('a real box', () => {
       hex(recovery),
       b64(recovery),
       hex(recoverySigning.privateKey),
+      hex(owner.privateKey),
     ];
     const files = await allFiles(box.dataDir);
     const blobFiles = files.filter((f) => f.includes(`${join('blobs', '')}`));

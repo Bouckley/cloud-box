@@ -64,7 +64,8 @@ the exact shapes; `docs/plans/M2.md` holds the full scope rulings.
 
 **Password change**
 - `PUT /v1/account/password {kdf, masterKeyByPassword}`. The box cannot check
-  the old password (zero knowledge); any signed-in device may replace the
+  the old password (zero knowledge); any device with an owner session (one
+  holding the master key, [ADR 0010](0010-owner-sessions.md)) may replace the
   wrap.
 
 **Uploads take the hash at the end**
@@ -124,8 +125,9 @@ the exact shapes; `docs/plans/M2.md` holds the full scope rulings.
   the box reads only `application/json` bodies (415 otherwise), which a
   cross-site page cannot send without a CORS preflight (M2 Task 18).
 
-- **The device key alone can act, not only an unlocked device** (corrected,
-  M2 Task 18). Logging in needs only the device key, which a locked browser,
+- **The device key alone could act, not only an unlocked device** (found in
+  M2 Task 18, fixed by [ADR 0010](0010-owner-sessions.md): those actions now
+  need an owner session). Logging in needs only the device key, which a locked browser,
   a freshly paired device or a copied profile still holds (devtools on the
   box's page can sign with it). With it someone can set a new password wrap,
   or move everything to Trash and delete it forever. The recovery key still

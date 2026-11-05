@@ -47,6 +47,20 @@ function once(
   return holder;
 }
 
+/** A platform that notes every session token the box hands out. */
+function recording(tokens: string[]): Platform {
+  const p = nodePlatform(box.fetch);
+  p.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const req = new Request(input, init);
+    const res = await box.fetch(req);
+    if (new URL(req.url).pathname === '/v1/auth/verify' && res.ok) {
+      tokens.push(((await res.clone().json()) as { token: string }).token);
+    }
+    return res;
+  }) as typeof fetch;
+  return p;
+}
+
 async function setUp(p = platform()): Promise<{ p: Platform; me: Unlocked; words: string[] }> {
   await box.pressButton();
   const prepared = await Box.connect(box.baseUrl, p).prepareSetup({
@@ -300,6 +314,46 @@ describe('accounts on a real box', () => {
     await box.advanceClock(61 * 60);
     const status = await me.status();
     expect(status.devices).toHaveLength(1);
+  });
+
+  // ADR 0010: the owner key, derived from the master key, makes owner sessions.
+  it('an unlocked device acts as owner; the device key alone cannot', async () => {
+    const tokens: string[] = [];
+    const p = recording(tokens);
+    const { me } = await setUp(p);
+    await expect(me.createPairingCode()).resolves.toBeDefined();
+    me.lock();
+    // Someone with only this browser's device key (it is locked) logs in.
+    expect(await Box.connect(box.baseUrl, p).login()).toBe('ok');
+    const plain = tokens.at(-1)!;
+    const res = await box.fetch(`${box.baseUrl}/v1/devices/pairing-codes`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${plain}` },
+    });
+    expect(res.status).toBe(403);
+    expect(((await res.json()) as { code: string }).code).toBe('owner_required');
+    // Unlocking with the password makes it the owner again.
+    const again = await Box.connect(box.baseUrl, p).unlock(PASSWORD);
+    await expect(again.createPairingCode()).resolves.toBeDefined();
+  });
+
+  it('after the hourly expiry an unlocked device logs in as owner again', async () => {
+    const { me } = await setUp();
+    await box.advanceClock(61 * 60);
+    await expect(me.createPairingCode()).resolves.toBeDefined();
+  });
+
+  it('lock ends the session on the box', async () => {
+    const tokens: string[] = [];
+    const { me } = await setUp(recording(tokens));
+    const token = tokens.at(-1)!;
+    const account = () =>
+      box
+        .fetch(`${box.baseUrl}/v1/account`, { headers: { Authorization: `Bearer ${token}` } })
+        .then((r) => r.status);
+    expect(await account()).toBe(200);
+    me.lock();
+    await expect.poll(account).toBe(401);
   });
 
   it('revoked device', async () => {

@@ -60,13 +60,14 @@ func NewRouter(d Deps) http.Handler {
 		mux.HandleFunc("POST /v1/auth/challenge", h.createChallenge)
 		mux.HandleFunc("POST /v1/auth/verify", h.verifyChallenge)
 		mux.HandleFunc("GET /v1/account", h.requireSession(h.getAccount))
-		mux.HandleFunc("PUT /v1/account/password", h.requireSession(h.changePassword))
+		mux.HandleFunc("PUT /v1/account/password", h.requireOwner(h.changePassword))
+		mux.HandleFunc("DELETE /v1/auth/session", h.requireSession(h.endSession))
 		mux.HandleFunc("POST /v1/recovery/challenge", h.recoveryChallenge)
 		mux.HandleFunc("POST /v1/recovery/reset", h.recoveryReset)
 		mux.HandleFunc("GET /v1/devices", h.requireSession(h.listDevices))
-		mux.HandleFunc("POST /v1/devices/pairing-codes", h.requireSession(h.createPairingCode))
+		mux.HandleFunc("POST /v1/devices/pairing-codes", h.requireOwner(h.createPairingCode))
 		mux.HandleFunc("POST /v1/devices/pair", h.pairDevice)
-		mux.HandleFunc("DELETE /v1/devices/{id}", h.requireSession(h.revokeDevice))
+		mux.HandleFunc("DELETE /v1/devices/{id}", h.requireOwner(h.revokeDevice))
 		mux.HandleFunc("PATCH /v1/devices/{id}", h.requireSession(h.renameDevice))
 	}
 	if d.Auth != nil && d.Blobs != nil {
@@ -90,7 +91,7 @@ func NewRouter(d Deps) http.Handler {
 		mux.HandleFunc("DELETE /v1/items/{id}", h.requireSession(itemIDHandler(h.trashItem)))
 		mux.HandleFunc("POST /v1/items/{id}/restore", h.requireSession(itemIDHandler(h.restoreItem)))
 		mux.HandleFunc("GET /v1/trash", h.requireSession(h.listTrash))
-		mux.HandleFunc("DELETE /v1/trash/{id}", h.requireSession(itemIDHandler(h.deleteFromTrash)))
+		mux.HandleFunc("DELETE /v1/trash/{id}", h.requireOwner(itemIDHandler(h.deleteFromTrash)))
 	}
 	if d.Auth != nil && d.Status != nil {
 		mux.HandleFunc("GET /v1/status", h.requireSession(h.getStatus))

@@ -15,6 +15,8 @@ import {
   parseRecoveryKey,
   randomKey,
   ready,
+  ownerMessage,
+  ownerSigningKeyPair,
   recoverMessage,
   recoverySigningKeyPair,
   recoveryWrapKey,
@@ -95,6 +97,12 @@ export class Box {
   readonly #device: DeviceKeys;
   #token: string | null = null;
   #login: Promise<LoginResult> | null = null;
+  /**
+   * The owner key (ADR 0010) while unlocked: every login then also signs as
+   * owner, so the session may change the password, pair or revoke devices
+   * and delete forever. Null when locked: the device key alone can't.
+   */
+  #owner: KeyPair | null = null;
 
   private constructor(baseUrl: string, platform: Platform) {
     this.#platform = platform;
@@ -148,8 +156,16 @@ export class Box {
       }
       const { challenge } = must(ch);
       const signature = await this.#device.sign(rec, authMessage(rec.deviceId, challenge));
+      const owner = this.#owner;
       const v = await this.#public.POST('/v1/auth/verify', {
-        body: { deviceId: rec.deviceId, challenge, signature: b64(signature) },
+        body: {
+          deviceId: rec.deviceId,
+          challenge,
+          signature: b64(signature),
+          ...(owner && {
+            ownerSignature: b64(sign(owner.privateKey, ownerMessage(rec.deviceId, challenge))),
+          }),
+        },
       });
       if (v.response.status === 401 && attempt === 0) continue;
       this.#token = must(v).token;
@@ -191,6 +207,7 @@ export class Box {
         wrapKey(recoveryWrapKey(rk), master, ad.masterKeyByRecovery(userId)),
       ),
       recoveryPublicKey: b64(recoverySigningKeyPair(rk).publicKey),
+      ownerPublicKey: b64(ownerSigningKeyPair(master).publicKey),
       identityPublicKey: b64(identity.publicKey),
       identityKeyEnc: b64(wrapKey(master, identity.privateKey, ad.identityKey(userId))),
       dedupeKeyEnc: b64(wrapKey(master, dedupe, ad.dedupeKey(userId))),
@@ -245,8 +262,7 @@ export class Box {
             accepted = true;
           }
           await this.#device.save(rec);
-          this.#token = null;
-          await this.#requireLogin();
+          await this.#becomeOwner(master);
           const unlocked = this.#unlocked(userId, rec.deviceId, { master, identity, dedupe }, kdf);
           await unlocked.library.ensureRoots();
           done = true;
@@ -368,7 +384,15 @@ export class Box {
     return rec.deviceId;
   }
 
+  /** Logs in again as owner, now that the master key is here (ADR 0010). */
+  async #becomeOwner(master: Uint8Array): Promise<void> {
+    this.#owner = ownerSigningKeyPair(master);
+    this.#token = null;
+    await this.#requireLogin();
+  }
+
   async #finishUnlock(account: Account, deviceId: string, master: Uint8Array): Promise<Unlocked> {
+    await this.#becomeOwner(master);
     const identity = {
       publicKey: fromB64(account.identityPublicKey),
       privateKey: unwrapKey(master, fromB64(account.identityKeyEnc), ad.identityKey(account.id)),
@@ -455,7 +479,17 @@ export class Box {
         keys.master.fill(0);
         keys.identity.privateKey.fill(0);
         keys.dedupe.fill(0);
+        this.#owner?.privateKey.fill(0);
+        this.#owner = null;
+        // End the session on the box too (ADR 0010); the token is forgotten
+        // here whether or not the box hears it.
+        const token = this.#token;
         this.#token = null;
+        if (token !== null) {
+          void this.#public
+            .DELETE('/v1/auth/session', { headers: { Authorization: `Bearer ${token}` } })
+            .catch(() => {});
+        }
       },
     };
   }

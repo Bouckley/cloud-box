@@ -24,9 +24,12 @@ const (
 // the box never reveals which devices exist or why a login failed.
 var ErrUnauthorized = errors.New("unauthorized")
 
-// Session identifies the signed-in user and device.
+// Session identifies the signed-in user and device. Owner is true when the
+// login also proved the master key with the owner key (ADR 0010).
 type Session struct {
 	UserID, DeviceID string
+	Owner            bool
+	tokenHash        []byte
 }
 
 type pendingChallenge struct {
@@ -75,8 +78,11 @@ func (s *Service) compactChallengeOrder() {
 }
 
 // Verify checks the device's signature over AuthMessage(deviceID, challenge)
-// and starts a session. The challenge is used up whatever the outcome.
-func (s *Service) Verify(ctx context.Context, deviceID, challenge string, sig []byte) (string, time.Time, error) {
+// and starts a session. With ownerSig (the owner key's signature over
+// OwnerMessage of the same device and challenge) the session is an owner
+// session; a bad ownerSig fails the login like any other failure. The
+// challenge is used up whatever the outcome.
+func (s *Service) Verify(ctx context.Context, deviceID, challenge string, sig, ownerSig []byte) (string, time.Time, error) {
 	now := s.clock.Now()
 	s.mu.Lock()
 	pc, ok := s.challenges[challenge]
@@ -102,9 +108,23 @@ func (s *Service) Verify(ctx context.Context, deviceID, challenge string, sig []
 		if !boxcrypto.VerifyEd25519(pub, boxcrypto.AuthMessage(deviceID, challenge), sig) {
 			return ErrUnauthorized
 		}
+		owner := 0
+		if ownerSig != nil {
+			var ownerPub []byte
+			if err := tx.QueryRowContext(ctx, "SELECT owner_public_key FROM users WHERE id = ?",
+				userID).Scan(&ownerPub); err != nil {
+				return err
+			}
+			// A missing key (an account from before migration 0003) fails
+			// verification: no owner session without one.
+			if !boxcrypto.VerifyEd25519(ownerPub, boxcrypto.OwnerMessage(deviceID, challenge), ownerSig) {
+				return ErrUnauthorized
+			}
+			owner = 1
+		}
 		if _, err := tx.ExecContext(ctx,
-			"INSERT INTO sessions (token_hash, user_id, device_id, expires_at) VALUES (?, ?, ?, ?)",
-			tokenHash(token), userID, deviceID, expires.UnixMilli()); err != nil {
+			"INSERT INTO sessions (token_hash, user_id, device_id, expires_at, owner) VALUES (?, ?, ?, ?, ?)",
+			tokenHash(token), userID, deviceID, expires.UnixMilli(), owner); err != nil {
 			return err
 		}
 		_, err = tx.ExecContext(ctx, "UPDATE devices SET last_seen = ? WHERE id = ?", now.UnixMilli(), deviceID)
@@ -120,15 +140,21 @@ func (s *Service) Verify(ctx context.Context, deviceID, challenge string, sig []
 // tokens of revoked devices are ErrUnauthorized. Lookup is by SHA-256 of
 // the token, so response timing reveals nothing about stored tokens.
 func (s *Service) Authenticate(ctx context.Context, token string) (Session, error) {
-	var sess Session
-	err := s.db.DB().QueryRowContext(ctx, `SELECT s.user_id, s.device_id FROM sessions s
+	sess := Session{tokenHash: tokenHash(token)}
+	err := s.db.DB().QueryRowContext(ctx, `SELECT s.user_id, s.device_id, s.owner FROM sessions s
 		JOIN devices d ON d.id = s.device_id
 		WHERE s.token_hash = ? AND s.expires_at > ? AND d.revoked_at IS NULL`,
-		tokenHash(token), s.clock.Now().UnixMilli()).Scan(&sess.UserID, &sess.DeviceID)
+		sess.tokenHash, s.clock.Now().UnixMilli()).Scan(&sess.UserID, &sess.DeviceID, &sess.Owner)
 	if errors.Is(err, sql.ErrNoRows) {
 		return Session{}, ErrUnauthorized
 	}
 	return sess, err
+}
+
+// EndSession ends sess at once (Lock). Other sessions of the device go on.
+func (s *Service) EndSession(ctx context.Context, sess Session) error {
+	_, err := s.db.DB().ExecContext(ctx, "DELETE FROM sessions WHERE token_hash = ?", sess.tokenHash)
+	return err
 }
 
 // querier is a *sql.DB or *sql.Tx.

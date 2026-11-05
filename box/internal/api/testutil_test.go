@@ -117,6 +117,7 @@ func setupBody(signPublicKey []byte) map[string]any {
 			"masterKeyByPassword": randBytes(72),
 			"masterKeyByRecovery": randBytes(72),
 			"recoveryPublicKey":   randBytes(32),
+			"ownerPublicKey":      randBytes(32),
 			"identityPublicKey":   randBytes(32),
 			"identityKeyEnc":      randBytes(72),
 			"dedupeKeyEnc":        randBytes(72),

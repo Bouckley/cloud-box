@@ -41,9 +41,10 @@ func (h *handlers) createChallenge(w http.ResponseWriter, r *http.Request) {
 
 func (h *handlers) verifyChallenge(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		DeviceID  string `json:"deviceId"`
-		Challenge string `json:"challenge"`
-		Signature []byte `json:"signature"`
+		DeviceID       string `json:"deviceId"`
+		Challenge      string `json:"challenge"`
+		Signature      []byte `json:"signature"`
+		OwnerSignature []byte `json:"ownerSignature"`
 	}
 	if !readJSON(w, r, &req) {
 		return
@@ -56,7 +57,13 @@ func (h *handlers) verifyChallenge(w http.ResponseWriter, r *http.Request) {
 		badRequest(w, err.Error())
 		return
 	}
-	token, expires, err := h.d.Auth.Verify(r.Context(), req.DeviceID, req.Challenge, req.Signature)
+	if req.OwnerSignature != nil {
+		if err := checkLen("ownerSignature", req.OwnerSignature, signatureBytes, signatureBytes); err != nil {
+			badRequest(w, err.Error())
+			return
+		}
+	}
+	token, expires, err := h.d.Auth.Verify(r.Context(), req.DeviceID, req.Challenge, req.Signature, req.OwnerSignature)
 	if err != nil {
 		h.serviceError(w, r, err)
 		return
@@ -88,6 +95,31 @@ func (h *handlers) requireSession(next func(http.ResponseWriter, *http.Request, 
 		}
 		next(w, r, sess)
 	}
+}
+
+// requireOwner is requireSession for actions that need the master key
+// (ADR 0010): an ordinary session, from the device key alone, gets 403.
+func (h *handlers) requireOwner(next func(http.ResponseWriter, *http.Request, auth.Session)) http.HandlerFunc {
+	return h.requireSession(func(w http.ResponseWriter, r *http.Request, sess auth.Session) {
+		if !sess.Owner {
+			writeError(w, http.StatusForbidden, apiError{
+				Code:    "owner_required",
+				Message: "Unlock with your password to do this.",
+				Action:  "Unlock Cloud Box on this device, then try again.",
+			})
+			return
+		}
+		next(w, r, sess)
+	})
+}
+
+// endSession ends this session at once (Lock).
+func (h *handlers) endSession(w http.ResponseWriter, r *http.Request, sess auth.Session) {
+	if err := h.d.Auth.EndSession(r.Context(), sess); err != nil {
+		h.serviceError(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // validToken checks the token format: 43 base64url characters (32 bytes).

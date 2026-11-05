@@ -146,3 +146,41 @@ func TestRecoverVectors(t *testing.T) {
 		}
 	}
 }
+
+// ownerVectors mirrors the owner section of testdata/crypto-vectors.json
+// (ADR 0010): what the owner key signs at login.
+type ownerVectors struct {
+	Owner []struct {
+		PublicKey string `json:"publicKey"`
+		DeviceID  string `json:"deviceId"`
+		Challenge string `json:"challenge"`
+		Message   string `json:"message"`
+		Signature string `json:"signature"`
+	} `json:"owner"`
+}
+
+func TestOwnerVectors(t *testing.T) {
+	raw, err := os.ReadFile("../../../testdata/crypto-vectors.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var v ownerVectors
+	if err := json.Unmarshal(raw, &v); err != nil {
+		t.Fatal(err)
+	}
+	if len(v.Owner) == 0 {
+		t.Fatal("no owner vectors")
+	}
+	for i, row := range v.Owner {
+		msg := OwnerMessage(row.DeviceID, row.Challenge)
+		if string(msg) != row.Message {
+			t.Errorf("owner[%d] = %q, want %q", i, msg, row.Message)
+		}
+		if !VerifyEd25519(unhex(t, row.PublicKey), msg, unhex(t, row.Signature)) {
+			t.Errorf("owner[%d]: signature does not verify over the Go-built message", i)
+		}
+		if bytes.Equal(msg, AuthMessage(row.DeviceID, row.Challenge)) {
+			t.Errorf("owner[%d]: owner message equals the auth message", i)
+		}
+	}
+}

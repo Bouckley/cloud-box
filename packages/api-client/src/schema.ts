@@ -91,7 +91,7 @@ export interface paths {
     get?: never;
     /**
      * Replace the password wrap of the master key
-     * @description The box cannot check the old password (zero knowledge); any signed-in device may replace the wrap. The recovery wrap is unchanged. Same KDF bounds as setup. Errors: 400 `invalid_request`, 401 `unauthorized`.
+     * @description The box cannot check the old password (zero knowledge). Needs an owner session (ADR 0010), so only a device holding the master key may replace the wrap. The recovery wrap is unchanged. Same KDF bounds as setup. Errors: 400 `invalid_request`, 401 `unauthorized`, 403 `owner_required`.
      */
     put: operations['changePassword'];
     post?: never;
@@ -172,10 +172,30 @@ export interface paths {
     put?: never;
     /**
      * Send the Ed25519 signature of the auth message; get a session token
-     * @description The device signs UTF-8 `cloudbox/v1/auth/<deviceId>/<challenge>` with its signing key. Any failure is 401 `unauthorized`.
+     * @description The device signs UTF-8 `cloudbox/v1/auth/<deviceId>/<challenge>` with its signing key. A client holding the master key also sends `ownerSignature`: the owner key's signature of UTF-8 `cloudbox/v1/owner/<deviceId>/<challenge>` (ADR 0010); the session is then an owner session. Any failure, including a bad owner signature, is 401 `unauthorized`.
      */
     post: operations['verifyChallenge'];
     delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/auth/session': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /**
+     * End this session (Lock)
+     * @description The token stops working at once. Errors 401 `unauthorized`.
+     */
+    delete: operations['endSession'];
     options?: never;
     head?: never;
     patch?: never;
@@ -207,7 +227,10 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Create a single-use pairing code (valid 10 minutes) for the QR */
+    /**
+     * Create a single-use pairing code (valid 10 minutes) for the QR
+     * @description Needs an owner session (ADR 0010); else 403 `owner_required`.
+     */
     post: operations['createPairingCode'];
     delete?: never;
     options?: never;
@@ -249,7 +272,7 @@ export interface paths {
     post?: never;
     /**
      * Revoke a device; its sessions end at once
-     * @description Revoking the user's last active device is 409 `last_device`.
+     * @description Needs an owner session (ADR 0010); else 403 `owner_required`. Revoking the user's last active device is 409 `last_device`.
      */
     delete: operations['revokeDevice'];
     options?: never;
@@ -528,7 +551,7 @@ export interface paths {
     post?: never;
     /**
      * Delete an item for good (only from Trash)
-     * @description An item not in Trash is 409 `not_in_trash`.
+     * @description Needs an owner session (ADR 0010); else 403 `owner_required`. An item not in Trash is 409 `not_in_trash`.
      */
     delete: operations['deleteFromTrash'];
     options?: never;
@@ -611,6 +634,8 @@ export interface components {
       masterKeyByPassword: components['schemas']['WrappedKey'];
       masterKeyByRecovery: components['schemas']['WrappedKey'];
       recoveryPublicKey: components['schemas']['PublicKey'];
+      /** @description Public half of the owner key (ADR 0010), derived from the master key; owner sessions are signed with it. */
+      ownerPublicKey: components['schemas']['PublicKey'];
       identityPublicKey: components['schemas']['PublicKey'];
       identityKeyEnc: components['schemas']['WrappedKey'];
       dedupeKeyEnc: components['schemas']['WrappedKey'];
@@ -1003,6 +1028,7 @@ export interface operations {
           deviceId: components['schemas']['Id'];
           challenge: components['schemas']['Hex32'];
           signature: components['schemas']['Signature'];
+          ownerSignature?: components['schemas']['Signature'];
         };
       };
     };
@@ -1015,6 +1041,25 @@ export interface operations {
         content: {
           'application/json': components['schemas']['Session'];
         };
+      };
+      default: components['responses']['Error'];
+    };
+  };
+  endSession: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Ended. */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
       };
       default: components['responses']['Error'];
     };

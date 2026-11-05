@@ -21,14 +21,14 @@ On a laptop the same layout lives under `./.data/` in the repo (git-ignored).
 
 ## Tables
 
-Schema: `box/migrations/0001_init.sql`, then `0002_m2.sql` (M2). Times are
+Schema: `box/migrations/0001_init.sql`, then `0002_m2.sql` and `0003_owner.sql` (M2). Times are
 Unix milliseconds (UTC).
 
 | Table | Key columns | Notes |
 |-------|-------------|-------|
-| `users` | id, role, kdf_salt, kdf_ops, kdf_mem, master_key_password, master_key_recovery, recovery_public_key, identity_public_key, identity_key_enc, dedupe_key_enc | Wrapped keys only; `recovery_public_key` (unique, M2) checks recovery resets (ADR 0005) |
+| `users` | id, role, kdf_salt, kdf_ops, kdf_mem, master_key_password, master_key_recovery, recovery_public_key, owner_public_key, identity_public_key, identity_key_enc, dedupe_key_enc | Wrapped keys only; `recovery_public_key` (unique, M2) checks recovery resets (ADR 0005); `owner_public_key` checks owner logins (ADR 0010) |
 | `devices` | id, user_id, name_enc, sign_public_key, last_seen, revoked_at | |
-| `sessions` | token_hash, user_id, device_id, expires_at | Token stored only as SHA-256 |
+| `sessions` | token_hash, user_id, device_id, expires_at, owner | Token stored only as SHA-256; `owner` = the login proved the master key (ADR 0010) |
 | `pairing_codes` | code_hash, user_id, created_by, expires_at, used_at | Single use, stored hashed |
 | `collections` | id, owner_id, kind (album/folder), parent_id, name_enc, seq, deleted_at | `deleted_at` (M2): soft delete; the row stays because trashed items still need its key |
 | `collection_keys` | collection_id, user_id, wrapped_key | One row per member |

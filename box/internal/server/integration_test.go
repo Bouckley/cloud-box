@@ -137,20 +137,32 @@ func shaHex(b []byte) string {
 
 func (b *box) login(deviceID string, key ed25519.PrivateKey) string {
 	b.t.Helper()
+	return b.loginOwner(deviceID, key, nil)
+}
+
+// loginOwner logs in; with ownerKey the session is an owner session (ADR 0010).
+func (b *box) loginOwner(deviceID string, key, ownerKey ed25519.PrivateKey) string {
+	b.t.Helper()
 	var ch struct{ Challenge string }
 	b.do("POST", "/v1/auth/challenge", "", map[string]string{"deviceId": deviceID}, nil, 200, &ch)
-	var sess struct{ Token string }
-	b.do("POST", "/v1/auth/verify", "", map[string]any{
+	req := map[string]any{
 		"deviceId": deviceID, "challenge": ch.Challenge,
 		"signature": ed25519.Sign(key, boxcrypto.AuthMessage(deviceID, ch.Challenge)),
-	}, nil, 200, &sess)
+	}
+	if ownerKey != nil {
+		req["ownerSignature"] = ed25519.Sign(ownerKey, boxcrypto.OwnerMessage(deviceID, ch.Challenge))
+	}
+	var sess struct{ Token string }
+	b.do("POST", "/v1/auth/verify", "", req, nil, 200, &sess)
 	return sess.Token
 }
 
-// setUp creates the owner with device A and returns A's id, key and token.
+// setUp creates the owner with device A and returns A's id, key and an owner
+// session token.
 func (b *box) setUp() (deviceA string, key ed25519.PrivateKey, token string) {
 	b.t.Helper()
 	pub, priv, _ := ed25519.GenerateKey(rand.Reader)
+	opub, opriv, _ := ed25519.GenerateKey(rand.Reader)
 	deviceA = newID()
 	b.pressButton()
 	b.do("POST", "/v1/setup", "", map[string]any{
@@ -158,11 +170,11 @@ func (b *box) setUp() (deviceA string, key ed25519.PrivateKey, token string) {
 			"id":                  newID(),
 			"kdf":                 map[string]any{"salt": randBytes(16), "opsLimit": 3, "memLimitBytes": 268435456},
 			"masterKeyByPassword": randBytes(72), "masterKeyByRecovery": randBytes(72),
-			"recoveryPublicKey": randBytes(32), "identityPublicKey": randBytes(32), "identityKeyEnc": randBytes(72), "dedupeKeyEnc": randBytes(72),
+			"recoveryPublicKey": randBytes(32), "ownerPublicKey": []byte(opub), "identityPublicKey": randBytes(32), "identityKeyEnc": randBytes(72), "dedupeKeyEnc": randBytes(72),
 		},
 		"device": map[string]any{"id": deviceA, "nameEnc": randBytes(60), "signPublicKey": pub},
 	}, nil, 201, nil)
-	return deviceA, priv, b.login(deviceA, priv)
+	return deviceA, priv, b.loginOwner(deviceA, priv, opriv)
 }
 
 // pressButton presses the sim power button and waits until the box reports

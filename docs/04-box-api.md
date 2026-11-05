@@ -15,14 +15,15 @@ Endpoints marked *(Mn)* are not built yet; they arrive in that milestone.
 | GET | `/v1/info` | Public: is the box set up, is setup open (no auth) |
 | POST | `/v1/setup` | First run only, within 10 minutes of a button press: create owner, store wrapped master key |
 | POST | `/v1/auth/challenge` | Get a random challenge for a device |
-| POST | `/v1/auth/verify` | Send the Ed25519 signature; returns a short-lived session token |
+| POST | `/v1/auth/verify` | Send the Ed25519 signature; returns a short-lived session token. With `ownerSignature` (owner key, ADR 0010) it is an owner session |
+| DELETE | `/v1/auth/session` | End this session (Lock) |
 | GET | `/v1/account` | The signed-in user's wrapped keys and KDF settings (to unlock on a new device) |
-| PUT | `/v1/account/password` | Replace the password wrap of the master key |
+| PUT | `/v1/account/password` | Replace the password wrap of the master key (owner session) |
 | GET | `/v1/devices` | The user's devices (encrypted names, last seen, revoked) |
-| POST | `/v1/devices/pairing-codes` | One-time pairing code (10 minutes) for the QR |
+| POST | `/v1/devices/pairing-codes` | One-time pairing code (10 minutes) for the QR (owner session) |
 | POST | `/v1/devices/pair` | Pair a new device using a one-time code from the QR |
 | PATCH | `/v1/devices/{id}` | Set a device's encrypted name |
-| DELETE | `/v1/devices/{id}` | Revoke a device (never the last one) |
+| DELETE | `/v1/devices/{id}` | Revoke a device (never the last one; owner session) |
 | POST | `/v1/recovery/challenge` | Recovery reset: challenge for the recovery key (no auth) |
 | POST | `/v1/recovery/reset` | Recovery reset: revoke every device, add this one (no auth) |
 
@@ -55,7 +56,7 @@ Endpoints marked *(Mn)* are not built yet; they arrive in that milestone.
 | PATCH | `/v1/collections/{id}` | Rename, move |
 | DELETE | `/v1/collections/{id}` | Delete an empty album or folder (soft; comes back if a trashed item in it is restored) |
 | GET | `/v1/trash` | Items in Trash with days left |
-| DELETE | `/v1/trash/{id}` | Delete permanently |
+| DELETE | `/v1/trash/{id}` | Delete permanently (owner session) |
 | POST | `/v1/invites` *(M7)* | Create a one-time invite for a family member |
 | GET/DELETE | `/v1/members/{id}` *(M7)* | Manage members; roles: owner, member, helper, guest |
 | POST | `/v1/links` *(M7)* | Share link (passcode, expiry) for a collection |
@@ -75,6 +76,9 @@ Endpoints marked *(Mn)* are not built yet; they arrive in that milestone.
 - Every item response includes `state`: `uploading`, `stored`, `verified`, `replicated`.
   Apps show "safe" only for `replicated`.
 - Errors use one JSON shape: `{ "code": "storage_full", "message": "...", "action": "..." }`.
+- The four actions marked *owner session* need a session whose login also
+  carried the owner key's signature, which only a device holding the master
+  key can make; otherwise `403 owner_required` (ADR 0010).
 - JSON request bodies must say `Content-Type: application/json`, or the box
   answers 415 `unsupported_media_type`. A web page on another site then
   cannot post to the box (for example to claim it during setup) without a

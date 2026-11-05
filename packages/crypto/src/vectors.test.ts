@@ -4,6 +4,7 @@ import { ad as adFor, type BlobRole } from './ad.ts';
 import { aeadDecrypt, aeadEncryptWithNonce } from './aead.ts';
 import { authMessage, recoverMessage } from './auth.ts';
 import { recoverySigningKeyPair, recoveryWrapKey } from './recovery.ts';
+import { ownerMessage, ownerSigningKeyPair } from './owner.ts';
 import { dedupeHash } from './dedupe.ts';
 import { deriveKek } from './kdf.ts';
 import { boxKeyPairFromSeed, openSealed } from './sealed.ts';
@@ -94,6 +95,14 @@ describe('crypto-vectors.json', () => {
     const rk = { entropy: b(v.entropy), words: v.words };
     expect(recoveryWrapKey(rk)).toEqual(b(v.wrapKey));
     expect(recoverySigningKeyPair(rk).publicKey).toEqual(b(v.signPublicKey));
+  });
+
+  it.each(vectors.owner)('owner: $deviceId', (v) => {
+    const kp = ownerSigningKeyPair(b(v.master));
+    expect(kp.publicKey).toEqual(b(v.publicKey));
+    const message = ownerMessage(v.deviceId, v.challenge);
+    expect(new TextDecoder().decode(message)).toBe(v.message);
+    expect(sign(kp.privateKey, message)).toEqual(b(v.signature));
   });
 
   it('sha256 covers the empty input', () => {

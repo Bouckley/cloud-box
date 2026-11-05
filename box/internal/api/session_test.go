@@ -12,9 +12,11 @@ import (
 
 // owner is a set-up owner with a signed-in device.
 type owner struct {
-	userID, deviceID, token string
+	userID, deviceID, token string // token is an owner session (ADR 0010)
+	plain                   string // an ordinary session of the same device
 	key                     ed25519.PrivateKey
 	recovery                ed25519.PrivateKey // recovery signing key
+	ownerKey                ed25519.PrivateKey // owner key (ADR 0010)
 }
 
 // setUpOwner runs setup and logs in over HTTP.
@@ -22,17 +24,26 @@ func (e *env) setUpOwner() owner {
 	e.t.Helper()
 	pub, priv, _ := ed25519.GenerateKey(rand.Reader)
 	rpub, rpriv, _ := ed25519.GenerateKey(rand.Reader)
+	opub, opriv, _ := ed25519.GenerateKey(rand.Reader)
 	body := setupBody(pub)
 	user(body)["recoveryPublicKey"] = []byte(rpub)
+	user(body)["ownerPublicKey"] = []byte(opub)
 	if rec := e.call(http.MethodPost, "/v1/setup", "", body); rec.Code != http.StatusCreated {
 		e.t.Fatalf("setup = %d %s", rec.Code, rec.Body)
 	}
-	o := owner{userID: user(body)["id"].(string), deviceID: device(body)["id"].(string), key: priv, recovery: rpriv}
-	o.token = e.login(o.deviceID, priv)
+	o := owner{userID: user(body)["id"].(string), deviceID: device(body)["id"].(string), key: priv, recovery: rpriv, ownerKey: opriv}
+	o.token = e.loginOwner(o.deviceID, priv, opriv)
+	o.plain = e.login(o.deviceID, priv)
 	return o
 }
 
 func (e *env) login(deviceID string, key ed25519.PrivateKey) string {
+	e.t.Helper()
+	return e.loginOwner(deviceID, key, nil)
+}
+
+// loginOwner logs in; with ownerKey the session is an owner session.
+func (e *env) loginOwner(deviceID string, key, ownerKey ed25519.PrivateKey) string {
 	e.t.Helper()
 	rec := e.call(http.MethodPost, "/v1/auth/challenge", "", map[string]string{"deviceId": deviceID})
 	if rec.Code != http.StatusOK {
@@ -44,9 +55,11 @@ func (e *env) login(deviceID string, key ed25519.PrivateKey) string {
 	}
 	decodeInto(e.t, rec, &ch)
 	sig := ed25519.Sign(key, boxcrypto.AuthMessage(deviceID, ch.Challenge))
-	rec = e.call(http.MethodPost, "/v1/auth/verify", "", map[string]any{
-		"deviceId": deviceID, "challenge": ch.Challenge, "signature": sig,
-	})
+	req := map[string]any{"deviceId": deviceID, "challenge": ch.Challenge, "signature": sig}
+	if ownerKey != nil {
+		req["ownerSignature"] = ed25519.Sign(ownerKey, boxcrypto.OwnerMessage(deviceID, ch.Challenge))
+	}
+	rec = e.call(http.MethodPost, "/v1/auth/verify", "", req)
 	if rec.Code != http.StatusOK {
 		e.t.Fatalf("verify = %d %s", rec.Code, rec.Body)
 	}

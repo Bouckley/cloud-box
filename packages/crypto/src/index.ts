@@ -34,6 +34,7 @@ export { createSha256, sha256, type Sha256 } from './hash.ts';
 export { isId, newId } from './ids.ts';
 export { ad, type BlobRole } from './ad.ts';
 export { authMessage, recoverMessage } from './auth.ts';
+export { ownerMessage, ownerSigningKeyPair } from './owner.ts';
 export {
   newRecoveryKey,
   parseRecoveryKey,

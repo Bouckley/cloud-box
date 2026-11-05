@@ -18,6 +18,7 @@ import { sign, signingKeyPairFromSeed } from '../src/sign.ts';
 import { ready } from '../src/sodium.ts';
 import { encryptFile } from '../src/stream.ts';
 import { recoverySigningKeyPair, recoveryWrapKey } from '../src/recovery.ts';
+import { ownerMessage, ownerSigningKeyPair } from '../src/owner.ts';
 import { entropyToMnemonic } from '@scure/bip39';
 import { wordlist } from '@scure/bip39/wordlists/english.js';
 
@@ -194,6 +195,28 @@ const recovery = [new Uint8Array(32), seq(32, 100)].map((entropy) => {
   };
 });
 
+// The owner key (ADR 0010): derived from the master key (context "cbowner1",
+// id 1); it signs cloudbox/v1/owner/<deviceId>/<challenge> at login.
+const owner = [
+  { master: seq(32, 140), deviceId: ID, challenge: hex(seq(32, 64)) },
+  {
+    master: seq(32, 180),
+    deviceId: 'ffeeddccbbaa99887766554433221100',
+    challenge: hex(seq(32, 192)),
+  },
+].map(({ master, deviceId, challenge }) => {
+  const kp = ownerSigningKeyPair(master);
+  const message = ownerMessage(deviceId, challenge);
+  return {
+    master: hex(master),
+    publicKey: hex(kp.publicKey),
+    deviceId,
+    challenge,
+    message: new TextDecoder().decode(message),
+    signature: hex(sign(kp.privateKey, message)),
+  };
+});
+
 const generated = {
   version: 1,
   note: 'Generated once by packages/crypto/scripts/gen-vectors.ts and committed. Binary values are lowercase hex. Do not edit by hand.',
@@ -208,6 +231,7 @@ const generated = {
   dedupe,
   recover,
   recovery,
+  owner,
 };
 
 let vectors: Record<string, unknown> = generated;

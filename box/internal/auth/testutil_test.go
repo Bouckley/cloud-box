@@ -51,6 +51,7 @@ func testUser() NewUser {
 		MasterKeyByPassword: randBytes(72),
 		MasterKeyByRecovery: randBytes(72),
 		RecoveryPublicKey:   randBytes(32),
+		OwnerPublicKey:      randBytes(32),
 		IdentityPublicKey:   randBytes(32),
 		IdentityKeyEnc:      randBytes(72),
 		DedupeKeyEnc:        randBytes(72),
